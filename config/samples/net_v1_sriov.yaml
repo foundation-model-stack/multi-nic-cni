@@ -1,0 +1,25 @@
+apiVersion: net.cogadvisor.io/v1
+kind: MultiNicNetwork
+metadata:
+  name: multinic-sriov
+spec:
+  subnet: "172.34.0.0/16"
+  ipam: |
+    {
+      "type": "multi-nic-ipam",
+      "hostBlock": 8,
+      "interfaceBlock": 2,
+      "vlanMode": "l2"
+    }
+  multiNICIPAM: true
+  plugin:
+    cniVersion: "0.3.0"
+    type: sriov
+    args:
+      numVfs: "2"
+      isRdma: "true"
+  masterNets:
+    - "10.10.1.0/24"
+    - "10.10.2.0/24"
+    - "10.10.3.0/24"
+    - "10.10.4.0/24"

@@ -1,0 +1,132 @@
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: manager-role
+rules:
+- apiGroups:
+  - net.cogadvisor.io
+  resources:
+  - cidrs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - net.cogadvisor.io
+  resources:
+  - cidrs/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - net.cogadvisor.io
+  resources:
+  - cidrs/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - net.cogadvisor.io
+  resources:
+  - configs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - net.cogadvisor.io
+  resources:
+  - configs/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - net.cogadvisor.io
+  resources:
+  - hostinterfaces
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - net.cogadvisor.io
+  resources:
+  - hostinterfaces/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - net.cogadvisor.io
+  resources:
+  - hostinterfaces/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - net.cogadvisor.io
+  resources:
+  - ippools
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - net.cogadvisor.io
+  resources:
+  - ippools/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - net.cogadvisor.io
+  resources:
+  - ippools/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - net.cogadvisor.io
+  resources:
+  - multinicnetworks
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - net.cogadvisor.io
+  resources:
+  - multinicnetworks/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - net.cogadvisor.io
+  resources:
+  - multinicnetworks/status
+  verbs:
+  - get
+  - patch
+  - update

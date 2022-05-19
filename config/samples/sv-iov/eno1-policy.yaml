@@ -1,0 +1,14 @@
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovNetworkNodePolicy
+metadata:
+  name: eno1-policy
+  namespace: openshift-sriov-network-operator
+spec:
+  resourceName: srioveno1
+  nodeSelector:
+    feature.node.kubernetes.io/network-sriov.capable: "true"
+  numVfs: 16
+  nicSelector:
+    vendor: "8086"
+    deviceID: "37d2"
+    rootDevices: ["0000:60:00.0"]

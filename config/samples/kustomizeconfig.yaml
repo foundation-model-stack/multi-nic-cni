@@ -1,0 +1,15 @@
+images:
+- kind: Config
+  version: v1
+  group: net.cogadvisor.io
+  path: spec/daemon/image
+
+nameReference:
+- kind: Secret
+  version: v1
+  fieldSpecs:
+  - kind: Config
+    version: v1
+    group: net.cogadvisor.io
+    path: spec/daemon/imagePullSecretName
+

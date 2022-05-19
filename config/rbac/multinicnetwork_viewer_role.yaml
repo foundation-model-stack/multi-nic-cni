@@ -1,0 +1,20 @@
+# permissions for end users to view multinicnetworks.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: multinicnetwork-viewer-role
+rules:
+- apiGroups:
+  - net.cogadvisor.io
+  resources:
+  - multinicnetworks
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - net.cogadvisor.io
+  resources:
+  - multinicnetworks/status
+  verbs:
+  - get

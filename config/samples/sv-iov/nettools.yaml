@@ -1,0 +1,51 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: sriov-nettools-worker0
+  namespace: default
+  annotations:
+    k8s.v1.cni.cncf.io/networks: |
+      [
+        {
+          "name": "sriovens1f0-net",
+          "ips": ["10.56.217.171"]
+        }
+      ]
+spec:
+  containers:
+  - name: nettools
+    image: res-cpe-team-docker-local.artifactory.swg-devops.com/ext/jrecord/nettools:latest
+    command:
+      - tail
+      - -f
+      - /dev/null
+    imagePullPolicy: IfNotPresent
+  nodeName: ocp-w-1
+  imagePullSecrets:
+  - name: res-cpe-team-docker-local
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: sriov-nettools-worker1
+  namespace: default
+  annotations:
+    k8s.v1.cni.cncf.io/networks: |
+      [
+        {
+          "name": "sriovens1f0-net",
+          "ips": ["10.56.217.172"]
+        }
+      ]
+spec:
+  containers:
+  - name: nettools
+    image: res-cpe-team-docker-local.artifactory.swg-devops.com/ext/jrecord/nettools:latest
+    command:
+      - tail
+      - -f
+      - /dev/null
+    imagePullPolicy: IfNotPresent
+  nodeName: ocp-w-2
+  imagePullSecrets:
+  - name: res-cpe-team-docker-local

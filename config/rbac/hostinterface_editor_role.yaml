@@ -1,0 +1,24 @@
+# permissions for end users to edit hostinterfaces.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: hostinterface-editor-role
+rules:
+- apiGroups:
+  - net.cogadvisor.io.net.cogadvisor.io
+  resources:
+  - hostinterfaces
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - net.cogadvisor.io.net.cogadvisor.io
+  resources:
+  - hostinterfaces/status
+  verbs:
+  - get

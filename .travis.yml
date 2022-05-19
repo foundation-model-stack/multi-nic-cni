@@ -1,0 +1,23 @@
+#
+# Copyright 2022- IBM Inc. All rights reserved
+# SPDX-License-Identifier: Apache2.0
+#
+arch: amd64
+virt: vm
+os: linux
+dist: xenial
+
+language: go
+go:
+- 1.18.x
+go_import_path: github.com/operator-framework/operator-sdk
+before_install:
+- go mod tidy
+# Download and install operator-sdk
+- git clone https://github.com/operator-framework/operator-sdk; cd operator-sdk; git checkout master; make install; make build; sudo mv build/operator-sdk /usr/local/bin/operator-sdk;cd ..
+- sudo chmod +x /usr/local/bin/operator-sdk
+script:
+- make bundle
+- make test
+# - cd cni && make test
+# - cd daemon/src && make test

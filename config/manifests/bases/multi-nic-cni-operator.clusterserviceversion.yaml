@@ -1,0 +1,99 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: ClusterServiceVersion
+metadata:
+  annotations:
+    alm-examples: '[]'
+    capabilities: Basic Install
+  name: multi-nic-cni-operator.v0.0.0
+  namespace: placeholder
+spec:
+  apiservicedefinitions: {}
+  customresourcedefinitions:
+    owned:
+    - description: CIDR is the Schema for the cidrs API
+      displayName: CIDR
+      kind: CIDR
+      name: cidrs.net.cogadvisor.io.net.cogadvisor.io
+      version: v1
+    - description: Config is the Schema for the configs API
+      displayName: Config
+      kind: Config
+      name: configs.net.cogadvisor.io.net.cogadvisor.io
+      version: v1
+    - description: HostInterface is the Schema for the hostinterfaces API
+      displayName: Host Interface
+      kind: HostInterface
+      name: hostinterfaces.net.cogadvisor.io.net.cogadvisor.io
+      version: v1
+    - description: IPPool is the Schema for the ippools API
+      displayName: IPPool
+      kind: IPPool
+      name: ippools.net.cogadvisor.io.net.cogadvisor.io
+      version: v1
+    - description: QoSClassPolicy is the Schema for the qosclasspolicies API
+      displayName: Qo SClass Policy
+      kind: QoSClassPolicy
+      name: qosclasspolicies.net.cogadvisor.io
+      version: v1
+    - description: CIDR is the Schema for the cidrs API
+      displayName: CIDR
+      kind: CIDR
+      name: cidrs.net.cogadvisor.io
+      version: v1
+    - description: Config is the Schema for the configs API
+      displayName: Config
+      kind: Config
+      name: configs.net.cogadvisor.io
+      version: v1
+    - description: DeviceClass is the Schema for the deviceclasses API
+      displayName: Device Class
+      kind: DeviceClass
+      name: deviceclasses.net.cogadvisor.io
+      version: v1
+    - description: HostInterface is the Schema for the hostinterfaces API
+      displayName: Host Interface
+      kind: HostInterface
+      name: hostinterfaces.net.cogadvisor.io
+      version: v1
+    - description: IPPool is the Schema for the ippools API
+      displayName: IPPool
+      kind: IPPool
+      name: ippools.net.cogadvisor.io
+      version: v1
+    - description: MultiNicNetwork is the Schema for the multinicnetworks API
+      displayName: Multi Nic Network
+      kind: MultiNicNetwork
+      name: multinicnetworks.net.cogadvisor.io
+      version: v1
+  description: operate CNI for exporting and configurating multiple nics to container
+    namespace
+  displayName: multi-nic-cni-operator
+  icon:
+  - base64data: ""
+    mediatype: ""
+  install:
+    spec:
+      deployments: null
+    strategy: ""
+  installModes:
+  - supported: false
+    type: OwnNamespace
+  - supported: false
+    type: SingleNamespace
+  - supported: false
+    type: MultiNamespace
+  - supported: true
+    type: AllNamespaces
+  keywords:
+  - multi-nic
+  - cni
+  links:
+  - name: Multi Nic Cni Operator
+    url: https://multi-nic-cni-operator.domain
+  maintainers:
+  - email: sunyanan.choochotkaew1@ibm.com
+    name: Sunyanan Choochotkaew
+  maturity: alpha
+  provider:
+    name: IBM Cognitive Advisor
+  version: 0.0.0

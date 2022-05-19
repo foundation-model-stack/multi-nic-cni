@@ -1,0 +1,28 @@
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  name: multi-nic-sample
+  namespace: default
+spec:
+  spec:
+    config: '{
+      "cniVersion":"1.0.0",
+      "name":"multi-nic-sample",
+      "type":"multi-nic",
+      "ipam": {
+        "hostBlock":8,
+        "interfaceBlock":2,
+        "type":"multi-nic-ipam",
+        "vlanMode":"l3"
+        },
+        "dns":{},
+        "plugin":{
+          "type":"ipvlan",
+          "mode":"l3",
+          },
+          "subnet":"192.168.0.0/16",
+          "masterNets":["10.244.0.0/24","10.244.1.0/24"],
+          "multiNICIPAM":true,
+          "daemonIP":"",
+          "daemonPort":11000
+      }'
