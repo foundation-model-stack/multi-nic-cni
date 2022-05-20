@@ -1,0 +1,22 @@
+apiVersion: net.cogadvisor.io/v1
+kind: MultiNicNetwork
+metadata:
+  name: multinic-ipvlanl3
+  namespace: default
+spec:
+  subnet: "192.168.0.0/16"
+  ipam: |
+    {
+      "type": "multi-nic-ipam",
+      "hostBlock": 8, 
+      "interfaceBlock": 2,
+      "vlanMode": "l2"
+    }
+  multiNICIPAM: false
+  plugin:
+    cniVersion: "0.3.0"
+    type: macvlan
+    args: 
+      mode: l2
+  masterNets:
+    - "10.1.2.0/24"

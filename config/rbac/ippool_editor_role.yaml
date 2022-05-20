@@ -1,0 +1,24 @@
+# permissions for end users to edit ippools.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: ippool-editor-role
+rules:
+- apiGroups:
+  - net.cogadvisor.io.net.cogadvisor.io
+  resources:
+  - ippools
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - net.cogadvisor.io.net.cogadvisor.io
+  resources:
+  - ippools/status
+  verbs:
+  - get

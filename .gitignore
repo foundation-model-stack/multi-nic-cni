@@ -1,0 +1,65 @@
+
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+bin
+testbin/*
+
+# Test binary, build with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+# Kubernetes Generated files - skip generated files, except for vendored files
+
+!vendor/**/zz_generated.*
+
+# editor and IDE paraphernalia
+.idea
+*.swp
+*.swo
+*~
+
+bundle
+config/samples/net-attach-def
+config/samples/nettools
+config/samples/machine
+
+# to-copy folder
+daemon/cni
+daemon/cni/*
+deploy/
+daemon/bin
+cni/bin
+cni/test-bin
+daemon/src/test-bin
+document/diagram
+daemon/test-bin
+
+.DS_Store
+*/.DS_Store
+*/*/.DS_Store
+
+terraform/ibmcloud/terraform.tfvars
+terraform/ibmcloud/.terraform
+terraform/ibmcloud/terraform.tfstate*
+terraform/ibmcloud/.terraform*
+connection-check/copy.sh
+connection-check/concheck
+
+note.txt
+config/samples/vpci
+
+config/secret/*-secret.yaml
+config/*/patches/image_pull_secret.yaml
+config/*/net.cogadvisor.io_v1_config.yaml
+
+go.sum
+*/go.sum
+*/*/go.sum
+
+debug

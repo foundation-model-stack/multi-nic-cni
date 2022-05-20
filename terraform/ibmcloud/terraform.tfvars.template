@@ -1,0 +1,20 @@
+## PLEASE MODIFY THIS TEMPLATE
+
+apikey       = <APIKEY>
+
+vpc_name = <VPC_NAME>
+resource_group = <RESOURCE_GROUP>
+
+region       = "us-south"
+zone         = "us-south-1"
+
+subnet_prefix = "self-managed-ocp"
+subnet_count = "2"
+
+worker_names = [ <WORKER_NAME_LIST> ]
+
+# podnet = "192.168.0.0/16" 
+
+main_iface_sg_name = "<CLUSTER_WIDE_SG>"
+
+# daemonport = 11000

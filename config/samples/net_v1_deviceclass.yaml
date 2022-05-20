@@ -1,0 +1,14 @@
+apiVersion: net.cogadvisor.io/v1
+kind: DeviceClass
+metadata:
+  name: highspeed
+spec:
+  ids:
+  - vendor: "15b3"
+    products: 
+    - "1019"
+    - "101d"
+  - vendor: "1d0f"
+    products: 
+    - "efa0"
+    - "efa1"

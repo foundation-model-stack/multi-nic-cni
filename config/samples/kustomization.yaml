@@ -1,0 +1,14 @@
+## Append samples you want in your CSV to this file as resources ##
+resources:
+- net.cogadvisor.io_v1_config.yaml
+- net_v1_deviceclass.yaml
+#+kubebuilder:scaffold:manifestskustomizesamples
+
+configurations:
+- kustomizeconfig.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+images:
+- name: multi-nic-cni-daemon
+  newName: res-cpe-team-docker-local.artifactory.swg-devops.com/net/multi-nic-cni-daemon
+  newTag: v1.0.0-alpha

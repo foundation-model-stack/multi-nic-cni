@@ -1,0 +1,79 @@
+#
+# Copyright 2022- IBM Inc. All rights reserved
+# SPDX-License-Identifier: Apache2.0
+#
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: multi-nic-concheck-account
+  namespace: default
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: multi-nic-concheck-cr
+rules:
+- apiGroups:
+  - net.cogadvisor.io
+  resources:
+  - cidrs
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  - pods/status
+  - pods/log
+  verbs:
+  - create
+  - get
+  - watch
+  - list
+- apiGroups:
+  - batch
+  resources:
+  - jobs
+  - jobs/status
+  verbs:
+  - create
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: multi-nic-concheck-cr-binding
+subjects:
+- kind: ServiceAccount
+  name: multi-nic-concheck-account
+  namespace: default
+roleRef:
+  kind: ClusterRole
+  name: multi-nic-concheck-cr
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: multi-nic-concheck
+  namespace: default
+  labels:
+    multi-nic-concheck: driver
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      serviceAccountName: multi-nic-concheck-account
+      containers:
+      - name: concheck
+        image: res-cpe-team-docker-local.artifactory.swg-devops.com/net/multi-nic-cni-concheck:v1.0.0-alpha
+        imagePullPolicy: Always
+        securityContext:
+          privileged: true
+      imagePullSecrets:
+      - name: res-cpe-team-docker-local

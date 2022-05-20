@@ -1,0 +1,26 @@
+# permissions for end users to edit multinicnetworks.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: sriov-role
+rules:
+- apiGroups:
+  - sriovnetwork.openshift.io
+  resources:
+  - sriovnetworknodestates
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - sriovnetwork.openshift.io
+  resources:
+  - sriovnetworknodepolicies
+  - sriovibnetworks
+  - sriovnetworks
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - watch

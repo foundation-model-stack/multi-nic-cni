@@ -1,0 +1,12 @@
+apiVersion: net.cogadvisor.io/v1
+kind: IPPool
+metadata:
+  name: multi-nic-sample-192.168.0.0-26
+spec:
+  allocations: []
+  excludes: []
+  hostName: master0
+  interfaceName: test-eth1
+  netAttachDef: multi-nic-sample
+  podCIDR: 192.168.0.0/26
+  vlanCIDR: 192.168.0.0/18

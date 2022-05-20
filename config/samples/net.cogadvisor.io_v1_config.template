@@ -1,0 +1,31 @@
+apiVersion: net.cogadvisor.io/v1
+kind: Config
+metadata:
+  name: multi-nicd
+spec:
+  cniType: multi-nic
+  ipamType: multi-nic-ipam
+  joinPath: /join
+  getInterfacePath: /interface
+  addRoutePath: /addroute
+  deleteRoutePath: /deleteroute
+  daemon:
+    image: multi-nic-cni-daemon
+    imagePullPolicy: Always
+    securityContext:
+      privileged: true
+    env:
+    - name: DAEMON_PORT
+      value: "11000"
+    mounts:
+    - name: cnibin
+      podpath: /host/opt/cni/bin
+      hostpath: ${CNI_BIN_HOSTPATH}
+    - name: device-plugin
+      podpath: /var/lib/kubelet/device-plugins
+      hostpath: /var/lib/kubelet/device-plugins
+    port: 11000
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "50Mi"
