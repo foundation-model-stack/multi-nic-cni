@@ -1,4 +1,4 @@
-module github.ibm.com/CognitiveAdvisor/multi-nic-cni/daemon
+module github.com/foundation-model-stack/multi-nic-cni/daemon
 
 go 1.17
 

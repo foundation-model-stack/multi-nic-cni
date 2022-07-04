@@ -28,7 +28,7 @@ data "ibm_is_vpc" "vpc" {
 }
 
 resource "ibm_is_security_group" "sg" {
-  name = "generated-sg-for-multi-nic-cni"
+  name = "${var.subnet_prefix}-${var.zone}-sg-for-multi-nic-cni"
   vpc  = data.ibm_is_vpc.vpc.id
 }
 

@@ -33,5 +33,3 @@ endif
 
 docker-build-push: update-cni-local image-build
 	docker push ${DAEMON_IMG}
-
-docker-build-push-with-test: test docker-build-push

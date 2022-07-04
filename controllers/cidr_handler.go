@@ -12,10 +12,10 @@ import (
 
 	"k8s.io/client-go/kubernetes"
 
+	netcogadvisoriov1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
+	"github.com/foundation-model-stack/multi-nic-cni/compute"
+	"github.com/foundation-model-stack/multi-nic-cni/plugin"
 	"github.com/go-logr/logr"
-	netcogadvisoriov1 "github.ibm.com/CognitiveAdvisor/multi-nic-cni-operator/api/v1"
-	"github.ibm.com/CognitiveAdvisor/multi-nic-cni-operator/compute"
-	"github.ibm.com/CognitiveAdvisor/multi-nic-cni-operator/plugin"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"

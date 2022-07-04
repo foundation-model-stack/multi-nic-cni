@@ -8,8 +8,8 @@ package controllers
 import (
 	"context"
 
+	netcogadvisoriov1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
 	"github.com/go-logr/logr"
-	netcogadvisoriov1 "github.ibm.com/CognitiveAdvisor/multi-nic-cni-operator/api/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"

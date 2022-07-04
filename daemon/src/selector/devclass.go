@@ -6,7 +6,7 @@
 package selector
 
 import (
-	"github.ibm.com/CognitiveAdvisor/multi-nic-cni/daemon/iface"
+	"github.com/foundation-model-stack/multi-nic-cni/daemon/iface"
 	"log"
 )
 

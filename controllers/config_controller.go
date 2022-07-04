@@ -16,8 +16,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	netcogadvisoriov1 "github.ibm.com/CognitiveAdvisor/multi-nic-cni-operator/api/v1"
-	"github.ibm.com/CognitiveAdvisor/multi-nic-cni-operator/plugin"
+	netcogadvisoriov1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
+	"github.com/foundation-model-stack/multi-nic-cni/plugin"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"

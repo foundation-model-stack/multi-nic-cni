@@ -88,7 +88,7 @@ namespaces|list of namespaces to apply the network definitions (i.e., to create 
 ##### 1. Build CNI operator
 1. Clone the repo and enter the workspace
     ```bash
-    git clone https://github.ibm.com/CognitiveAdvisor/multi-nic-cni-operator.git
+    git clone https://github.com/foundation-model-stack/multi-nic-cni.git
     cd multi-nic-cni-operator
     ```
 2. Make bundle

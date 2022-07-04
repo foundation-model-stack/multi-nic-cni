@@ -18,11 +18,11 @@ import (
 
 	"github.com/gorilla/mux"
 
-	da "github.ibm.com/CognitiveAdvisor/multi-nic-cni/daemon/allocator"
-	"github.ibm.com/CognitiveAdvisor/multi-nic-cni/daemon/backend"
-	di "github.ibm.com/CognitiveAdvisor/multi-nic-cni/daemon/iface"
-	dr "github.ibm.com/CognitiveAdvisor/multi-nic-cni/daemon/router"
-	ds "github.ibm.com/CognitiveAdvisor/multi-nic-cni/daemon/selector"
+	da "github.com/foundation-model-stack/multi-nic-cni/daemon/allocator"
+	"github.com/foundation-model-stack/multi-nic-cni/daemon/backend"
+	di "github.com/foundation-model-stack/multi-nic-cni/daemon/iface"
+	dr "github.com/foundation-model-stack/multi-nic-cni/daemon/router"
+	ds "github.com/foundation-model-stack/multi-nic-cni/daemon/selector"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/kubernetes"
