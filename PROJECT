@@ -5,7 +5,7 @@ plugins:
   manifests.sdk.operatorframework.io/v2: {}
   scorecard.sdk.operatorframework.io/v2: {}
 projectName: multi-nic-cni-operator
-repo: github.ibm.com/CognitiveAdvisor/multi-nic-cni-operator
+repo: github.com/foundation-model-stack/multi-nic-cni
 resources:
 - api:
     crdVersion: v1
@@ -14,7 +14,7 @@ resources:
   domain: cogadvisor.io
   group: net
   kind: CIDR
-  path: github.ibm.com/CognitiveAdvisor/multi-nic-cni-operator/api/v1
+  path: github.com/foundation-model-stack/multi-nic-cni/api/v1
   version: v1
 - api:
     crdVersion: v1
@@ -22,7 +22,7 @@ resources:
   domain: cogadvisor.io
   group: net
   kind: HostInterface
-  path: github.ibm.com/CognitiveAdvisor/multi-nic-cni-operator/api/v1
+  path: github.com/foundation-model-stack/multi-nic-cni/api/v1
   version: v1
 - api:
     crdVersion: v1
@@ -30,7 +30,7 @@ resources:
   domain: cogadvisor.io
   group: net
   kind: IPPool
-  path: github.ibm.com/CognitiveAdvisor/multi-nic-cni-operator/api/v1
+  path: github.com/foundation-model-stack/multi-nic-cni/api/v1
   version: v1
 - api:
     crdVersion: v1
@@ -38,7 +38,7 @@ resources:
   domain: cogadvisor.io
   group: net
   kind: Config
-  path: github.ibm.com/CognitiveAdvisor/multi-nic-cni-operator/api/v1
+  path: github.com/foundation-model-stack/multi-nic-cni/api/v1
   version: v1
 - api:
     crdVersion: v1
@@ -46,7 +46,7 @@ resources:
   domain: cogadvisor.io
   group: net
   kind: CNIConfig
-  path: github.ibm.com/CognitiveAdvisor/multi-nic-cni-operator/api/v1
+  path: github.com/foundation-model-stack/multi-nic-cni/api/v1
   version: v1
 - api:
     crdVersion: v1
@@ -55,7 +55,7 @@ resources:
   domain: cogadvisor.io
   group: net
   kind: MultiNicNetwork
-  path: github.ibm.com/CognitiveAdvisor/multi-nic-cni-operator/api/v1
+  path: github.com/foundation-model-stack/multi-nic-cni/api/v1
   version: v1
 - api:
     crdVersion: v1
@@ -63,13 +63,13 @@ resources:
   domain: cogadvisor.io
   group: net
   kind: QoSClassPolicy
-  path: github.ibm.com/CognitiveAdvisor/multi-nic-cni-operator/api/v1
+  path: github.com/foundation-model-stack/multi-nic-cni/api/v1
   version: v1
 - api:
     crdVersion: v1
   domain: cogadvisor.io
   group: net
   kind: DeviceClass
-  path: github.ibm.com/CognitiveAdvisor/multi-nic-cni-operator/api/v1
+  path: github.com/foundation-model-stack/multi-nic-cni/api/v1
   version: v1
 version: "3"

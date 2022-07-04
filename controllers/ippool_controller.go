@@ -16,7 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	netcogadvisoriov1 "github.ibm.com/CognitiveAdvisor/multi-nic-cni-operator/api/v1"
+	netcogadvisoriov1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
 )
 
 // IPPoolReconciler reconciles a IPPool object

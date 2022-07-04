@@ -10,9 +10,9 @@ import (
 	"fmt"
 
 	"github.com/containernetworking/cni/pkg/types"
+	"github.com/foundation-model-stack/multi-nic-cni/plugin"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.ibm.com/CognitiveAdvisor/multi-nic-cni-operator/plugin"
 	//+kubebuilder:scaffold:imports
 )
 

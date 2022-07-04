@@ -8,7 +8,7 @@ package plugin
 import (
 	"encoding/json"
 
-	netcogadvisoriov1 "github.ibm.com/CognitiveAdvisor/multi-nic-cni-operator/api/v1"
+	netcogadvisoriov1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 

@@ -21,8 +21,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	netcogadvisoriov1 "github.ibm.com/CognitiveAdvisor/multi-nic-cni-operator/api/v1"
-	"github.ibm.com/CognitiveAdvisor/multi-nic-cni-operator/plugin"
+	netcogadvisoriov1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
+	"github.com/foundation-model-stack/multi-nic-cni/plugin"
 )
 
 const (

@@ -9,8 +9,8 @@ import (
 	"encoding/json"
 
 	"github.com/containernetworking/cni/pkg/types"
+	netcogadvisoriov1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
 	"github.com/go-logr/logr"
-	netcogadvisoriov1 "github.ibm.com/CognitiveAdvisor/multi-nic-cni-operator/api/v1"
 	"k8s.io/client-go/rest"
 )
 

@@ -24,10 +24,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	netcogadvisoriov1 "github.ibm.com/CognitiveAdvisor/multi-nic-cni-operator/api/v1"
-	netv1 "github.ibm.com/CognitiveAdvisor/multi-nic-cni-operator/api/v1"
-	"github.ibm.com/CognitiveAdvisor/multi-nic-cni-operator/controllers"
-	"github.ibm.com/CognitiveAdvisor/multi-nic-cni-operator/plugin"
+	netcogadvisoriov1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
+	netv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
+	"github.com/foundation-model-stack/multi-nic-cni/controllers"
+	"github.com/foundation-model-stack/multi-nic-cni/plugin"
 	//+kubebuilder:scaffold:imports
 )
 

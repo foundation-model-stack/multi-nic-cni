@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
-	"github.ibm.com/CognitiveAdvisor/multi-nic-cni/daemon/backend"
+	"github.com/foundation-model-stack/multi-nic-cni/daemon/backend"
 	"log"
 	"strconv"
 	corev1 "k8s.io/api/core/v1"

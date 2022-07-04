@@ -16,7 +16,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	netcogadvisoriov1 "github.ibm.com/CognitiveAdvisor/multi-nic-cni-operator/api/v1"
+	netcogadvisoriov1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
 )
 
 // HostInterfaceReconciler reconciles a HostInterface object

@@ -6,8 +6,8 @@
 package selector
 
 import (
-	"github.ibm.com/CognitiveAdvisor/multi-nic-cni/daemon/backend"
-	"github.ibm.com/CognitiveAdvisor/multi-nic-cni/daemon/iface"
+	"github.com/foundation-model-stack/multi-nic-cni/daemon/backend"
+	"github.com/foundation-model-stack/multi-nic-cni/daemon/iface"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"context"

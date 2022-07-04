@@ -12,6 +12,7 @@ RUN mkdir -p /host/opt/cni/bin
 WORKDIR /usr/local/app
 COPY src src
 COPY cni cni
+COPY run.sh run.sh
 RUN cd cni && go mod tidy && go build -o /usr/local/app/multi-nic ./plugins/main/multi-nic
 RUN cd cni && go mod tidy && go build -o /usr/local/app/multi-nic-ipam ./plugins/ipam/multi-nic-ipam
 RUN cd src && go mod tidy && go build -o /usr/local/app/daemon

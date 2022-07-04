@@ -1,4 +1,4 @@
-module github.ibm.com/CognitiveAdvisor/multi-nic-cni/concheck
+module github.com/foundation-model-stack/multi-nic-cni/concheck
 
 go 1.16
 
