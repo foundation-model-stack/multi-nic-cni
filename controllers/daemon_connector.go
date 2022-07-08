@@ -48,6 +48,13 @@ type DaemonConnector struct {
 	*kubernetes.Clientset
 }
 
+// L3 Configuration defines request of l3 route configuration
+type L3ConfigRequest struct {
+	Name   string      `json:"name"`
+	Subnet string      `json:"subnet"`
+	Routes []HostRoute `json:"routes"`
+}
+
 // HostRoute defines a route
 type HostRoute struct {
 	Subnet        string `json:"net"`
@@ -118,27 +125,27 @@ func (dc DaemonConnector) Join(daemon v1.Pod, hifs []netcogadvisoriov1.Interface
 }
 
 // AddRoute sends a request to add a new route to specific host
-func (dc DaemonConnector) AddRoute(daemon v1.Pod, net string, via string, iface string) (RouteUpdateResponse, error) {
-	return dc.putRouteRequest(daemon, ADD_ROUTE_PATH, net, via, iface)
+func (dc DaemonConnector) ApplyL3Config(daemon v1.Pod, cidrName string, subnet string, routes []HostRoute) (RouteUpdateResponse, error) {
+	return dc.putRouteRequest(daemon, ADD_ROUTE_PATH, cidrName, subnet, routes)
 }
 
 // DeleteRoute sends a request to delete the route from specific host
-func (dc DaemonConnector) DeleteRoute(daemon v1.Pod, net string, via string, iface string) (RouteUpdateResponse, error) {
-	return dc.putRouteRequest(daemon, DELETE_ROUTE_PATH, net, via, iface)
+func (dc DaemonConnector) DeleteL3Config(daemon v1.Pod, cidrName string, subnet string) (RouteUpdateResponse, error) {
+	return dc.putRouteRequest(daemon, DELETE_ROUTE_PATH, cidrName, subnet, []HostRoute{})
 }
 
 // putRouteRequest sends a route adding/deleting request to specific host
-func (dc DaemonConnector) putRouteRequest(daemon v1.Pod, path string, net string, via string, iface string) (RouteUpdateResponse, error) {
+func (dc DaemonConnector) putRouteRequest(daemon v1.Pod, path string, cidrName string, subnet string, routes []HostRoute) (RouteUpdateResponse, error) {
 	address := GetDaemonAddressByPod(daemon) + path
 	var response RouteUpdateResponse
 
-	hostRoute := HostRoute{
-		Subnet:        net,
-		NextHop:       via,
-		InterfaceName: iface,
+	requestL3Config := L3ConfigRequest{
+		Name:   cidrName,
+		Subnet: subnet,
+		Routes: routes,
 	}
 
-	jsonReq, err := json.Marshal(hostRoute)
+	jsonReq, err := json.Marshal(requestL3Config)
 
 	if err != nil {
 		return response, err

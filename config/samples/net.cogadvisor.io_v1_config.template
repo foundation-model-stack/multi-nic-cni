@@ -7,8 +7,8 @@ spec:
   ipamType: multi-nic-ipam
   joinPath: /join
   getInterfacePath: /interface
-  addRoutePath: /addroute
-  deleteRoutePath: /deleteroute
+  addRoutePath: /addl3
+  deleteRoutePath: /deletel3
   daemon:
     image: multi-nic-cni-daemon
     imagePullPolicy: Always
@@ -17,6 +17,8 @@ spec:
     env:
     - name: DAEMON_PORT
       value: "11000"
+    - name: RT_TABLE_PATH
+      value: /opt/rt_tables
     mounts:
     - name: cnibin
       podpath: /host/opt/cni/bin
@@ -24,6 +26,9 @@ spec:
     - name: device-plugin
       podpath: /var/lib/kubelet/device-plugins
       hostpath: /var/lib/kubelet/device-plugins
+    - name: rt-tables
+      podpath: /opt/rt_tables
+      hostpath: /etc/iproute2/rt_tables
     port: 11000
     resources:
       requests:
