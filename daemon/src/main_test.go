@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache2.0
  */
 
-package main_test
+package main
 
 import (
 	"encoding/json"
@@ -13,7 +13,6 @@ import (
 	"net/http/httptest"
 	"testing"
 	"bytes"
-	daemon "github.com/foundation-model-stack/multi-nic-cni/daemon"
 	backend "github.com/foundation-model-stack/multi-nic-cni/daemon/backend"
 	da "github.com/foundation-model-stack/multi-nic-cni/daemon/allocator"
 	di "github.com/foundation-model-stack/multi-nic-cni/daemon/iface"
@@ -56,6 +55,24 @@ var requestRoute = dr.HostRoute {
 	InterfaceName: "ens10",
 }
 
+var requestL3Config = dr.L3ConfigRequest{
+	Name: "l3net",
+	Subnet: "192.168.0.0/16",
+	Routes: []dr.HostRoute{
+		requestRoute,
+	},
+	Force: false,
+}
+
+var requestL3ConfigForceDelete = dr.L3ConfigRequest{
+	Name: "l3net",
+	Subnet: "192.168.0.0/16",
+	Routes: []dr.HostRoute{
+		requestRoute,
+	},
+	Force: true,
+}
+
 const (
 	HOST_NAME = "master0"
 	DEF_NAME = "multi-nic-sample"
@@ -82,11 +99,12 @@ var MASTER_NETADDRESSES = []string{"10.244.0.0/24", "10.244.1.0/24"}
 var MASTER_VENDORS = []string{"1d0f",""}
 var MASTER_PRODUCTS = []string{"efa1",""}
 
+
+
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "MultiNic CNI Suite")
 }
-
 
 func setTestLatestInterfaces() {
 	latestInterfaceMap := map[string]di.InterfaceInfoType{}
@@ -148,44 +166,57 @@ var _ = AfterSuite(func() {
 	deleteMasterInterfaces()
 })
 
-var _ = Describe("Test Route Add/Delete", func() {
-	It("add route", func() {
-		routeJson, err := json.Marshal(requestRoute)
+var _ = Describe("Test L3Config Add/Delete", func() {
+	It("apply/delete l3config", func() {
+		l3config, err := json.Marshal(requestL3Config)
 		Expect(err).NotTo(HaveOccurred())
-		req, err := http.NewRequest("PUT", "/addroute", bytes.NewBuffer(routeJson))
+		req, err := http.NewRequest("PUT", ADD_L3CONFIG_PATH, bytes.NewBuffer(l3config))
 		Expect(err).NotTo(HaveOccurred())
 		req.Header.Set("Content-Type", "application/json; charset=utf-8")
 		res := httptest.NewRecorder()
-		handler := http.HandlerFunc(daemon.AddRoute)
+		handler := http.HandlerFunc(ApplyL3Config)
 		handler.ServeHTTP(res, req)
 		body, _ := ioutil.ReadAll(res.Body)
 		var response dr.RouteUpdateResponse
 		json.Unmarshal(body, &response)
-		log.Printf("TestAddRoute: %v", response)
+		log.Printf("TestApplyL3Config: %v", response)
 		Expect(response.Success).To(Equal(true))
-	})
-	It("delete route", func() {
-		routeJson, err := json.Marshal(requestRoute)
+
+		l3config, err = json.Marshal(requestL3ConfigForceDelete)
 		Expect(err).NotTo(HaveOccurred())
-		req, err := http.NewRequest("PUT", "/deleteroute", bytes.NewBuffer(routeJson))
+		req, err = http.NewRequest("PUT", ADD_L3CONFIG_PATH, bytes.NewBuffer(l3config))
 		Expect(err).NotTo(HaveOccurred())
 		req.Header.Set("Content-Type", "application/json; charset=utf-8")
-		res := httptest.NewRecorder()
-		handler := http.HandlerFunc(daemon.DeleteRoute)
+		res = httptest.NewRecorder()
+		handler = http.HandlerFunc(ApplyL3Config)
 		handler.ServeHTTP(res, req)
-		body, _ := ioutil.ReadAll(res.Body)
-		var response dr.RouteUpdateResponse
+		body, _ = ioutil.ReadAll(res.Body)
+		var responseWithForce dr.RouteUpdateResponse
+		json.Unmarshal(body, &responseWithForce)
+		log.Printf("TestApplyL3ConfigForceDelete: %v", responseWithForce)
+		Expect(responseWithForce.Success).To(Equal(true))
+
+		l3config, err = json.Marshal(requestL3Config)
+		Expect(err).NotTo(HaveOccurred())
+		req, err = http.NewRequest("PUT", DELETE_L3CONFIG_PATH, bytes.NewBuffer(l3config))
+		Expect(err).NotTo(HaveOccurred())
+		req.Header.Set("Content-Type", "application/json; charset=utf-8")
+		res = httptest.NewRecorder()
+		handler = http.HandlerFunc(DeleteL3Config)
+		handler.ServeHTTP(res, req)
+		body, _ = ioutil.ReadAll(res.Body)
 		json.Unmarshal(body, &response)
-		log.Printf("TestDeleteRoute: %v", response)
+		log.Printf("TestDeleteL3Config: %v", response)
 		Expect(response.Success).To(Equal(true))
 	})
 })
 
+
 var _ = Describe("Test Get Interfaces", func() {
 	It("get interfaces", func() {
-		req, _ := http.NewRequest("GET", "/interface", nil)
+		req, _ := http.NewRequest("GET", INTERFACE_PATH, nil)
 		res := httptest.NewRecorder()
-		handler := http.HandlerFunc(daemon.GetInterface)
+		handler := http.HandlerFunc(GetInterface)
 		handler.ServeHTTP(res, req)
 		body, _ := ioutil.ReadAll(res.Body)
 		var response []di.InterfaceInfoType
@@ -209,69 +240,17 @@ var _ = Describe("Test Allocation", func() {
 	
 		ipJson, err := json.Marshal(request)
 		Expect(err).NotTo(HaveOccurred())
-		req, err := http.NewRequest("PUT", daemon.ALLOCATE_PATH, bytes.NewBuffer(ipJson))
+		req, err := http.NewRequest("PUT", ALLOCATE_PATH, bytes.NewBuffer(ipJson))
 		Expect(err).NotTo(HaveOccurred())
 		req.Header.Set("Content-Type", "application/json; charset=utf-8")
 		res := httptest.NewRecorder()
-		handler := http.HandlerFunc(daemon.Allocate)
+		handler := http.HandlerFunc(Allocate)
 		handler.ServeHTTP(res, req)
 		body, err := ioutil.ReadAll(res.Body)
 		Expect(err).NotTo(HaveOccurred())
 		err = json.Unmarshal(body, &response)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(len(response)).To(Equal(len(MASTER_INTERFACES)))
-	})
-	initIndexes := []int{1,2,3,8,13,18}
-	allocations := genAllocation(initIndexes)
-
-	It("find simple next available index" , func() {
-		indexes := []int{1,2,3,8,13,18}
-		nextIndex := da.FindAvailableIndex(indexes,0)
-		Expect(nextIndex).To(Equal(4))
-	})
-
-	It("find next available index with exclude range over consecutive order" , func() {
-		excludes := []da.ExcludeRange {
-			da.ExcludeRange {
-				MinIndex: 4,
-				MaxIndex: 6,
-			},
-		}
-		indexes := da.GenerateAllocateIndexes(allocations,20,excludes)
-		Expect(indexes).To(Equal([]int{1,2,3,4,5,6,8,13,18}))
-		nextIndex := da.FindAvailableIndex(indexes,0)
-		Expect(nextIndex).To(Equal(7))
-	})
-	It("find next available index with exclude range over non-consecutive order" , func() {
-		excludes := []da.ExcludeRange {
-			da.ExcludeRange {
-				MinIndex: 4,
-				MaxIndex: 7,
-			},
-		}
-	
-		indexes := da.GenerateAllocateIndexes(allocations,20,excludes)
-		Expect(indexes).To(Equal([]int{1,2,3,4,5,6,7,8,13,18}))
-		nextIndex := da.FindAvailableIndex(indexes,0)
-		Expect(nextIndex).To(Equal(9))
-	})
-
-	It("find next available index with exclude range over non-consecutive and then consecutive order" , func() {
-		excludes := []da.ExcludeRange {
-			da.ExcludeRange {
-				MinIndex: 4,
-				MaxIndex: 7,
-			},
-			da.ExcludeRange {
-				MinIndex: 9,
-				MaxIndex: 12,
-			},
-		}
-	
-		indexes := da.GenerateAllocateIndexes(allocations,20,excludes)
-		Expect(indexes).To(Equal([]int{1,2,3,4,5,6,7,8,9,10,11,12,13,18}))
-		nextIndex := da.FindAvailableIndex(indexes,0)
-		Expect(nextIndex).To(Equal(14))
 	})
 })
 
@@ -291,11 +270,11 @@ var _ = Describe("Test NIC Select", func() {
 	
 		jsonObj, err := json.Marshal(request)
 		Expect(err).NotTo(HaveOccurred())
-		req, err := http.NewRequest("PUT", daemon.NIC_SELECT_PATH, bytes.NewBuffer(jsonObj))
+		req, err := http.NewRequest("PUT", NIC_SELECT_PATH, bytes.NewBuffer(jsonObj))
 		Expect(err).NotTo(HaveOccurred())
 		req.Header.Set("Content-Type", "application/json; charset=utf-8")
 		res := httptest.NewRecorder()
-		handler := http.HandlerFunc(daemon.SelectNic)
+		handler := http.HandlerFunc(SelectNic)
 		handler.ServeHTTP(res, req)
 		body, err := ioutil.ReadAll(res.Body)
 		Expect(err).NotTo(HaveOccurred())
@@ -320,11 +299,11 @@ var _ = Describe("Test NIC Select", func() {
 	
 		jsonObj, err := json.Marshal(request)
 		Expect(err).NotTo(HaveOccurred())
-		req, err := http.NewRequest("PUT", daemon.NIC_SELECT_PATH, bytes.NewBuffer(jsonObj))
+		req, err := http.NewRequest("PUT", NIC_SELECT_PATH, bytes.NewBuffer(jsonObj))
 		Expect(err).NotTo(HaveOccurred())
 		req.Header.Set("Content-Type", "application/json; charset=utf-8")
 		res := httptest.NewRecorder()
-		handler := http.HandlerFunc(daemon.SelectNic)
+		handler := http.HandlerFunc(SelectNic)
 		handler.ServeHTTP(res, req)
 		body, err := ioutil.ReadAll(res.Body)
 		Expect(err).NotTo(HaveOccurred())
@@ -349,11 +328,11 @@ var _ = Describe("Test NIC Select", func() {
 	
 		jsonObj, err := json.Marshal(request)
 		Expect(err).NotTo(HaveOccurred())
-		req, err := http.NewRequest("PUT", daemon.NIC_SELECT_PATH, bytes.NewBuffer(jsonObj))
+		req, err := http.NewRequest("PUT", NIC_SELECT_PATH, bytes.NewBuffer(jsonObj))
 		Expect(err).NotTo(HaveOccurred())
 		req.Header.Set("Content-Type", "application/json; charset=utf-8")
 		res := httptest.NewRecorder()
-		handler := http.HandlerFunc(daemon.SelectNic)
+		handler := http.HandlerFunc(SelectNic)
 		handler.ServeHTTP(res, req)
 		body, err := ioutil.ReadAll(res.Body)
 		Expect(err).NotTo(HaveOccurred())
@@ -363,15 +342,6 @@ var _ = Describe("Test NIC Select", func() {
 		Expect(response.Masters[0]).To(Equal(MASTER_INTERFACES[0]))
 	})
 })
-
-func genAllocation(indexes []int) []backend.Allocation {
-	var allocations []backend.Allocation
-	for _, index := range indexes {
-		allocations = append(allocations, backend.Allocation{Index: index})
-	}
-	return allocations
-}
-
 
 func deployExamples(folder string, ignoreErr bool) {
 	files, err := ioutil.ReadDir(folder)
