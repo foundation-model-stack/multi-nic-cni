@@ -43,7 +43,7 @@ func (h *HostInterfaceHandler) CreateHostInterface(hostName string, interfaces [
 }
 
 // UpdateHostInterface updates HostInterface
-func (h *HostInterfaceHandler) UpdateHostInterface(oldObj netcogadvisoriov1.HostInterface, interfaces []netcogadvisoriov1.InterfaceInfoType) error {
+func (h *HostInterfaceHandler) UpdateHostInterface(oldObj netcogadvisoriov1.HostInterface, interfaces []netcogadvisoriov1.InterfaceInfoType) (*netcogadvisoriov1.HostInterface, error) {
 	updateHif := &netcogadvisoriov1.HostInterface{
 		ObjectMeta: oldObj.ObjectMeta,
 		Spec: netcogadvisoriov1.HostInterfaceSpec{
@@ -51,7 +51,7 @@ func (h *HostInterfaceHandler) UpdateHostInterface(oldObj netcogadvisoriov1.Host
 			Interfaces: interfaces,
 		},
 	}
-	return h.Client.Update(context.TODO(), updateHif)
+	return updateHif, h.Client.Update(context.TODO(), updateHif)
 }
 
 // GetHostInterface gets HostInterface from hostname

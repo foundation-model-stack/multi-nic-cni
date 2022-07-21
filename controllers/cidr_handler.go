@@ -255,19 +255,28 @@ func (h *CIDRHandler) UpdateCIDR(cidrSpec netcogadvisoriov1.CIDRSpec, defNamespa
 		excludesInStr = append(excludesInStr, exclude.Address)
 	}
 
+	changed := false
+
 	entriesMap := make(map[string]netcogadvisoriov1.CIDREntry)
 	for _, entry := range entries {
+		var newHostList []netcogadvisoriov1.HostInterfaceInfo
+		for _, host := range entry.Hosts {
+			if _, exists := HostInterfaceCache[host.HostName]; exists {
+				newHostList = append(newHostList, host)
+			} else {
+				// host not exist anymore
+				changed = true
+			}
+		}
+		entry.Hosts = newHostList
 		entriesMap[entry.NetAddress] = entry
 	}
 
 	// maxHostIndex = 2^(host bits) - 1
 	maxHostIndex := int(math.Pow(2, float64(def.HostBlock)) - 1)
 
-	changed := false
-
 	// compute host indexes over host interface list
-	hifList, _ := h.HostInterfaceHandler.ListHostInterface()
-	for _, hif := range hifList {
+	for _, hif := range HostInterfaceCache {
 		hostName := hif.Spec.HostName
 		ifaces := hif.Spec.Interfaces
 
@@ -328,8 +337,6 @@ func (h *CIDRHandler) UpdateCIDR(cidrSpec netcogadvisoriov1.CIDRSpec, defNamespa
 		}
 	}
 
-	routeChange := false
-
 	// if pod CIDR changes, update CIDR and create corresponding IPPools and routes
 	if changed {
 		newEntries := []netcogadvisoriov1.CIDREntry{}
@@ -375,25 +382,34 @@ func (h *CIDRHandler) UpdateCIDR(cidrSpec netcogadvisoriov1.CIDRSpec, defNamespa
 				}
 			}
 		}
-
-		// add routes
-		if h.IsL3Mode(def) {
-			hostInterfaceInfoMap := h.GetHostInterfaceIndexMap(newEntries)
-			h.RouteHandler.DeleteRoutes(cidrSpec)
-			routeChange = h.RouteHandler.AddRoutes(cidrSpec, newEntries, hostInterfaceInfoMap)
-		}
-
-		h.Mutex.Unlock()
-		return routeChange, err
-	}
-
-	// try re-adding routes
-	if h.IsL3Mode(def) {
-		hostInterfaceInfoMap := h.GetHostInterfaceIndexMap(entries)
-		routeChange = h.RouteHandler.AddRoutes(cidrSpec, entries, hostInterfaceInfoMap)
+		h.Log.Info(fmt.Sprintf("CIDR %s changed", def.Name))
 	}
 	h.Mutex.Unlock()
-	return routeChange, nil
+	return changed, nil
+}
+
+// SyncCIDRRoute try adding routes by CIDR
+func (h *CIDRHandler) SyncCIDRRoute(cidrSpec netcogadvisoriov1.CIDRSpec, forceDelete bool) bool {
+	def := cidrSpec.Config
+	success := true
+	// try re-adding routes
+	if h.IsL3Mode(def) {
+		h.Mutex.Lock()
+		entries := cidrSpec.CIDRs
+		hostInterfaceInfoMap := h.GetHostInterfaceIndexMap(entries)
+		h.Log.Info(fmt.Sprintf("Sync routes from CIDR (force delete: %v)", forceDelete))
+		success = h.RouteHandler.AddRoutes(cidrSpec, entries, hostInterfaceInfoMap, forceDelete)
+		h.Mutex.Unlock()
+	}
+	return success
+}
+
+// DeleteOldRoutes forcefully deletes old routes from CIDR
+func (h *CIDRHandler) DeleteOldRoutes(cidrSpec netcogadvisoriov1.CIDRSpec) {
+	def := cidrSpec.Config
+	if h.IsL3Mode(def) {
+		h.RouteHandler.DeleteRoutes(cidrSpec)
+	}
 }
 
 // cleanPendingIPPools clean ippools in case that cidr is updated with new subnet entry

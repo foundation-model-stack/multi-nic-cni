@@ -9,6 +9,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"time"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -32,9 +33,10 @@ import (
 )
 
 var (
-	MAX_QSIZE = 100
-	scheme    = runtime.NewScheme()
-	setupLog  = ctrl.Log.WithName("setup")
+	MAX_QSIZE       = 100
+	scheme          = runtime.NewScheme()
+	setupLog        = ctrl.Log.WithName("setup")
+	TICKET_INTERVAL = 10 * time.Minute
 )
 
 func init() {
@@ -114,13 +116,13 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "CIDR")
 		os.Exit(1)
 	}
-
-	if err = (&controllers.HostInterfaceReconciler{
+	hostInterfaceReconciler := &controllers.HostInterfaceReconciler{
 		Client:        mgr.GetClient(),
 		Log:           hifLog,
 		Scheme:        mgr.GetScheme(),
 		DaemonWatcher: daemonWatcher,
-	}).SetupWithManager(mgr); err != nil {
+	}
+	if err = (hostInterfaceReconciler).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "HostInterface")
 		os.Exit(1)
 	}
@@ -172,6 +174,11 @@ func main() {
 	}
 
 	cidrHandler.CleanPreviousCIDR(config, defHandler)
+
+	ticker := time.NewTicker(TICKET_INTERVAL)
+	defer ticker.Stop()
+	syncLog := ctrl.Log.WithName("controllers").WithName("Synchronizer")
+	controllers.RunPeriodicUpdate(ticker, cidrHandler, hostInterfaceReconciler, syncLog, quit)
 
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
