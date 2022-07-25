@@ -47,6 +47,13 @@ type DaemonWatcher struct {
 	DaemonConnector
 }
 
+func isContainerReady(pod v1.Pod) bool {
+	if len(pod.Status.ContainerStatuses) > 0 {
+		return pod.Status.ContainerStatuses[0].Ready
+	}
+	return false
+}
+
 // NewDaemonWatcher creates new daemon watcher
 func NewDaemonWatcher(client client.Client, config *rest.Config, logger logr.Logger, hifLog logr.Logger, cidrHandler *CIDRHandler, podQueue chan *v1.Pod, quit chan struct{}) *DaemonWatcher {
 	clientset, _ := kubernetes.NewForConfig(config)
@@ -78,7 +85,7 @@ func NewDaemonWatcher(client client.Client, config *rest.Config, logger logr.Log
 			if !ok {
 				return
 			}
-			if isDaemonPod(pod) && prevPod.Status.PodIP == "" && pod.Status.PodIP != "" {
+			if isDaemonPod(pod) && !isContainerReady(*prevPod) && isContainerReady(*pod) {
 				// newly-created daemon pod, put to the process queue
 				watcher.PodQueue <- pod
 			}
@@ -117,7 +124,7 @@ func (w *DaemonWatcher) UpdateCurrentList() error {
 		return err
 	}
 	for _, existingDaemon := range initialList.Items {
-		if existingDaemon.Status.PodIP != "" {
+		if isContainerReady(existingDaemon) {
 			w.PodQueue <- existingDaemon.DeepCopy()
 		}
 	}
@@ -232,7 +239,7 @@ func (w *DaemonWatcher) UpdateCIDRs() {
 	cidrMap, _ := w.CIDRHandler.ListCIDR()
 	for cidrName, cidr := range cidrMap {
 		w.Log.Info(fmt.Sprintf("Update cidr %s", cidrName))
-		change, err := w.CIDRHandler.UpdateCIDR(cidr.Spec, cidr.Spec.Namespace)
+		change, err := w.CIDRHandler.UpdateCIDR(cidr.Spec, false)
 		if err != nil {
 			w.Log.Info(fmt.Sprintf("Fail to update CIDR: %v", err))
 		} else if change {

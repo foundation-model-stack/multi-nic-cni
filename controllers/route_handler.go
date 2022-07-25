@@ -21,21 +21,25 @@ type RouteHandler struct {
 
 // AddRoutes add corresponding routes of CIDR
 // success: all routes is properly updated
-func (h *RouteHandler) AddRoutes(cidrSpec netcogadvisoriov1.CIDRSpec, entries []netcogadvisoriov1.CIDREntry, hostInterfaceInfoMap map[string]map[int]netcogadvisoriov1.HostInterfaceInfo, forceDelete bool) bool {
-	sucess := true
+func (h *RouteHandler) AddRoutes(cidrSpec netcogadvisoriov1.CIDRSpec, entries []netcogadvisoriov1.CIDREntry, hostInterfaceInfoMap map[string]map[int]netcogadvisoriov1.HostInterfaceInfo, forceDelete bool) (success bool, noConnection bool) {
+	success = true
+	noConnection = false
 	for hostName, daemon := range DaemonCache {
 		if _, ok := hostInterfaceInfoMap[hostName]; ok {
-			change := h.AddRoutesToHost(cidrSpec, hostName, daemon, entries, hostInterfaceInfoMap, forceDelete)
-			if !change {
-				sucess = false
+			change, connectFail := h.AddRoutesToHost(cidrSpec, hostName, daemon, entries, hostInterfaceInfoMap, forceDelete)
+			if !change || connectFail {
+				success = false
+			}
+			if connectFail {
+				noConnection = true
 			}
 		}
 	}
-	return sucess
+	return success, noConnection
 }
 
 // AddRoutesToHost add route to a specific host
-func (h *RouteHandler) AddRoutesToHost(cidrSpec netcogadvisoriov1.CIDRSpec, hostName string, daemon corev1.Pod, entries []netcogadvisoriov1.CIDREntry, hostInterfaceInfoMap map[string]map[int]netcogadvisoriov1.HostInterfaceInfo, forceDelete bool) bool {
+func (h *RouteHandler) AddRoutesToHost(cidrSpec netcogadvisoriov1.CIDRSpec, hostName string, daemon corev1.Pod, entries []netcogadvisoriov1.CIDREntry, hostInterfaceInfoMap map[string]map[int]netcogadvisoriov1.HostInterfaceInfo, forceDelete bool) (bool, bool) {
 	change := true
 	mainSrcHostIP := daemon.Status.HostIP
 	routes := []HostRoute{}
@@ -69,7 +73,7 @@ func (h *RouteHandler) AddRoutesToHost(cidrSpec netcogadvisoriov1.CIDRSpec, host
 	if err != nil || !res.Success {
 		change = false
 	}
-	return change
+	return change, res.Message == CONNECTION_REFUSED
 }
 
 // DeleteRoutes deletes corresponding routes of CIDR

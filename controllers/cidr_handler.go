@@ -40,12 +40,13 @@ type CIDRHandler struct {
 	compute.CIDRCompute
 	*HostInterfaceHandler
 	*IPPoolHandler
+	*MultiNicNetworkHandler
 	sync.Mutex
 	Log logr.Logger
 	RouteHandler
 }
 
-func NewCIDRHandler(client client.Client, config *rest.Config, logger logr.Logger, hifLog logr.Logger, ippoolLog logr.Logger) *CIDRHandler {
+func NewCIDRHandler(client client.Client, config *rest.Config, logger logr.Logger, hifLog logr.Logger, ippoolLog logr.Logger, networkLog logr.Logger) *CIDRHandler {
 	clientset, _ := kubernetes.NewForConfig(config)
 	cidrCompute := compute.CIDRCompute{}
 
@@ -61,6 +62,10 @@ func NewCIDRHandler(client client.Client, config *rest.Config, logger logr.Logge
 		IPPoolHandler: &IPPoolHandler{
 			Client: client,
 			Log:    ippoolLog,
+		},
+		MultiNicNetworkHandler: &MultiNicNetworkHandler{
+			Client: client,
+			Log:    networkLog,
 		},
 		RouteHandler: RouteHandler{
 			DaemonConnector: DaemonConnector{
@@ -113,8 +118,7 @@ func (h *CIDRHandler) CleanPreviousCIDR(config *rest.Config, defHandler *plugin.
 		h.Log.Info(fmt.Sprintf("Checking %d cidrs", len(cidrMap)))
 		for name, cidr := range cidrMap {
 			defName := cidr.Spec.Config.Name
-			defNamespace := cidr.Spec.Namespace
-			err := defHandler.Delete(defName, defNamespace)
+			err := defHandler.Delete(defName, metav1.NamespaceAll)
 			if err != nil {
 				// corresponding NetworkAttachmentDefinition does not exist, delete CIDR
 				h.DeleteCIDR(cidr)
@@ -235,18 +239,19 @@ func (h *CIDRHandler) NewCIDRWithNewConfig(def netcogadvisoriov1.PluginConfig, n
 	}
 
 	cidrSpec := netcogadvisoriov1.CIDRSpec{
-		Namespace: namespace,
-		Config:    def,
-		CIDRs:     entries,
+		Config: def,
+		CIDRs:  entries,
 	}
-	return h.UpdateCIDR(cidrSpec, namespace)
+	return h.UpdateCIDR(cidrSpec, true)
 }
 
 // UpdateCIDR computes host indexes and coresponding pod VLAN from host interface list
-func (h *CIDRHandler) UpdateCIDR(cidrSpec netcogadvisoriov1.CIDRSpec, defNamespace string) (bool, error) {
+func (h *CIDRHandler) UpdateCIDR(cidrSpec netcogadvisoriov1.CIDRSpec, new bool) (bool, error) {
 	h.Mutex.Lock()
+
 	def := cidrSpec.Config
 	entries := cidrSpec.CIDRs
+	h.Log.Info(fmt.Sprintf("Update CIDR %s", def.Name))
 
 	// sort and convert exclude object to string
 	excludes := compute.SortAddress(def.ExcludeCIDRs)
@@ -255,7 +260,7 @@ func (h *CIDRHandler) UpdateCIDR(cidrSpec netcogadvisoriov1.CIDRSpec, defNamespa
 		excludesInStr = append(excludesInStr, exclude.Address)
 	}
 
-	changed := false
+	changed := new
 
 	entriesMap := make(map[string]netcogadvisoriov1.CIDREntry)
 	for _, entry := range entries {
@@ -345,9 +350,8 @@ func (h *CIDRHandler) UpdateCIDR(cidrSpec netcogadvisoriov1.CIDRSpec, defNamespa
 		}
 
 		spec := netcogadvisoriov1.CIDRSpec{
-			Namespace: defNamespace,
-			Config:    def,
-			CIDRs:     newEntries,
+			Config: def,
+			CIDRs:  newEntries,
 		}
 		mapObj := &netcogadvisoriov1.CIDR{
 			ObjectMeta: metav1.ObjectMeta{
@@ -372,6 +376,8 @@ func (h *CIDRHandler) UpdateCIDR(cidrSpec netcogadvisoriov1.CIDRSpec, defNamespa
 			h.Mutex.Unlock()
 			return false, err
 		}
+		// initialize the MultiNicNetwork status
+		h.MultiNicNetworkHandler.UpdateStatus(*mapObj, netcogadvisoriov1.ApplyingRoute)
 
 		// update IPPools
 		for _, entry := range newEntries {
@@ -389,19 +395,26 @@ func (h *CIDRHandler) UpdateCIDR(cidrSpec netcogadvisoriov1.CIDRSpec, defNamespa
 }
 
 // SyncCIDRRoute try adding routes by CIDR
-func (h *CIDRHandler) SyncCIDRRoute(cidrSpec netcogadvisoriov1.CIDRSpec, forceDelete bool) bool {
+func (h *CIDRHandler) SyncCIDRRoute(cidrSpec netcogadvisoriov1.CIDRSpec, forceDelete bool) (status netcogadvisoriov1.RouteStatus) {
 	def := cidrSpec.Config
-	success := true
 	// try re-adding routes
 	if h.IsL3Mode(def) {
 		h.Mutex.Lock()
 		entries := cidrSpec.CIDRs
 		hostInterfaceInfoMap := h.GetHostInterfaceIndexMap(entries)
 		h.Log.Info(fmt.Sprintf("Sync routes from CIDR (force delete: %v)", forceDelete))
-		success = h.RouteHandler.AddRoutes(cidrSpec, entries, hostInterfaceInfoMap, forceDelete)
+		success, noConnection := h.RouteHandler.AddRoutes(cidrSpec, entries, hostInterfaceInfoMap, forceDelete)
 		h.Mutex.Unlock()
+		if noConnection {
+			return netcogadvisoriov1.RouteUnknown
+		}
+		if forceDelete && !success {
+			return netcogadvisoriov1.SomeRouteFailed
+		}
+		return netcogadvisoriov1.AllRouteApplied
+	} else {
+		return netcogadvisoriov1.RouteNoApplied
 	}
-	return success
 }
 
 // DeleteOldRoutes forcefully deletes old routes from CIDR

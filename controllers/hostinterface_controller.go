@@ -30,7 +30,7 @@ type HostInterfaceReconciler struct {
 	*DaemonWatcher
 }
 
-const HostInterfaceReconcileTime = time.Minute
+const HostInterfaceReconcileTime = time.Second
 const TestModelLabel = "test-mode"
 
 var HostInterfaceCache map[string]netcogadvisoriov1.HostInterface = make(map[string]netcogadvisoriov1.HostInterface)
@@ -55,6 +55,7 @@ func (r *HostInterfaceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		r.Log.Info(fmt.Sprintf("Requeue HostInterface %s: %v", req.Name, err))
 		return ctrl.Result{RequeueAfter: HostInterfaceReconcileTime}, nil
 	}
+	r.Log.Info(fmt.Sprintf("HostInterface reconciled: %s", instance.ObjectMeta.Name))
 	err = r.UpdateInterfaces(*instance)
 	if err != nil {
 		// deamon pod may be missing for a short time

@@ -6,8 +6,6 @@
 package controllers
 
 import (
-	"context"
-
 	"fmt"
 
 	. "github.com/onsi/ginkgo"
@@ -24,7 +22,7 @@ var _ = Describe("Test deploying MultiNicNetwork", func() {
 	cniArgs["mode"] = mode
 	cniArgs["mtu"] = fmt.Sprintf("%d", mtu)
 
-	multinicnetwork := getMultiNicCNINetwork(cniVersion, cniType, cniArgs)
+	multinicnetwork := getMultiNicCNINetwork("test-mn", cniVersion, cniType, cniArgs)
 
 	It("successfully create/delete network attachment definition", func() {
 		mainPlugin, annotations, err := multinicnetworkReconciler.GetMainPluginConf(multinicnetwork, hifList)
@@ -34,10 +32,4 @@ var _ = Describe("Test deploying MultiNicNetwork", func() {
 		err = multinicnetworkReconciler.NetAttachDefHandler.DeleteNets(multinicnetwork)
 		Expect(err).NotTo(HaveOccurred())
 	})
-
-	It("successfully deploy and delete", func() {
-		Expect(k8sClient.Create(context.TODO(), multinicnetwork)).Should(Succeed())
-		Expect(k8sClient.Delete(context.TODO(), multinicnetwork)).Should(Succeed())
-	})
-
 })
