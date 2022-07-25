@@ -30,7 +30,8 @@ const (
 	NETWORK_ANNOTATION         = "k8s.v1.cni.cncf.io/networks"
 	NETWORK_STATUS_ANNOTATION  = "k8s.v1.cni.cncf.io/network-status"
 
-	IPERF_IMAGE = "networkstatic/iperf3"
+	IPERF_IMAGE     = "networkstatic/iperf3"
+	MAX_NAME_LENGTH = 60
 )
 
 const (
@@ -54,8 +55,14 @@ func NewIperfHandler(config *rest.Config) *IperfHandler {
 	}
 	return handler
 }
+
 func (h *IperfHandler) getName(cidrName string, hostName string, labelValue string) string {
-	return fmt.Sprintf("%s-%s-%s", cidrName, hostName, labelValue)
+	name := fmt.Sprintf("%s-%s-%s", cidrName, hostName, labelValue)
+	lengthOver := len(name) - MAX_NAME_LENGTH
+	if lengthOver > 0 {
+		name = name[lengthOver : len(name)-1]
+	}
+	return name
 }
 
 func (h *IperfHandler) getLabelValue(cidrName string, labelValue string) string {

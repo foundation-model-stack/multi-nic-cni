@@ -30,7 +30,7 @@ var _ = Describe("Test GetConfig of main plugins", func() {
 		cniArgs["mode"] = mode
 		cniArgs["mtu"] = fmt.Sprintf("%d", mtu)
 
-		multinicnetwork := getMultiNicCNINetwork(cniVersion, cniType, cniArgs)
+		multinicnetwork := getMultiNicCNINetwork("test-ipvlanl2", cniVersion, cniType, cniArgs)
 
 		mainPlugin, _, err := ipvlanPlugin.GetConfig(*multinicnetwork, hifList)
 		Expect(err).NotTo(HaveOccurred())
@@ -59,7 +59,7 @@ var _ = Describe("Test GetConfig of main plugins", func() {
 		cniArgs["mode"] = mode
 		cniArgs["mtu"] = fmt.Sprintf("%d", mtu)
 
-		multinicnetwork := getMultiNicCNINetwork(cniVersion, cniType, cniArgs)
+		multinicnetwork := getMultiNicCNINetwork("test-macvlan", cniVersion, cniType, cniArgs)
 
 		mainPlugin, _, err := macvlanPlugin.GetConfig(*multinicnetwork, hifList)
 		Expect(err).NotTo(HaveOccurred())
@@ -87,7 +87,7 @@ var _ = Describe("Test GetConfig of main plugins", func() {
 		isRdma := true
 		cniArgs["numVfs"] = fmt.Sprintf("%d", numVfs)
 		cniArgs["isRdma"] = fmt.Sprintf("%v", isRdma)
-		multinicnetwork := getMultiNicCNINetwork(cniVersion, cniType, cniArgs)
+		multinicnetwork := getMultiNicCNINetwork("test-ipvlan", cniVersion, cniType, cniArgs)
 
 		_, annotations, err := sriovPlugin.GetConfig(*multinicnetwork, hifList)
 		Expect(err).NotTo(HaveOccurred())
@@ -123,7 +123,7 @@ var _ = Describe("Test GetConfig of main plugins", func() {
 		cniArgs["numVfs"] = fmt.Sprintf("%d", numVfs)
 		cniArgs["isRdma"] = fmt.Sprintf("%v", isRdma)
 		cniArgs["resourceName"] = resourceName
-		multinicnetwork := getMultiNicCNINetwork(cniVersion, cniType, cniArgs)
+		multinicnetwork := getMultiNicCNINetwork("test-sriov", cniVersion, cniType, cniArgs)
 
 		_, annotations, err := sriovPlugin.GetConfig(*multinicnetwork, hifList)
 		Expect(err).NotTo(HaveOccurred())

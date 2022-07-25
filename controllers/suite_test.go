@@ -116,7 +116,7 @@ var _ = BeforeSuite(func() {
 	defHandler.DaemonPort = DEFAULT_DAEMON_PORT
 
 	clientset, err := kubernetes.NewForConfig(cfg)
-	cidrHandler := NewCIDRHandler(mgr.GetClient(), cfg, cidrLog, hifLog, ippoolLog)
+	cidrHandler := NewCIDRHandler(mgr.GetClient(), cfg, cidrLog, hifLog, ippoolLog, networkLog)
 
 	pluginMap := GetPluginMap(cfg, networkLog)
 
@@ -309,11 +309,10 @@ func generateHostInterfaceList(nodes []v1.Node) map[string]netcogadvisoriov1.Hos
 }
 
 // getMultiNicCNINetwork returns MultiNicNetwork object
-func getMultiNicCNINetwork(cniVersion string, cniType string, cniArgs map[string]string) *netcogadvisoriov1.MultiNicNetwork {
+func getMultiNicCNINetwork(name string, cniVersion string, cniType string, cniArgs map[string]string) *netcogadvisoriov1.MultiNicNetwork {
 	return &netcogadvisoriov1.MultiNicNetwork{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test",
-			Namespace: "default",
+			Name: name,
 		},
 		Spec: netcogadvisoriov1.MultiNicNetworkSpec{
 			Subnet:         globalSubnet,
