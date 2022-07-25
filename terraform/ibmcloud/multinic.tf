@@ -1,8 +1,7 @@
 variable "vpc_name" {}
-variable "subnet_prefix" {}
 variable "subnet_count" {}
 variable "zone" {}
-variable "worker_names" {}
+variable "worker_names" { default = [] }
 variable "resource_group" {}
 variable "podnet" { default = "192.168.0.0/16" }
 variable "daemonport" { default = 11000 }
@@ -27,8 +26,13 @@ data "ibm_is_vpc" "vpc" {
   name = var.vpc_name
 }
 
+data "ibm_resource_group" "rg" {
+  name = var.resource_group
+}
+
 resource "ibm_is_security_group" "sg" {
-  name = "${var.subnet_prefix}-${var.zone}-sg-for-multi-nic-cni"
+  resource_group = data.ibm_resource_group.rg.id
+  name = "${var.vpc_name}-${var.zone}-sg-for-multi-nic-cni"
   vpc  = data.ibm_is_vpc.vpc.id
 }
 
@@ -61,14 +65,10 @@ data "ibm_is_instance" "workers" {
   name = var.worker_names[count.index]
 }
 
-data "ibm_resource_group" "rg" {
-  name = var.resource_group
-}
-
 # create new subnets
 resource "ibm_is_subnet" "subnets" {
   count = var.subnet_count
-  name = "${var.subnet_prefix}-${var.zone}-s${count.index}"
+  name = "${var.vpc_name}-${var.zone}-s${count.index}"
   vpc  = data.ibm_is_vpc.vpc.id
   zone = var.zone
   total_ipv4_address_count = 256

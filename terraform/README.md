@@ -6,19 +6,23 @@ This terraform will
 - attach created subnets to vsi listed in `worker_names`.
 #### Steps
 1. Install terraform version `>= 0.1.3`
-2. Modify `terraform.tfvars.template`, then copy to `.tfvars` file
+2. Move to provider folder. For example,
+   ```bash
+   cd ibmcloud
+   ```
+3. Modify `terraform.tfvars.template`, then copy to `.tfvars` file
     ```bash
     cp terraform.tfvars.template terraform.tfvars
     ```
-3. Init terraform 
+4. Init terraform 
     ```bash
     terraform init
     ```
-4. Initailly apply with required target (subnets)
+5. Initailly apply with required target (subnets)
     ```bash
     terraform apply -var-file=terraform.tfvars -target="ibm_is_subnet.subnets"
     ```
-5. Apply all targets
+6. Apply all targets
     ```bash
     terraform apply -var-file=terraform.tfvars
     ```

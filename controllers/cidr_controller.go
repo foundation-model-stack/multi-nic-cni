@@ -37,22 +37,25 @@ type CIDRReconciler struct {
 const CIDRReconcileTime = time.Minute
 const cidrFinalizer = "finalizers.cidr.net.cogadvisor.io"
 
+var CIDRCache map[string]netcogadvisoriov1.CIDRSpec = make(map[string]netcogadvisoriov1.CIDRSpec)
+
 func (r *CIDRReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = r.Log.WithValues("cidr", req.NamespacedName)
-
+	cidrName := req.Name
 	instance := &netcogadvisoriov1.CIDR{}
 	err := r.Client.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
 			// Return and don't requeue
-			r.Log.Info(fmt.Sprintf("CIDR %s deleted ", instance.GetName()))
+			r.Log.Info(fmt.Sprintf("CIDR %s deleted ", cidrName))
+			delete(CIDRCache, cidrName)
 			return ctrl.Result{}, nil
 		}
-		r.Log.Info(fmt.Sprintf("Cannot get #%v ", err))
+		r.Log.Info(fmt.Sprintf("Requeue CIDR %s: %v", cidrName, err))
 		// Error reading the object - requeue the request.
 		// ReconcileTime is defined in config_controller
-		return ctrl.Result{RequeueAfter: ReconcileTime}, nil
+		return ctrl.Result{RequeueAfter: CIDRReconcileTime}, nil
 	}
 
 	// Add finalizer to instance
@@ -81,9 +84,16 @@ func (r *CIDRReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, nil
 	}
 
-	// Otherwise, update CIDR
-	r.CIDRHandler.UpdateCIDR(instance.Spec, instance.Spec.Namespace)
-	return ctrl.Result{RequeueAfter: CIDRReconcileTime}, nil
+	// sync route from CIDR
+	success := r.CIDRHandler.SyncCIDRRoute(instance.Spec, true)
+	if !success {
+		// if some routes are not properly updated, retry
+		r.Log.Info(fmt.Sprintf("Requeue CIDR %s, some routes cannot be updated.", cidrName))
+		return ctrl.Result{RequeueAfter: CIDRReconcileTime}, nil
+	}
+	r.Log.Info(fmt.Sprintf("All routes updated for CIDR %s", cidrName))
+	CIDRCache[cidrName] = *instance.Spec.DeepCopy()
+	return ctrl.Result{}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

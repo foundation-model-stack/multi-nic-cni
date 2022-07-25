@@ -16,7 +16,6 @@ import (
 	"github.com/foundation-model-stack/multi-nic-cni/compute"
 	"github.com/foundation-model-stack/multi-nic-cni/plugin"
 	"github.com/go-logr/logr"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
@@ -130,9 +129,6 @@ func (h *CIDRHandler) CleanPreviousCIDR(config *rest.Config, defHandler *plugin.
 			defName := ippool.Spec.NetAttachDefName
 			_, err := h.GetCIDR(defName)
 			if err != nil {
-				// delete corrsponding routes
-				daemonMap, _ := h.RouteHandler.GetDaemonHostMap()
-				h.DeleteRouteFromIPPool(daemonMap, ippool.Spec)
 				// corresponding CIDR does not exist, delete CIDR
 				h.DeleteIPPool(defName, ippool.Spec.PodCIDR)
 			}
@@ -165,51 +161,10 @@ func (h *CIDRHandler) DeleteCIDR(cidr netcogadvisoriov1.CIDR) error {
 	return fmt.Errorf("%s", errorMsg)
 }
 
-// DeleteRouteFromIPPool deletes routes according to IPPool by calling daemon process via DaemonConnector
-func (h *CIDRHandler) DeleteRouteFromIPPool(daemonMap map[string]corev1.Pod, ippool netcogadvisoriov1.IPPoolSpec) {
-	srcIface := ippool.InterfaceName
-	srcHostInterface, err := h.HostInterfaceHandler.GetHostInterface(ippool.HostName)
-	if err == nil {
-		net := ippool.PodCIDR
-		ifaceNetAddress := ""
-		for _, iface := range srcHostInterface.Spec.Interfaces {
-			if iface.InterfaceName == srcIface {
-				ifaceNetAddress = iface.NetAddress
-				break
-			}
-		}
-		if ifaceNetAddress != "" {
-			hifList, _ := h.HostInterfaceHandler.ListHostInterface()
-			for neighHostName, neighHostInterface := range hifList {
-				for _, iface := range neighHostInterface.Spec.Interfaces {
-					if iface.NetAddress == ifaceNetAddress {
-						ifaceName := iface.InterfaceName
-						via := iface.HostIP
-						neighPod := daemonMap[neighHostName]
-						res, err := h.RouteHandler.DeleteRoute(neighPod, net, via, ifaceName)
-						if err == nil && res.Success {
-							h.Log.Info(fmt.Sprintf("Delete routes %s from %s", net, neighHostName))
-						} else {
-							h.Log.Info(fmt.Sprintf("Cannot delete route %s from %s: %v, %v", net, neighHostName, res, err))
-						}
-						break
-					}
-				}
-			}
-		} else {
-			h.Log.Info(fmt.Sprintf("Cannot get source network address: %s", net))
-		}
-	} else {
-		h.Log.Info(fmt.Sprintf("Cannot get source hif: %v", err))
-	}
-}
-
 // deleteRoutesFromCIDR deletes routes from CIDR
 func (h *CIDRHandler) deleteRoutesFromCIDR(cidrInfo netcogadvisoriov1.CIDRSpec) {
 	if h.IsL3Mode(cidrInfo.Config) {
-		hostInterfaceInfoMap := h.GetHostInterfaceIndexMap(cidrInfo.CIDRs)
-		failMap := h.RouteHandler.DeleteRoutes(cidrInfo.CIDRs, hostInterfaceInfoMap)
-		h.Log.Info(fmt.Sprintf("Delete CIDR %s; delete fail map: %v", cidrInfo.Config.Name, failMap))
+		h.RouteHandler.DeleteRoutes(cidrInfo)
 	}
 }
 
@@ -300,19 +255,28 @@ func (h *CIDRHandler) UpdateCIDR(cidrSpec netcogadvisoriov1.CIDRSpec, defNamespa
 		excludesInStr = append(excludesInStr, exclude.Address)
 	}
 
+	changed := false
+
 	entriesMap := make(map[string]netcogadvisoriov1.CIDREntry)
 	for _, entry := range entries {
+		var newHostList []netcogadvisoriov1.HostInterfaceInfo
+		for _, host := range entry.Hosts {
+			if _, exists := HostInterfaceCache[host.HostName]; exists {
+				newHostList = append(newHostList, host)
+			} else {
+				// host not exist anymore
+				changed = true
+			}
+		}
+		entry.Hosts = newHostList
 		entriesMap[entry.NetAddress] = entry
 	}
 
 	// maxHostIndex = 2^(host bits) - 1
 	maxHostIndex := int(math.Pow(2, float64(def.HostBlock)) - 1)
 
-	changed := false
-
 	// compute host indexes over host interface list
-	hifList, _ := h.HostInterfaceHandler.ListHostInterface()
-	for _, hif := range hifList {
+	for _, hif := range HostInterfaceCache {
 		hostName := hif.Spec.HostName
 		ifaces := hif.Spec.Interfaces
 
@@ -373,8 +337,6 @@ func (h *CIDRHandler) UpdateCIDR(cidrSpec netcogadvisoriov1.CIDRSpec, defNamespa
 		}
 	}
 
-	routeChange := false
-
 	// if pod CIDR changes, update CIDR and create corresponding IPPools and routes
 	if changed {
 		newEntries := []netcogadvisoriov1.CIDREntry{}
@@ -414,36 +376,44 @@ func (h *CIDRHandler) UpdateCIDR(cidrSpec netcogadvisoriov1.CIDRSpec, defNamespa
 		// update IPPools
 		for _, entry := range newEntries {
 			for _, host := range entry.Hosts {
-				err = h.IPPoolHandler.UpdateIPPool(def.Name, host.PodCIDR, entry.VlanCIDR, host.HostName, host.InterfaceName, excludes)
+				err = h.IPPoolHandler.UpdateIPPool(cidrSpec.Config.Name, host.PodCIDR, entry.VlanCIDR, host.HostName, host.InterfaceName, excludes)
 				if err != nil {
 					h.Log.Info(fmt.Sprintf("Cannot update IPPools for host %s: error=%v", host.HostName, err))
 				}
 			}
 		}
-
-		// add routes
-
-		if h.IsL3Mode(def) {
-			hostInterfaceInfoMap := h.GetHostInterfaceIndexMap(newEntries)
-			routeChange, _ = h.RouteHandler.AddRoutes(newEntries, hostInterfaceInfoMap, false)
-		}
-
-		h.Mutex.Unlock()
-		return routeChange, err
-	}
-
-	// try re-adding routes
-	if h.IsL3Mode(def) {
-		hostInterfaceInfoMap := h.GetHostInterfaceIndexMap(entries)
-		routeChange, _ = h.RouteHandler.AddRoutes(entries, hostInterfaceInfoMap, true)
+		h.Log.Info(fmt.Sprintf("CIDR %s changed", def.Name))
 	}
 	h.Mutex.Unlock()
-	return routeChange, nil
+	return changed, nil
 }
 
-// cleanPendingIPPools clean ippools adn routes in case that cidr is updated with new subnet entry
+// SyncCIDRRoute try adding routes by CIDR
+func (h *CIDRHandler) SyncCIDRRoute(cidrSpec netcogadvisoriov1.CIDRSpec, forceDelete bool) bool {
+	def := cidrSpec.Config
+	success := true
+	// try re-adding routes
+	if h.IsL3Mode(def) {
+		h.Mutex.Lock()
+		entries := cidrSpec.CIDRs
+		hostInterfaceInfoMap := h.GetHostInterfaceIndexMap(entries)
+		h.Log.Info(fmt.Sprintf("Sync routes from CIDR (force delete: %v)", forceDelete))
+		success = h.RouteHandler.AddRoutes(cidrSpec, entries, hostInterfaceInfoMap, forceDelete)
+		h.Mutex.Unlock()
+	}
+	return success
+}
+
+// DeleteOldRoutes forcefully deletes old routes from CIDR
+func (h *CIDRHandler) DeleteOldRoutes(cidrSpec netcogadvisoriov1.CIDRSpec) {
+	def := cidrSpec.Config
+	if h.IsL3Mode(def) {
+		h.RouteHandler.DeleteRoutes(cidrSpec)
+	}
+}
+
+// cleanPendingIPPools clean ippools in case that cidr is updated with new subnet entry
 func (h *CIDRHandler) cleanPendingIPPools(defName string, oldCIDR *netcogadvisoriov1.CIDR, newCIDR *netcogadvisoriov1.CIDR) {
-	daemonMap, _ := h.RouteHandler.GetDaemonHostMap()
 	newPoolMap := make(map[string]bool)
 
 	for _, entry := range newCIDR.Spec.CIDRs {
@@ -458,10 +428,6 @@ func (h *CIDRHandler) cleanPendingIPPools(defName string, oldCIDR *netcogadvisor
 			if _, exist := newPoolMap[ippoolName]; !exist {
 				ippool, err := h.IPPoolHandler.GetIPPool(ippoolName)
 				if err == nil {
-					// found
-					if h.IsL3Mode(oldCIDR.Spec.Config) {
-						h.DeleteRouteFromIPPool(daemonMap, ippool.Spec)
-					}
 					// corresponding CIDR does not exist, delete CIDR
 					h.DeleteIPPool(defName, ippool.Spec.PodCIDR)
 				}

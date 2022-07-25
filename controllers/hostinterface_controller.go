@@ -17,6 +17,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	netcogadvisoriov1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
+
+	"k8s.io/apimachinery/pkg/api/errors"
 )
 
 // HostInterfaceReconciler reconciles a HostInterface object
@@ -29,6 +31,9 @@ type HostInterfaceReconciler struct {
 }
 
 const HostInterfaceReconcileTime = time.Minute
+const TestModelLabel = "test-mode"
+
+var HostInterfaceCache map[string]netcogadvisoriov1.HostInterface = make(map[string]netcogadvisoriov1.HostInterface)
 
 //+kubebuilder:rbac:groups=net.cogadvisor.io,resources=hostinterfaces,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=net.cogadvisor.io,resources=hostinterfaces/status,verbs=get;update;patch
@@ -38,19 +43,25 @@ func (r *HostInterfaceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	_ = r.Log.WithValues("hostinterface", req.NamespacedName)
 	instance := &netcogadvisoriov1.HostInterface{}
 	err := r.Client.Get(ctx, req.NamespacedName, instance)
-	if err != nil || instance.GetDeletionTimestamp() != nil {
-		// deleted, re-process daemon pods (recreate HostInterface if the daemon pod still exists)
-		r.DaemonWatcher.UpdateCurrentList()
-		r.DaemonWatcher.UpdateCIDRs()
-		return ctrl.Result{}, nil
-	}
-	err = r.updateInterfaces(instance)
 	if err != nil {
-		// deamon pod may be missing for a short time
-		r.Log.Info(fmt.Sprintf("cannot update interfaces: %v", err))
+		if errors.IsNotFound(err) {
+			// deleted, re-process daemon pods (recreate HostInterface if the daemon pod still exists)
+			r.DaemonWatcher.UpdateCurrentList()
+			r.DaemonWatcher.UpdateCIDRs()
+			delete(HostInterfaceCache, req.Name)
+			return ctrl.Result{}, nil
+		}
+		// error by other reasons, requeue
+		r.Log.Info(fmt.Sprintf("Requeue HostInterface %s: %v", req.Name, err))
 		return ctrl.Result{RequeueAfter: HostInterfaceReconcileTime}, nil
 	}
-	return ctrl.Result{RequeueAfter: HostInterfaceReconcileTime}, nil
+	err = r.UpdateInterfaces(*instance)
+	if err != nil {
+		// deamon pod may be missing for a short time
+		r.Log.Info(fmt.Sprintf("Requeue HostInterface %s, cannot update interfaces: %v", instance.ObjectMeta.Name, err))
+		return ctrl.Result{RequeueAfter: HostInterfaceReconcileTime}, nil
+	}
+	return ctrl.Result{}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -60,32 +71,45 @@ func (r *HostInterfaceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *HostInterfaceReconciler) updateInterfaces(instance *netcogadvisoriov1.HostInterface) error {
+func (r *HostInterfaceReconciler) UpdateInterfaces(instance netcogadvisoriov1.HostInterface) error {
 	nodeName := instance.Spec.HostName
-	labels := fmt.Sprintf("%s=%s", HOST_INTERFACE_LABEL, nodeName)
-	listOptions := metav1.ListOptions{
-		LabelSelector: labels,
-	}
-	podList, _ := r.DaemonWatcher.Clientset.CoreV1().Pods(DAEMON_NAMESPACE).List(context.TODO(), listOptions)
-	for _, pod := range podList.Items {
-		interfaces, err := r.DaemonWatcher.DaemonConnector.GetInterfaces(pod)
+	hifName := instance.GetName()
+
+	if pod, ok := DaemonCache[nodeName]; ok {
+		podAddress := GetDaemonAddressByPod(pod)
+		interfaces, err := r.DaemonWatcher.DaemonConnector.GetInterfaces(podAddress)
 		if err != nil {
 			return err
 		}
-		if r.interfaceChanged(instance.Spec.Interfaces, interfaces) {
+		_, found := HostInterfaceCache[hifName]
+		if !found {
+			HostInterfaceCache[hifName] = *instance.DeepCopy()
+			r.DaemonWatcher.UpdateCIDRs()
+		} else if r.interfaceChanged(instance.Spec.Interfaces, interfaces) {
 			r.DaemonWatcher.IpamJoin(pod)
-			err = r.DaemonWatcher.HostInterfaceHandler.UpdateHostInterface(*instance, interfaces)
+			updatedHif, err := r.DaemonWatcher.HostInterfaceHandler.UpdateHostInterface(instance, interfaces)
 			if err != nil {
 				return err
 			}
 			r.Log.Info(fmt.Sprintf("%s's interfaces updated", nodeName))
+			HostInterfaceCache[hifName] = *updatedHif.DeepCopy()
 			r.DaemonWatcher.UpdateCIDRs()
-			return nil
-		} else {
-			return nil
 		}
+		return nil
 	}
-	return fmt.Errorf("no daemon pod found for %s", nodeName)
+	if _, ok := instance.Labels[TestModelLabel]; ok {
+		r.Log.Info(fmt.Sprintf("%s on test mode", nodeName))
+		return nil
+	}
+	_, err := r.DaemonWatcher.Clientset.CoreV1().Nodes().Get(context.TODO(), nodeName, metav1.GetOptions{})
+	if err != nil {
+		// not found node
+		r.HostInterfaceHandler.DeleteHostInterface(nodeName)
+		r.Log.Info(fmt.Sprintf("Delete Hostinterface %s: node no more exists", nodeName))
+		return nil
+	} else {
+		return fmt.Errorf("no daemon pod found for %s", nodeName)
+	}
 }
 
 func (r *HostInterfaceReconciler) interfaceChanged(olds []netcogadvisoriov1.InterfaceInfoType, news []netcogadvisoriov1.InterfaceInfoType) bool {

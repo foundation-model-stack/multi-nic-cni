@@ -8,7 +8,6 @@ resource_group = <RESOURCE_GROUP>
 region       = "us-south"
 zone         = "us-south-1"
 
-subnet_prefix = "self-managed-ocp"
 subnet_count = "2"
 
 worker_names = [ <WORKER_NAME_LIST> ]

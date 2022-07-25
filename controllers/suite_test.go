@@ -43,7 +43,8 @@ var cfg *rest.Config
 var k8sClient client.Client
 var testEnv *envtest.Environment
 var setupLog = ctrl.Log.WithName("setup")
-var hifList map[string]netcogadvisoriov1.HostInterface = generateHostInterfaceList()
+var nodes []v1.Node = generateNodes()
+var hifList map[string]netcogadvisoriov1.HostInterface = generateHostInterfaceList(nodes)
 
 var ipvlanPlugin *plugin.IPVLANPlugin
 var macvlanPlugin *plugin.MACVLANPlugin
@@ -224,6 +225,7 @@ var _ = BeforeSuite(func() {
 	// Deploy host interface
 	for _, hif := range hifList {
 		Expect(k8sClient.Create(context.TODO(), &hif)).Should(Succeed())
+		HostInterfaceCache[hif.Spec.HostName] = hif
 	}
 	// Deploy sriov dependency
 
@@ -255,16 +257,31 @@ var _ = AfterSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 })
 
-// generateHostInterfaceList generates stub host and interfaces
-func generateHostInterfaceList() map[string]netcogadvisoriov1.HostInterface {
+func generateNodes() []v1.Node {
+	nodes := []v1.Node{}
 	hostNamePrefix := "worker-"
+	hostNum := 5
+
+	for i := 0; i < hostNum; i++ {
+		hostName := fmt.Sprintf("%s%d", hostNamePrefix, i)
+		node := v1.Node{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: hostName,
+			},
+		}
+		nodes = append(nodes, node)
+	}
+	return nodes
+}
+
+// generateHostInterfaceList generates stub host and interfaces
+func generateHostInterfaceList(nodes []v1.Node) map[string]netcogadvisoriov1.HostInterface {
 	interfaceNames := []string{"eth1", "eth2"}
 	networkPrefixes := []string{"10.242.0.", "10.242.1."}
 
-	hostNum := 5
 	hifList := make(map[string]netcogadvisoriov1.HostInterface)
-	for i := 0; i < hostNum; i++ {
-		hostName := fmt.Sprintf("%s%d", hostNamePrefix, i)
+	for i, node := range nodes {
+		hostName := node.GetName()
 		ifaces := []netcogadvisoriov1.InterfaceInfoType{}
 		for index, ifaceName := range interfaceNames {
 			iface := netcogadvisoriov1.InterfaceInfoType{
@@ -277,6 +294,9 @@ func generateHostInterfaceList() map[string]netcogadvisoriov1.HostInterface {
 		hif := netcogadvisoriov1.HostInterface{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: hostName,
+				Labels: map[string]string{
+					TestModelLabel: "true",
+				},
 			},
 			Spec: netcogadvisoriov1.HostInterfaceSpec{
 				HostName:   hostName,

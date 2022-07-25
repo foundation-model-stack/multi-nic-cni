@@ -42,6 +42,9 @@ const (
 	ADD_ROUTE_PATH    = "/addroute"
 	DELETE_ROUTE_PATH = "/deleteroute"
 
+	ADD_L3CONFIG_PATH = "/addl3"
+	DELETE_L3CONFIG_PATH = "/deletel3"
+
 	ALLOCATE_PATH   = "/allocate"
 	DEALLOCATE_PATH = "/deallocate"
 
@@ -57,6 +60,8 @@ func handleRequests() *mux.Router {
 	router.HandleFunc(INTERFACE_PATH, GetInterface)
 	router.HandleFunc(ADD_ROUTE_PATH, AddRoute).Methods("POST")
 	router.HandleFunc(DELETE_ROUTE_PATH, DeleteRoute).Methods("POST")
+	router.HandleFunc(ADD_L3CONFIG_PATH, ApplyL3Config).Methods("POST")
+	router.HandleFunc(DELETE_L3CONFIG_PATH, DeleteL3Config).Methods("POST")
 	router.HandleFunc(NIC_SELECT_PATH, SelectNic).Methods("POST")
 	router.HandleFunc(ALLOCATE_PATH, Allocate).Methods("POST")
 	router.HandleFunc(DEALLOCATE_PATH, Deallocate).Methods("POST")
@@ -139,6 +144,16 @@ func GetInterface(w http.ResponseWriter, r *http.Request) {
 
 func AddRoute(w http.ResponseWriter, r *http.Request) {
 	response := dr.AddRoute(r)
+	json.NewEncoder(w).Encode(response)
+}
+
+func ApplyL3Config(w http.ResponseWriter, r *http.Request) {
+	response := dr.ApplyL3Config(r)
+	json.NewEncoder(w).Encode(response)
+}
+
+func DeleteL3Config(w http.ResponseWriter, r *http.Request) {
+	response := dr.DeleteL3Config(r)
 	json.NewEncoder(w).Encode(response)
 }
 
@@ -232,6 +247,7 @@ func main() {
 			DAEMON_PORT = setDaemonPortInt
 		}
 	}
+	dr.SetRTTablePath()
 	
 	da.CleanHangingAllocation(hostName)
 	router := handleRequests()

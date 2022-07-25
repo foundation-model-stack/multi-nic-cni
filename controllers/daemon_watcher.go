@@ -30,10 +30,10 @@ const (
 	DEFAULT_DAEMON_NAMESPACE   = "multi-nic-cni"
 	DEFAULT_DAEMON_LABEL_NAME  = "app"
 	DEFAULT_DAEMON_LABEL_VALUE = "multi-nicd"
-
-	HOST_INTERFACE_LABEL = "hostinterface-nodename"
-	JOIN_LABEL_NAME      = "multi-nicd-join"
+	JOIN_LABEL_NAME            = "multi-nicd-join"
 )
+
+var DaemonCache map[string]v1.Pod = make(map[string]v1.Pod)
 
 // DaemonWatcher watches daemon pods and updates HostInterface and CIDR
 type DaemonWatcher struct {
@@ -41,6 +41,7 @@ type DaemonWatcher struct {
 	PodQueue chan *v1.Pod
 	Quit     chan struct{}
 	Log      logr.Logger
+
 	*HostInterfaceHandler
 	*CIDRHandler
 	DaemonConnector
@@ -116,7 +117,9 @@ func (w *DaemonWatcher) UpdateCurrentList() error {
 		return err
 	}
 	for _, existingDaemon := range initialList.Items {
-		w.PodQueue <- existingDaemon.DeepCopy()
+		if existingDaemon.Status.PodIP != "" {
+			w.PodQueue <- existingDaemon.DeepCopy()
+		}
 	}
 	return nil
 }
@@ -133,26 +136,23 @@ func (w *DaemonWatcher) Run() {
 //                 updates CIDR according to the change
 func (w *DaemonWatcher) ProcessPodQueue() {
 	daemon := <-w.PodQueue
-	_, err := w.Clientset.CoreV1().Pods(DAEMON_NAMESPACE).Get(context.TODO(), daemon.ObjectMeta.Name, metav1.GetOptions{})
-	if err == nil {
+	if daemon != nil {
+		nodeName := daemon.Spec.NodeName
 		if daemon.GetDeletionTimestamp() == nil {
-			w.Log.Info(fmt.Sprintf("Daemon pod %s update", daemon.GetName()))
-
-			nodeName := daemon.Spec.NodeName
-			err = w.addLabel(*daemon, HOST_INTERFACE_LABEL, nodeName)
-			if err != nil {
-				w.Log.Info(fmt.Sprintf("Fail to add label to %s: %v", daemon.GetName(), err))
-			}
+			w.Log.Info(fmt.Sprintf("Daemon pod %s for %s update", daemon.GetName(), nodeName))
+			// set daemon
+			DaemonCache[nodeName] = *daemon.DeepCopy()
 
 			// not terminating, update HostInterface
-			err = w.createHostInterfaceInfo(*daemon)
+			err := w.createHostInterfaceInfo(*daemon)
 			if err != nil {
 				w.Log.Info(fmt.Sprintf("Fail to create hostinterface %s: %v", daemon.GetName(), err))
+
 			}
-		}
-	} else {
-		if errors.IsNotFound(err) {
-			// not found, delete HostInterface
+		} else {
+			w.Log.Info(fmt.Sprintf("Daemon pod for %s deleted", nodeName))
+			// deleted, delete HostInterface
+			delete(DaemonCache, nodeName)
 			w.HostInterfaceHandler.DeleteHostInterface(daemon.Spec.NodeName)
 		}
 	}
@@ -175,9 +175,8 @@ func (w *DaemonWatcher) IpamJoin(daemon v1.Pod) error {
 		// ip hasn't been assigned yet
 		return nil
 	}
-	hifMap, err := w.HostInterfaceHandler.ListHostInterface()
 	var hifs []netcogadvisoriov1.InterfaceInfoType
-	for _, hif := range hifMap {
+	for _, hif := range HostInterfaceCache {
 		if hif.Spec.HostName == daemon.Status.PodIP {
 			continue
 		}
@@ -192,8 +191,9 @@ func (w *DaemonWatcher) IpamJoin(daemon v1.Pod) error {
 			return nil
 		}
 	}
+	podAddress := GetDaemonAddressByPod(daemon)
 	w.Log.Info(fmt.Sprintf("Join %s with %d hifs", daemon.Status.PodIP, hifLen))
-	err = w.DaemonConnector.Join(daemon, hifs)
+	err := w.DaemonConnector.Join(podAddress, hifs)
 	if err != nil {
 		return err
 	}
@@ -206,7 +206,8 @@ func (w *DaemonWatcher) IpamJoin(daemon v1.Pod) error {
 
 // updateHostInterfaceInfo creates if HostInterface is not exists and calls ipamJoin
 func (w *DaemonWatcher) createHostInterfaceInfo(daemon v1.Pod) error {
-	interfaces, connectErr := w.DaemonConnector.GetInterfaces(daemon)
+	podAddress := GetDaemonAddressByPod(daemon)
+	interfaces, connectErr := w.DaemonConnector.GetInterfaces(podAddress)
 	_, hifFoundErr := w.HostInterfaceHandler.GetHostInterface(daemon.Spec.NodeName)
 	if hifFoundErr != nil && errors.IsNotFound(hifFoundErr) {
 		// not exists, create new HostInterface
@@ -240,11 +241,8 @@ func (w *DaemonWatcher) UpdateCIDRs() {
 	}
 	// call greeting if route changed
 	if routeChange {
-		podMap, err := w.DaemonConnector.GetDaemonHostMap()
-		if err != nil {
-			for _, daemon := range podMap {
-				w.IpamJoin(daemon)
-			}
+		for _, daemon := range DaemonCache {
+			w.IpamJoin(daemon)
 		}
 	}
 }

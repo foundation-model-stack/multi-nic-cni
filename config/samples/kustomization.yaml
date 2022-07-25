@@ -11,4 +11,6 @@ kind: Kustomization
 images:
 - name: multi-nic-cni-daemon
   newName: res-cpe-team-docker-local.artifactory.swg-devops.com/net/multi-nic-cni-daemon
-  newTag: v1.0.0-alpha
+  newTag: v1.0.1-alpha
+patches:
+- path: patches/image_pull_secret.yaml

@@ -6,7 +6,6 @@
 package controllers
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -18,7 +17,6 @@ import (
 
 	netcogadvisoriov1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
 	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -48,6 +46,14 @@ type DaemonConnector struct {
 	*kubernetes.Clientset
 }
 
+// L3 Configuration defines request of l3 route configuration
+type L3ConfigRequest struct {
+	Name   string      `json:"name"`
+	Subnet string      `json:"subnet"`
+	Routes []HostRoute `json:"routes"`
+	Force  bool        `json:"force"`
+}
+
 // HostRoute defines a route
 type HostRoute struct {
 	Subnet        string `json:"net"`
@@ -67,12 +73,11 @@ type IPAMInfo struct {
 }
 
 // GetInterfaces returns HostInterface of specific host
-func (dc DaemonConnector) GetInterfaces(daemon v1.Pod) ([]netcogadvisoriov1.InterfaceInfoType, error) {
+func (dc DaemonConnector) GetInterfaces(podAddress string) ([]netcogadvisoriov1.InterfaceInfoType, error) {
 	var interfaces []netcogadvisoriov1.InterfaceInfoType
-
-	address := GetDaemonAddressByPod(daemon)
+	address := podAddress + INTERFACE_PATH
 	// try connect and get interface from daemon pod
-	res, err := http.Get(address + INTERFACE_PATH)
+	res, err := http.Get(address)
 	if err != nil {
 		return []netcogadvisoriov1.InterfaceInfoType{}, err
 	}
@@ -86,8 +91,8 @@ func (dc DaemonConnector) GetInterfaces(daemon v1.Pod) ([]netcogadvisoriov1.Inte
 }
 
 // Join notifies new daemon to get knowing the existing daemons on the other hosts
-func (dc DaemonConnector) Join(daemon v1.Pod, hifs []netcogadvisoriov1.InterfaceInfoType) error {
-	address := GetDaemonAddressByPod(daemon) + REGISTER_IPAM_PATH
+func (dc DaemonConnector) Join(podAddress string, hifs []netcogadvisoriov1.InterfaceInfoType) error {
+	address := podAddress + REGISTER_IPAM_PATH
 
 	ipamInfo := IPAMInfo{
 		HIFList: hifs,
@@ -118,27 +123,28 @@ func (dc DaemonConnector) Join(daemon v1.Pod, hifs []netcogadvisoriov1.Interface
 }
 
 // AddRoute sends a request to add a new route to specific host
-func (dc DaemonConnector) AddRoute(daemon v1.Pod, net string, via string, iface string) (RouteUpdateResponse, error) {
-	return dc.putRouteRequest(daemon, ADD_ROUTE_PATH, net, via, iface)
+func (dc DaemonConnector) ApplyL3Config(podAddress string, cidrName string, subnet string, routes []HostRoute, forceDelete bool) (RouteUpdateResponse, error) {
+	return dc.putRouteRequest(podAddress, ADD_ROUTE_PATH, cidrName, subnet, routes, forceDelete)
 }
 
 // DeleteRoute sends a request to delete the route from specific host
-func (dc DaemonConnector) DeleteRoute(daemon v1.Pod, net string, via string, iface string) (RouteUpdateResponse, error) {
-	return dc.putRouteRequest(daemon, DELETE_ROUTE_PATH, net, via, iface)
+func (dc DaemonConnector) DeleteL3Config(podAddress string, cidrName string, subnet string) (RouteUpdateResponse, error) {
+	return dc.putRouteRequest(podAddress, DELETE_ROUTE_PATH, cidrName, subnet, []HostRoute{}, false)
 }
 
 // putRouteRequest sends a route adding/deleting request to specific host
-func (dc DaemonConnector) putRouteRequest(daemon v1.Pod, path string, net string, via string, iface string) (RouteUpdateResponse, error) {
-	address := GetDaemonAddressByPod(daemon) + path
+func (dc DaemonConnector) putRouteRequest(podAddress string, path string, cidrName string, subnet string, routes []HostRoute, forceDelete bool) (RouteUpdateResponse, error) {
+	address := podAddress + path
 	var response RouteUpdateResponse
 
-	hostRoute := HostRoute{
-		Subnet:        net,
-		NextHop:       via,
-		InterfaceName: iface,
+	requestL3Config := L3ConfigRequest{
+		Name:   cidrName,
+		Subnet: subnet,
+		Routes: routes,
+		Force:  forceDelete,
 	}
 
-	jsonReq, err := json.Marshal(hostRoute)
+	jsonReq, err := json.Marshal(requestL3Config)
 
 	if err != nil {
 		return response, err
@@ -158,63 +164,4 @@ func (dc DaemonConnector) putRouteRequest(daemon v1.Pod, path string, net string
 		err = json.Unmarshal(body, &response)
 		return response, err
 	}
-}
-
-// GetDaemonHostMap finds a map from host name to daemon pod
-//                  uses clientset to get pods in DAEMON_NAMESPACE
-//                       that are labeled with DAEMON_LABEL_NAME=DAEMON_LABEL_VALUE
-func (dc DaemonConnector) GetDaemonHostMap() (map[string]v1.Pod, error) {
-	podMap := make(map[string]v1.Pod)
-	// get host IP -> host name
-	nodeIPMap, err := dc.getHostNameIPMap()
-	if err != nil {
-		return podMap, err
-	}
-
-	// list daemon pods labeled with DAEMON_LABEL_NAME=DAEMON_LABEL_VALUE
-	labels := fmt.Sprintf("%s=%s", DAEMON_LABEL_NAME, DAEMON_LABEL_VALUE)
-	listOptions := metav1.ListOptions{
-		LabelSelector: labels,
-	}
-	daemonList, err := dc.Clientset.CoreV1().Pods(DAEMON_NAMESPACE).List(context.TODO(), listOptions)
-	if err != nil {
-		return podMap, err
-	}
-
-	for _, daemon := range daemonList.Items {
-		hostIP := daemon.Status.HostIP
-		// map from host IP to host name
-		if hostName, exists := nodeIPMap[hostIP]; exists {
-			// put map of host name to daemon pod
-			podMap[hostName] = daemon
-		} else {
-			return podMap, fmt.Errorf("NodeNotFound")
-		}
-	}
-	return podMap, nil
-}
-
-// getHostNameIPMap finds a map from NodeInternalIP of each host to node name
-func (dc DaemonConnector) getHostNameIPMap() (map[string]string, error) {
-	nodeIPMap := make(map[string]string)
-	nodes, err := dc.Clientset.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
-	if err != nil {
-		return nodeIPMap, err
-	}
-	for _, node := range nodes.Items {
-		addrs := node.Status.Addresses
-		ip := ""
-
-		for _, addr := range addrs {
-			if addr.Type == v1.NodeInternalIP {
-				ip = addr.Address
-				nodeIPMap[ip] = node.ObjectMeta.Name
-				break
-			}
-		}
-		if ip == "" {
-			return nodeIPMap, fmt.Errorf("IPNotFound")
-		}
-	}
-	return nodeIPMap, nil
 }

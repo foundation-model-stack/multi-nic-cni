@@ -6,7 +6,7 @@ export DAEMON_REGISTRY = res-cpe-team-docker-local.artifactory.swg-devops.com
 
 # DAEMON_IMG defines the image:tag used for daemon
 DAEMON_TAG_BASE = net/multi-nic-cni
-DAEMON_VERSION ?= v1.0.0-alpha
+DAEMON_VERSION ?= v1.0.1-alpha
 DAEMON_IMG ?= $(DAEMON_REGISTRY)/$(DAEMON_TAG_BASE)-daemon:$(DAEMON_VERSION)
 
 

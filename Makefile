@@ -11,7 +11,8 @@ export CNI_BIN_HOSTPATH = $(shell kubectl get po -A --selector app=multus -o jso
 # To re-generate a bundle for another specific version without changing the standard setup, you can:
 # - use the VERSION as arg of the bundle target (e.g make bundle VERSION=0.0.2)
 # - use environment variables to overwrite this value (e.g export VERSION=0.0.2)
-VERSION ?= 0.0.1
+# VERSION ?= 0.0.1
+VERSION ?= 1.0.1-alpha
 
 # CHANNELS define the bundle channels used in the bundle.
 # Add a new line here if you would like to change its default config. (E.g CHANNELS = "preview,fast,stable")
@@ -44,7 +45,7 @@ IMAGE_TAG_BASE = $(IMAGE_REGISTRY)/multi-nic-cni-operator
 BUNDLE_IMG ?= $(IMAGE_TAG_BASE)/bundle:v$(VERSION)
 
 # Image URL to use all building/pushing image targets
-IMG ?= $(IMAGE_TAG_BASE)/controller:latest
+IMG ?= $(IMAGE_TAG_BASE)/controller:v$(VERSION)
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:trivialVersions=true,preserveUnknownFields=false"
 
