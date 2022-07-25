@@ -15,12 +15,14 @@ func RunPeriodicUpdate(ticker *time.Ticker, cidrHandler *CIDRHandler, hostInterf
 				return
 			case <-ticker.C:
 				// update interface
+
 				logger.Info(fmt.Sprintf("synchronizing state... %d HostInterfaces, %d CIDRs", len(HostInterfaceCache), len(CIDRCache)))
 				for _, instance := range HostInterfaceCache {
 					hostInterfaceReconciler.UpdateInterfaces(instance)
 				}
-				for _, instanceSpec := range CIDRCache {
-					cidrHandler.SyncCIDRRoute(instanceSpec, false)
+				for name, instanceSpec := range CIDRCache {
+					routeStatus := cidrHandler.SyncCIDRRoute(instanceSpec, false)
+					cidrHandler.MultiNicNetworkHandler.SyncStatus(name, instanceSpec, routeStatus)
 				}
 			}
 		}

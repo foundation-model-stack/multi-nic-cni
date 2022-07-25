@@ -42,11 +42,8 @@ type CIDREntry struct {
 type CIDRSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-
-	// Foo is an example field of CIDR. Edit cidr_types.go to remove/update
-	Namespace string       `json:"namespace"`
-	Config    PluginConfig `json:"config"`
-	CIDRs     []CIDREntry  `json:"cidr"`
+	Config PluginConfig `json:"config"`
+	CIDRs  []CIDREntry  `json:"cidr"`
 }
 
 // CIDRStatus defines the observed state of CIDR

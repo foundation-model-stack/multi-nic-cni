@@ -98,7 +98,7 @@ func main() {
 	defHandler.DaemonPort = controllers.DEFAULT_DAEMON_PORT
 
 	clientset, err := kubernetes.NewForConfig(config)
-	cidrHandler := controllers.NewCIDRHandler(mgr.GetClient(), config, cidrLog, hifLog, ippoolLog)
+	cidrHandler := controllers.NewCIDRHandler(mgr.GetClient(), config, cidrLog, hifLog, ippoolLog, networkLog)
 
 	pluginMap := controllers.GetPluginMap(config, networkLog)
 	setupLog.Info(fmt.Sprintf("Plugin Map: %v", pluginMap))

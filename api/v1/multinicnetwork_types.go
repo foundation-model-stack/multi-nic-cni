@@ -54,10 +54,36 @@ type AttachmentPolicy struct {
 	Target   string `json:"target,omitempty"`
 }
 
+// +enum
+type RouteStatus string
+
+const (
+	// AllRouteApplied indicates that all routes are applied
+	AllRouteApplied RouteStatus = "Success"
+
+	// ApplyingRoute indicates that the new cidr is just recomputed and waiting for route update
+	ApplyingRoute RouteStatus = "WaitForRoutes"
+
+	// SomeRouteFailed indicates that some route cannot be applied, need attention
+	SomeRouteFailed RouteStatus = "Failed"
+
+	// RouteUnknown indicates that some daemon cannot be connected
+	RouteUnknown RouteStatus = "Unknown"
+
+	// RouteNoApplied indicates that there is no L3 configuration applied
+	RouteNoApplied RouteStatus = "N/A"
+)
+
+type NicNetworkResult struct {
+	NetAddress string `json:"netAddress"`
+	NumOfHost  int    `json:"numOfHosts"`
+}
+
 // MultiNicNetworkStatus defines the observed state of MultiNicNetwork
 type MultiNicNetworkStatus struct {
-	// Definitions lists NetworkAttachmentDefinition created by the MultiNicNetwork
-	Definitions []string `json:"defs"`
+	ComputeResults []NicNetworkResult `json:"computeResults"`
+	Status         RouteStatus        `json:"routeStatus"`
+	LastSyncTime   metav1.Time        `json:"lastSyncTime"`
 }
 
 //+kubebuilder:object:root=true

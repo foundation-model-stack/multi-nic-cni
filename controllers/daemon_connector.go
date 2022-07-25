@@ -151,9 +151,11 @@ func (dc DaemonConnector) putRouteRequest(podAddress string, path string, cidrNa
 	} else {
 		res, err := http.Post(address, "application/json; charset=utf-8", bytes.NewBuffer(jsonReq))
 		if err != nil {
+			response.Message = CONNECTION_REFUSED
 			return response, err
 		}
 		if res.StatusCode != http.StatusOK {
+			response.Message = CONNECTION_REFUSED
 			return response, errors.New(res.Status)
 		}
 
