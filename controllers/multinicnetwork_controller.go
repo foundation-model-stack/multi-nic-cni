@@ -117,7 +117,23 @@ func (r *MultiNicNetworkReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		}
 		return ctrl.Result{}, nil
 	}
-
+	routeStatus := instance.Status.Status
+	if routeStatus == netcogadvisoriov1.AllRouteApplied || routeStatus == netcogadvisoriov1.RouteNoApplied {
+		// status alread applied
+		return ctrl.Result{}, nil
+	} else if routeStatus == netcogadvisoriov1.RouteUnknown {
+		// some route is failed
+		if cidr, ok := CIDRCache[instance.Name]; ok {
+			routeStatus = r.CIDRHandler.SyncCIDRRoute(cidr, false)
+			err := r.CIDRHandler.MultiNicNetworkHandler.SyncStatus(instance.Name, cidr, routeStatus)
+			if err != nil {
+				r.Log.Info(fmt.Sprintf("failed to update route status of %s: %v", instance.Name, err))
+			}
+			if routeStatus == netcogadvisoriov1.RouteUnknown {
+				return ctrl.Result{RequeueAfter: ReconcileTime}, nil
+			}
+		}
+	}
 	// setNetAddress if not defined
 	if len(instance.Spec.MasterNetAddrs) == 0 {
 		instance.Spec.MasterNetAddrs = r.CIDRHandler.GetAllNetAddrs()
