@@ -154,8 +154,9 @@ func (w *DaemonWatcher) ProcessPodQueue() {
 			err := w.createHostInterfaceInfo(*daemon)
 			if err != nil {
 				w.Log.Info(fmt.Sprintf("Fail to create hostinterface %s: %v", daemon.GetName(), err))
-
 			}
+			// sync route is node in the deploying CIDR
+			w.CIDRHandler.SyncCIDRRouteToHost(*daemon)
 		} else {
 			w.Log.Info(fmt.Sprintf("Daemon pod for %s deleted", nodeName))
 			// deleted, delete HostInterface

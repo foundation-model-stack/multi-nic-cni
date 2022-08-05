@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"math"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 
 	netcogadvisoriov1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
@@ -414,6 +415,30 @@ func (h *CIDRHandler) SyncCIDRRoute(cidrSpec netcogadvisoriov1.CIDRSpec, forceDe
 		return netcogadvisoriov1.AllRouteApplied
 	} else {
 		return netcogadvisoriov1.RouteNoApplied
+	}
+}
+
+func (h *CIDRHandler) SyncCIDRRouteToHost(daemon corev1.Pod) {
+	for name, cidrSpec := range CIDRCache {
+		def := cidrSpec.Config
+		if h.IsL3Mode(def) {
+			h.Mutex.Lock()
+			entries := cidrSpec.CIDRs
+			hostInterfaceInfoMap := h.GetHostInterfaceIndexMap(entries)
+			hostName := daemon.Spec.NodeName
+			if _, ok := hostInterfaceInfoMap[hostName]; ok {
+				change, connectFail := h.AddRoutesToHost(cidrSpec, hostName, daemon, entries, hostInterfaceInfoMap, false)
+				h.Log.Info(fmt.Sprintf("Add route to host %s change:%v, connectionFail: %v)", hostName, change, connectFail))
+				if connectFail {
+					routeStatus := netcogadvisoriov1.RouteUnknown
+					err := h.MultiNicNetworkHandler.SyncStatus(name, cidrSpec, routeStatus)
+					if err != nil {
+						h.Log.Info(fmt.Sprintf("failed to update route status of %s: %v", name, err))
+					}
+				}
+			}
+			h.Mutex.Unlock()
+		}
 	}
 }
 

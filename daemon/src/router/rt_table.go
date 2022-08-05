@@ -39,8 +39,13 @@ func GetTableID(tableName string, subnet string, addIfNotExists bool) (int, erro
 	if addIfNotExists && foundID == -1 {
 		foundID, err = addTable(tableName, reservedIDs)
 		if err == nil {
+			// delete existing rule
+			deleteRule(foundID)
 			err = addRule(subnet, foundID)
-		}
+		} 
+	}
+	if foundID != -1 && !isRuleExist(foundID) {
+		err = addRule(subnet, foundID)
 	}
 	return foundID, err
 }
@@ -73,6 +78,20 @@ func addRule(subnet string, tableID int) error {
 	err := netlink.RuleAdd(rule)
 	log.Printf("add rule %v:%v", rule, err)
 	return err
+}
+
+func isRuleExist(tableID int) bool {
+	family := netlink.FAMILY_V4
+	rules, err := netlink.RuleList(family)
+	if err != nil {
+		return false
+	}
+	for _, rule := range rules {
+		if rule.Table == tableID {
+			return true
+		}
+	}
+	return false
 }
 
 func getTableID(tableName string) int {
