@@ -4,15 +4,20 @@
 #
 include daemon/Makefile
 
-export IMAGE_REGISTRY = res-cpe-team-docker-local.artifactory.swg-devops.com
+export IMAGE_REGISTRY = ghcr.io/foundation-model-stack
+ifneq ($(shell kubectl get po -A --selector app=multus --ignore-not-found),)
 export CNI_BIN_HOSTPATH = $(shell kubectl get po -A --selector app=multus -o jsonpath='{.items[0].spec.volumes[?(@.name=="cnibin")].hostPath.path}')
+else
+export CNI_BIN_HOSTPATH = /var/lib/cni/bin
+endif
+
 # VERSION defines the project version for the bundle.
 # Update this value when you upgrade the version of your project.
 # To re-generate a bundle for another specific version without changing the standard setup, you can:
 # - use the VERSION as arg of the bundle target (e.g make bundle VERSION=0.0.2)
 # - use environment variables to overwrite this value (e.g export VERSION=0.0.2)
 # VERSION ?= 0.0.1
-VERSION ?= 1.0.2-alpha
+VERSION ?= 1.0.2
 
 # CHANNELS define the bundle channels used in the bundle.
 # Add a new line here if you would like to change its default config. (E.g CHANNELS = "preview,fast,stable")
@@ -37,8 +42,8 @@ BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 # This variable is used to construct full image tags for bundle and catalog images.
 #
 # For example, running 'make bundle-build bundle-push catalog-build catalog-push' will build and push both
-# net.cogadvisor.io/multi-nic-cni-operator-bundle:$VERSION and net.cogadvisor.io/multi-nic-cni-operator-catalog:$VERSION.
-IMAGE_TAG_BASE = $(IMAGE_REGISTRY)/multi-nic-cni-operator
+# net.cogadvisor.io/multi-nic-cni/bundle:$VERSION and net.cogadvisor.io/multi-nic-cni/catalog:$VERSION.
+IMAGE_TAG_BASE = $(IMAGE_REGISTRY)/multi-nic-cni
 
 # BUNDLE_IMG defines the image:tag used for the bundle.
 # You can use it as an arg. (E.g make bundle-build BUNDLE_IMG=<some-registry>/<project-name-bundle>:<tag>)
@@ -205,7 +210,7 @@ endif
 BUNDLE_IMGS ?= $(BUNDLE_IMG)
 
 # The image tag given to the resulting catalog image (e.g. make catalog-build CATALOG_IMG=example.com/operator-catalog:v0.2.0).
-CATALOG_IMG ?= $(IMAGE_TAG_BASE)-catalog:v$(VERSION)
+CATALOG_IMG ?= $(IMAGE_TAG_BASE)/catalog:v$(VERSION)
 
 # Set CATALOG_BASE_IMG to an existing catalog image tag to add $BUNDLE_IMGS to that image.
 ifneq ($(origin CATALOG_BASE_IMG), undefined)
