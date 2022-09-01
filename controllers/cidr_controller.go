@@ -87,16 +87,12 @@ func (r *CIDRReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	// sync route from CIDR
 	routeStatus := r.CIDRHandler.SyncCIDRRoute(instance.Spec, true)
 	r.CIDRHandler.MultiNicNetworkHandler.UpdateStatus(*instance, routeStatus)
-	if routeStatus == netcogadvisoriov1.RouteUnknown || routeStatus == netcogadvisoriov1.SomeRouteFailed {
-		// if some routes are not properly updated, retry
-		r.Log.Info(fmt.Sprintf("Requeue CIDR %s, some routes cannot be updated.", cidrName))
-		return ctrl.Result{RequeueAfter: CIDRReconcileTime}, nil
-	} else {
+	if routeStatus == netcogadvisoriov1.AllRouteApplied {
 		//success
 		r.Log.Info(fmt.Sprintf("CIDR %s successfully applied", cidrName))
 		CIDRCache[cidrName] = *instance.Spec.DeepCopy()
-		return ctrl.Result{}, nil
 	}
+	return ctrl.Result{}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
