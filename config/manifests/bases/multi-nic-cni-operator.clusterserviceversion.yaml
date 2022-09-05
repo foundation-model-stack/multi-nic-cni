@@ -87,13 +87,16 @@ spec:
   keywords:
   - multi-nic
   - cni
+  - network
   links:
-  - name: Multi Nic Cni Operator
-    url: https://multi-nic-cni-operator.domain
+  - name: Multi-NIC CNI Operator
+    url: https://github.com/foundation-model-stack/multi-nic-cni
   maintainers:
   - email: sunyanan.choochotkaew1@ibm.com
     name: Sunyanan Choochotkaew
+  - email: chiba@jp.ibm.com
+    name: Tatsuhiro Chiba
   maturity: alpha
   provider:
-    name: IBM Cognitive Advisor
+    name: Foundation Model Stack
   version: 0.0.0
