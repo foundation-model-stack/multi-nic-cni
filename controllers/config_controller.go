@@ -24,11 +24,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+
+	"os"
 )
 
 const (
-	SERVICE_ACCOUNT_NAME = "multi-nic-cni-operator-controller-manager"
-	OPERATOR_NAMESPACE   = "multi-nic-cni-operator-system"
+	SERVICE_ACCOUNT_NAME       = "multi-nic-cni-operator-controller-manager"
+	DEFAULT_OPERATOR_NAMESPACE = "multi-nic-cni-operator-system"
 
 	// NetworkAttachmentDefinition watching queue size
 	MAX_QSIZE = 100
@@ -36,6 +38,19 @@ const (
 	DAEMON_LABEL_NAME  = "app"
 	DAEMON_LABEL_VALUE = "multi-nicd"
 )
+
+var (
+	OPERATOR_NAMESPACE string = getOperatorNamespace()
+)
+
+func getOperatorNamespace() string {
+	key := "OPERATOR_NAMESPACE"
+	val, found := os.LookupEnv(key)
+	if !found {
+		return DEFAULT_OPERATOR_NAMESPACE
+	}
+	return val
+}
 
 // ConfigReconciler reconciles a Config object
 // - if Config is deleted, delete daemon
