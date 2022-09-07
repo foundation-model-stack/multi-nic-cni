@@ -31,7 +31,7 @@ var _ = Describe("Test Multi-NIC IPAM", func() {
 		defer multinicnetworkReconciler.Client.Delete(context.Background(), multinicnetwork)
 
 		var multiNicNetworkInstance *netcogadvisoriov1.MultiNicNetwork
-		maxTry := 10
+		maxTry := 30
 		count := 0
 		for {
 			multiNicNetworkInstance, err = multinicnetworkReconciler.CIDRHandler.GetNetwork(multinicnetwork.GetName())
@@ -41,6 +41,7 @@ var _ = Describe("Test Multi-NIC IPAM", func() {
 			time.Sleep(1)
 			count += 1
 		}
+		fmt.Printf("Try: %d \n", count)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(len(multiNicNetworkInstance.Status.ComputeResults)).To(Equal(0))
 		multinicnetworkReconciler.HandleMultiNicIPAM(multiNicNetworkInstance)
