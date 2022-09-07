@@ -110,14 +110,27 @@ spec:
           status:
             description: MultiNicNetworkStatus defines the observed state of MultiNicNetwork
             properties:
-              defs:
-                description: Definitions lists NetworkAttachmentDefinition created
-                  by the MultiNicNetwork
+              computeResults:
                 items:
-                  type: string
+                  properties:
+                    netAddress:
+                      type: string
+                    numOfHosts:
+                      type: integer
+                  required:
+                  - netAddress
+                  - numOfHosts
+                  type: object
                 type: array
+              lastSyncTime:
+                format: date-time
+                type: string
+              routeStatus:
+                type: string
             required:
-            - defs
+            - computeResults
+            - lastSyncTime
+            - routeStatus
             type: object
         type: object
     served: true

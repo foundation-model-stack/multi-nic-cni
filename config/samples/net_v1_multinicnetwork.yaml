@@ -1,0 +1,19 @@
+apiVersion: net.cogadvisor.io/v1
+kind: MultiNicNetwork
+metadata:
+  name: sample-network
+spec:
+  subnet: "192.168.0.0/16"
+  ipam: |
+    {
+      "type": "multi-nic-ipam",
+      "hostBlock": 8, 
+      "interfaceBlock": 2,
+      "vlanMode": "l2"
+    }
+  multiNICIPAM: true
+  plugin:
+    cniVersion: "0.3.0"
+    type: ipvlan
+    args: 
+      mode: l2

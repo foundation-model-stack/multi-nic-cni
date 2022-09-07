@@ -12,7 +12,5 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 images:
 - name: controller
-  newName: res-cpe-team-docker-local.artifactory.swg-devops.com/multi-nic-cni-operator/controller
-  newTag: v1.0.1-alpha
-patches:
-- path: patches/image_pull_secret.yaml
+  newName: ghcr.io/foundation-model-stack/multi-nic-cni-controller
+  newTag: v1.0.2
