@@ -44,6 +44,8 @@ var k8sClient client.Client
 var testEnv *envtest.Environment
 var setupLog = ctrl.Log.WithName("setup")
 var nodes []v1.Node = generateNodes()
+var interfaceNames []string = []string{"eth1", "eth2"}
+var networkPrefixes []string = []string{"10.242.0.", "10.242.1."}
 var hifList map[string]netcogadvisoriov1.HostInterface = generateHostInterfaceList(nodes)
 
 var ipvlanPlugin *plugin.IPVLANPlugin
@@ -62,7 +64,7 @@ var multiNicIPAMConfig string = `{
 	"vlanMode":       "l2"
    }`
 
-var networkAddresses []string = []string{"10.242.0.0/24", "10.242.1.0/24"}
+var networkAddresses []string = []string{"10.242.0.0/24", "10.242.1.0/24", "10.242.2.0/24", "10.242.1.0/24"}
 
 // MultiNicNetwork (IPVLAN L2)
 
@@ -274,35 +276,39 @@ func generateNodes() []v1.Node {
 	return nodes
 }
 
+// generateNewHostInterface generates new host
+func generateNewHostInterface(hostName string, interfaceNames []string, networkPrefixes []string, i int) netcogadvisoriov1.HostInterface {
+	ifaces := []netcogadvisoriov1.InterfaceInfoType{}
+	for index, ifaceName := range interfaceNames {
+		iface := netcogadvisoriov1.InterfaceInfoType{
+			InterfaceName: ifaceName,
+			NetAddress:    networkAddresses[index],
+			HostIP:        fmt.Sprintf("%s%d", networkPrefixes[index], i),
+		}
+		ifaces = append(ifaces, iface)
+	}
+	hif := netcogadvisoriov1.HostInterface{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: hostName,
+			Labels: map[string]string{
+				TestModelLabel: "true",
+			},
+		},
+		Spec: netcogadvisoriov1.HostInterfaceSpec{
+			HostName:   hostName,
+			Interfaces: ifaces,
+		},
+	}
+	return hif
+}
+
 // generateHostInterfaceList generates stub host and interfaces
 func generateHostInterfaceList(nodes []v1.Node) map[string]netcogadvisoriov1.HostInterface {
-	interfaceNames := []string{"eth1", "eth2"}
-	networkPrefixes := []string{"10.242.0.", "10.242.1."}
 
 	hifList := make(map[string]netcogadvisoriov1.HostInterface)
 	for i, node := range nodes {
 		hostName := node.GetName()
-		ifaces := []netcogadvisoriov1.InterfaceInfoType{}
-		for index, ifaceName := range interfaceNames {
-			iface := netcogadvisoriov1.InterfaceInfoType{
-				InterfaceName: ifaceName,
-				NetAddress:    networkAddresses[index],
-				HostIP:        fmt.Sprintf("%s%d", networkPrefixes[index], i),
-			}
-			ifaces = append(ifaces, iface)
-		}
-		hif := netcogadvisoriov1.HostInterface{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: hostName,
-				Labels: map[string]string{
-					TestModelLabel: "true",
-				},
-			},
-			Spec: netcogadvisoriov1.HostInterfaceSpec{
-				HostName:   hostName,
-				Interfaces: ifaces,
-			},
-		}
+		hif := generateNewHostInterface(hostName, interfaceNames, networkPrefixes, i)
 		hifList[hostName] = hif
 	}
 	return hifList
@@ -316,7 +322,6 @@ func getMultiNicCNINetwork(name string, cniVersion string, cniType string, cniAr
 		},
 		Spec: netcogadvisoriov1.MultiNicNetworkSpec{
 			Subnet:         globalSubnet,
-			MasterNetAddrs: networkAddresses,
 			IPAM:           multiNicIPAMConfig,
 			IsMultiNICIPAM: true,
 			MainPlugin: netcogadvisoriov1.PluginSpec{

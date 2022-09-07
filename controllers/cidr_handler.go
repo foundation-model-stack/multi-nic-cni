@@ -110,7 +110,9 @@ func (h *CIDRHandler) ListCIDR() (map[string]netcogadvisoriov1.CIDR, error) {
 }
 
 // CleanPreviousCIDR deletes CIDRs if corresponding NetworkAttachmentDefinition does not exist
-//                   deletes IPPools if corresponding CIDR does not exist
+//
+//	deletes IPPools if corresponding CIDR does not exist
+//
 // note: CIDR name = NetworkAttachmentDefinition name
 func (h *CIDRHandler) CleanPreviousCIDR(config *rest.Config, defHandler *plugin.NetAttachDefHandler) {
 	cidrMap, err := h.ListCIDR()
@@ -196,11 +198,9 @@ func (h *CIDRHandler) GetAllNetAddrs() []string {
 //
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// NewCIDRWithNewConfig creates new CIDR by computing interface indexes from master networks
-func (h *CIDRHandler) NewCIDRWithNewConfig(def netcogadvisoriov1.PluginConfig, namespace string) (bool, error) {
-	h.Log.Info("NewCIDRWithNewConfig")
+// newCIDR returns new CIDR from PluginConfig
+func (h *CIDRHandler) newCIDR(def netcogadvisoriov1.PluginConfig, namespace string) (netcogadvisoriov1.CIDRSpec, error) {
 	entries := []netcogadvisoriov1.CIDREntry{}
-	interfaceNetIndexMap := make(map[string]int)
 	masterIndex := int(0)
 	// maxInterfaceIndex = 2^(interface bits) - 1
 	maxInterfaceIndex := int(math.Pow(2, float64(def.InterfaceBlock)) - 1)
@@ -224,10 +224,9 @@ func (h *CIDRHandler) NewCIDRWithNewConfig(def netcogadvisoriov1.PluginConfig, n
 			// if tabu, find next interface index
 			masterIndex = masterIndex + 1
 			if masterIndex > maxInterfaceIndex {
-				return false, errors.New("wrong request (overflow interface index)")
+				return netcogadvisoriov1.CIDRSpec{}, errors.New("wrong request (overflow interface index)")
 			}
 		}
-		interfaceNetIndexMap[master] = masterIndex
 
 		entry := netcogadvisoriov1.CIDREntry{
 			NetAddress:     master,
@@ -243,39 +242,55 @@ func (h *CIDRHandler) NewCIDRWithNewConfig(def netcogadvisoriov1.PluginConfig, n
 		Config: def,
 		CIDRs:  entries,
 	}
+	return cidrSpec, nil
+}
+
+// NewCIDRWithNewConfig creates new CIDR by computing interface indexes from master networks
+func (h *CIDRHandler) NewCIDRWithNewConfig(def netcogadvisoriov1.PluginConfig, namespace string) (bool, error) {
+	h.Log.Info("NewCIDRWithNewConfig")
+	cidrSpec, err := h.newCIDR(def, namespace)
+	if err != nil {
+		return false, err
+	}
 	return h.UpdateCIDR(cidrSpec, true)
 }
 
-// UpdateCIDR computes host indexes and coresponding pod VLAN from host interface list
-func (h *CIDRHandler) UpdateCIDR(cidrSpec netcogadvisoriov1.CIDRSpec, new bool) (bool, error) {
-	h.Mutex.Lock()
-
-	def := cidrSpec.Config
+// updateEntries updates CIDR entry from current HostInterfaceCache
+func (h *CIDRHandler) updateEntries(cidrSpec netcogadvisoriov1.CIDRSpec, excludes []compute.IPValue, changed bool) (map[string]netcogadvisoriov1.CIDREntry, bool) {
 	entries := cidrSpec.CIDRs
-	h.Log.Info(fmt.Sprintf("Update CIDR %s", def.Name))
-
-	// sort and convert exclude object to string
-	excludes := compute.SortAddress(def.ExcludeCIDRs)
-	excludesInStr := []string{}
-	for _, exclude := range excludes {
-		excludesInStr = append(excludesInStr, exclude.Address)
-	}
-
-	changed := new
-
 	entriesMap := make(map[string]netcogadvisoriov1.CIDREntry)
 	for _, entry := range entries {
 		var newHostList []netcogadvisoriov1.HostInterfaceInfo
 		for _, host := range entry.Hosts {
-			if _, exists := HostInterfaceCache[host.HostName]; exists {
-				newHostList = append(newHostList, host)
+			if hif, exists := HostInterfaceCache[host.HostName]; exists {
+				// to not include hanging entry
+				for _, iface := range hif.Spec.Interfaces {
+					if iface.NetAddress == entry.NetAddress {
+						newHostList = append(newHostList, host)
+						break
+					}
+				}
 			} else {
 				// host not exist anymore
 				changed = true
 			}
 		}
-		entry.Hosts = newHostList
-		entriesMap[entry.NetAddress] = entry
+		if len(entry.Hosts) != len(newHostList) {
+			changed = true
+		}
+		if len(entry.Hosts) == 0 || len(newHostList) > 0 {
+			// new or has some in  newHostList
+			entry.Hosts = newHostList
+			entriesMap[entry.NetAddress] = entry
+		}
+	}
+
+	def := cidrSpec.Config
+
+	// sort and convert exclude object to string
+	excludesInStr := []string{}
+	for _, exclude := range excludes {
+		excludesInStr = append(excludesInStr, exclude.Address)
 	}
 
 	// maxHostIndex = 2^(host bits) - 1
@@ -291,58 +306,69 @@ func (h *CIDRHandler) UpdateCIDR(cidrSpec netcogadvisoriov1.CIDRSpec, new bool) 
 			interfaceNetAddress := iface.NetAddress
 			interfaceName := iface.InterfaceName
 			hostIP := iface.HostIP
+			success, entry := h.getInterfaceEntry(def, entriesMap, interfaceNetAddress)
+			if !success {
+				continue
+			}
+			vlanCIDR := entry.VlanCIDR
+			existingHosts := entry.Hosts
 
-			if entry, exists := entriesMap[interfaceNetAddress]; exists {
-				vlanCIDR := entry.VlanCIDR
-				existingHosts := entry.Hosts
-
-				// check if host index computed before
-				itemIndex := h.getHostIndex(existingHosts, hostName)
-				if itemIndex == -1 {
-					// compute new host index
+			// check if host index computed before
+			itemIndex := h.getHostIndex(existingHosts, hostName)
+			if itemIndex == -1 {
+				// compute new host index
+				entry, changed = h.tryAddNewHost(existingHosts, entry, maxHostIndex, def, hostName, interfaceName, hostIP)
+			} else {
+				// refer to previous host index
+				host := existingHosts[itemIndex]
+				nodeIndex := existingHosts[itemIndex].HostIndex
+				nodeBlock := def.HostBlock
+				podInByte, err := h.CIDRCompute.ComputeNet(entry.VlanCIDR, host.HostIndex, def.HostBlock)
+				if err != nil {
+					// invalid pod VLAN
+					// remove from existing list
+					entry.Hosts = append(entry.Hosts[0:itemIndex], entry.Hosts[itemIndex+1:]...)
+					// recompute host index
 					entry, changed = h.tryAddNewHost(existingHosts, entry, maxHostIndex, def, hostName, interfaceName, hostIP)
 				} else {
-					// refer to previous host index
-					host := existingHosts[itemIndex]
-					nodeIndex := existingHosts[itemIndex].HostIndex
-					nodeBlock := def.HostBlock
-					podInByte, err := h.CIDRCompute.ComputeNet(entry.VlanCIDR, host.HostIndex, def.HostBlock)
-					if err != nil {
-						// invalid pod VLAN
-						// remove from existing list
-						entry.Hosts = append(entry.Hosts[0:itemIndex], entry.Hosts[itemIndex+1:]...)
-						// recompute host index
-						entry, changed = h.tryAddNewHost(existingHosts, entry, maxHostIndex, def, hostName, interfaceName, hostIP)
-					} else {
-						// recheck is computed pod VLAN tabu
-						tabu := h.CIDRCompute.CheckIfTabuIndex(vlanCIDR, nodeIndex, nodeBlock, excludesInStr)
-						if !tabu {
-							podCIDR := h.CIDRCompute.GetCIDRFromByte(podInByte, vlanCIDR, nodeBlock)
-							// check if recomputed pod VLAN equal to the computed pod VLAN in  CIDR resource
-							if podCIDR != host.PodCIDR {
-								entry.Hosts[itemIndex].PodCIDR = podCIDR
-								changed = true
-							}
-							if interfaceName != host.InterfaceName {
-								entry.Hosts[itemIndex].InterfaceName = interfaceName
-								changed = true
-							}
-							if hostIP != host.HostIP {
-								entry.Hosts[itemIndex].HostIP = hostIP
-								changed = true
-							}
-						} else {
-							// tabu, recompute host index
-							entry.Hosts = append(entry.Hosts[0:itemIndex], entry.Hosts[itemIndex+1:]...)
-							entry, changed = h.tryAddNewHost(existingHosts, entry, maxHostIndex, def, hostName, interfaceName, hostIP)
+					// recheck is computed pod VLAN tabu
+					tabu := h.CIDRCompute.CheckIfTabuIndex(vlanCIDR, nodeIndex, nodeBlock, excludesInStr)
+					if !tabu {
+						podCIDR := h.CIDRCompute.GetCIDRFromByte(podInByte, vlanCIDR, nodeBlock)
+						// check if recomputed pod VLAN equal to the computed pod VLAN in  CIDR resource
+						if podCIDR != host.PodCIDR {
+							entry.Hosts[itemIndex].PodCIDR = podCIDR
+							changed = true
 						}
+						if interfaceName != host.InterfaceName {
+							entry.Hosts[itemIndex].InterfaceName = interfaceName
+							changed = true
+						}
+						if hostIP != host.HostIP {
+							entry.Hosts[itemIndex].HostIP = hostIP
+							changed = true
+						}
+					} else {
+						// tabu, recompute host index
+						entry.Hosts = append(entry.Hosts[0:itemIndex], entry.Hosts[itemIndex+1:]...)
+						entry, changed = h.tryAddNewHost(existingHosts, entry, maxHostIndex, def, hostName, interfaceName, hostIP)
 					}
 				}
-				entriesMap[interfaceNetAddress] = entry
 			}
+			entriesMap[interfaceNetAddress] = entry
 		}
 	}
 
+	return entriesMap, changed
+}
+
+// UpdateCIDR computes host indexes and coresponding pod VLAN from host interface list
+func (h *CIDRHandler) UpdateCIDR(cidrSpec netcogadvisoriov1.CIDRSpec, new bool) (bool, error) {
+	h.Mutex.Lock()
+	def := cidrSpec.Config
+	excludes := compute.SortAddress(def.ExcludeCIDRs)
+	h.Log.Info(fmt.Sprintf("Update CIDR %s", def.Name))
+	entriesMap, changed := h.updateEntries(cidrSpec, excludes, new)
 	// if pod CIDR changes, update CIDR and create corresponding IPPools and routes
 	if changed {
 		newEntries := []netcogadvisoriov1.CIDREntry{}
@@ -512,6 +538,51 @@ func (h *CIDRHandler) addNewHost(hosts []netcogadvisoriov1.HostInterfaceInfo, ma
 		}
 		// VLAN in tabu ranges or invalid, try next
 		excludedIndexes = append(excludedIndexes, nodeIndex)
+	}
+}
+
+// getInterfaceEntry get entry from interfaceaddress if exists, otherwise create new
+func (h *CIDRHandler) getInterfaceEntry(def netcogadvisoriov1.PluginConfig, entriesMap map[string]netcogadvisoriov1.CIDREntry, newNetAdress string) (bool, netcogadvisoriov1.CIDREntry) {
+	if entry, found := entriesMap[newNetAdress]; found {
+		// already exists
+		return true, entry
+	}
+	var excludedIndexes []int
+	for _, entry := range entriesMap {
+		index := entry.InterfaceIndex
+		excludedIndexes = append(excludedIndexes, index)
+	}
+	masterIndex := int(-1)
+	maxInterfaceIndex := int(math.Pow(2, float64(def.InterfaceBlock)) - 1)
+	vlanCIDR := ""
+	for vlanCIDR == "" {
+		masterIndex = h.CIDRCompute.FindAvailableIndex(excludedIndexes, -1, 0)
+		fmt.Printf("excludedIndexes: %v\n", excludedIndexes)
+		if masterIndex < 0 {
+			masterIndex = len(excludedIndexes)
+		}
+		tabu := h.CIDRCompute.CheckIfTabuIndex(def.Subnet, masterIndex, def.InterfaceBlock, def.ExcludeCIDRs)
+		if tabu {
+			excludedIndexes = append(excludedIndexes, masterIndex)
+		} else {
+			vlanInByte, err := h.CIDRCompute.ComputeNet(def.Subnet, masterIndex, def.InterfaceBlock)
+			if err != nil {
+				excludedIndexes = append(excludedIndexes, masterIndex)
+				continue
+			}
+			vlanCIDR = h.CIDRCompute.GetCIDRFromByte(vlanInByte, def.Subnet, def.InterfaceBlock)
+			break
+		}
+		if masterIndex > maxInterfaceIndex {
+			h.Log.Info("cannot add new interface (no available index)")
+			return false, netcogadvisoriov1.CIDREntry{}
+		}
+	}
+	return true, netcogadvisoriov1.CIDREntry{
+		NetAddress:     newNetAdress,
+		InterfaceIndex: masterIndex,
+		VlanCIDR:       vlanCIDR,
+		Hosts:          []netcogadvisoriov1.HostInterfaceInfo{},
 	}
 }
 
