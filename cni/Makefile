@@ -38,7 +38,7 @@ tidy:
 test: ginkgo-set plugins-set
 	@cd ./plugins/main/multi-nic && ginkgo
 
-build: ginkgo-set plugins-set tidy
+build: plugins-set tidy
 	@mkdir -p bin
 	@go build -o bin/multi-nic ./plugins/main/multi-nic
 	@go build -o bin/multi-nic-ipam ./plugins/ipam/multi-nic-ipam
@@ -46,7 +46,7 @@ build: ginkgo-set plugins-set tidy
 build-with-test: test build
 
 copy-to-daemon:
-	@rm -r ../daemon/cni
+	@rm -rf ../daemon/cni|| true
 	@mkdir -p ../daemon/cni
 	@cp -r ./pkg ../daemon/cni/pkg
 	@cp -r ./plugins ../daemon/cni/plugins
