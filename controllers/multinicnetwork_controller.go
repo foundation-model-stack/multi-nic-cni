@@ -180,21 +180,29 @@ func (r *MultiNicNetworkReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-// HandleMultiNicIPAM handles ipam if target type
-func (r *MultiNicNetworkReconciler) HandleMultiNicIPAM(instance *netcogadvisoriov1.MultiNicNetwork) error {
+// getIPAMConfig get IPAM config from network definition
+func (r *MultiNicNetworkReconciler) getIPAMConfig(instance *netcogadvisoriov1.MultiNicNetwork) (*netcogadvisoriov1.PluginConfig, error) {
 	isMultiNicIPAM, err := IsMultiNICIPAM(instance)
+	ipamConfig := &netcogadvisoriov1.PluginConfig{}
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if isMultiNicIPAM {
 		name := instance.GetName()
-		ipamConfig := &netcogadvisoriov1.PluginConfig{}
 		json.Unmarshal([]byte(instance.Spec.IPAM), ipamConfig)
 		ipamConfig.Name = name
 		ipamConfig.Type = instance.Spec.MainPlugin.Type
 		ipamConfig.Subnet = instance.Spec.Subnet
 		ipamConfig.MasterNetAddrs = instance.Spec.MasterNetAddrs
+		return ipamConfig, nil
+	}
+	return nil, fmt.Errorf("non-MultiNicIPAM")
+}
 
+// HandleMultiNicIPAM handles ipam if target type
+func (r *MultiNicNetworkReconciler) HandleMultiNicIPAM(instance *netcogadvisoriov1.MultiNicNetwork) error {
+	ipamConfig, err := r.getIPAMConfig(instance)
+	if err == nil {
 		cidrName := instance.GetName()
 		_, err := r.CIDRHandler.GetCIDR(cidrName)
 		// create new cidr if not created yet. otherwise, let cidr controller update
@@ -203,16 +211,16 @@ func (r *MultiNicNetworkReconciler) HandleMultiNicIPAM(instance *netcogadvisorio
 		} else {
 			_, err := r.CIDRHandler.NewCIDRWithNewConfig(*ipamConfig, instance.GetNamespace())
 			if err != nil {
-				r.Log.Info(fmt.Sprintf("Cannot init CIDR %s: %v", name, err))
+				r.Log.Info(fmt.Sprintf("Cannot init CIDR %s: %v", cidrName, err))
 			}
 			return err
 		}
 	}
-	return nil
+	return err
 }
 
-//deprecated
-//isExistConfig checks if considering plugin config do not change from the config in the existing CIDR
+// deprecated
+// isExistConfig checks if considering plugin config do not change from the config in the existing CIDR
 func (r *MultiNicNetworkReconciler) isExistConfig(instance *netcogadvisoriov1.MultiNicNetwork, ipamConfig netcogadvisoriov1.PluginConfig) bool {
 	cidrName := instance.GetName()
 	cidr, err := r.CIDRHandler.GetCIDR(cidrName)
