@@ -1,13 +1,15 @@
+> Documents and source codes for the deprecated domain `cogadvisor.io` are moved to [cogadvisor-net branch](https://github.com/foundation-model-stack/multi-nic-cni/tree/cogadvisor-net)
+> 
 - [Multi-NIC CNI](#multi-nic-cni)
   - [MultiNicNetwork](#multinicnetwork)
   - [Usage](#usage)
       - [Requirements](#requirements)
-      - [Install operator](#install-operator)
-        - [1. Build CNI operator](#1-build-cni-operator)
-        - [2. Build CNI daemon](#2-build-cni-daemon)
-        - [3. Deploy operator with daemon config](#3-deploy-operator-with-daemon-config)
+      - [Quick Installation](#quick-installation)
+        - [by manifests with kubectl](#by-manifests-with-kubectl)
+        - [by bundle with operator-sdk](#by-bundle-with-operator-sdk)
       - [Deploy MultiNicNetwork resource](#deploy-multinicnetwork-resource)
       - [Check connections](#check-connections)
+        - [installed by bundle with operator-sdk](#installed-by-bundle-with-operator-sdk)
 # Multi-NIC CNI
 Attaching secondary network interfaces that is linked to different network interfaces on host (NIC) to pod provides benefits of network segmentation and top-up network bandwidth in the containerization system. 
 
@@ -30,6 +32,7 @@ iii) **Policy-based secondary network attachment**: Instead of statically set th
 ![](./document/img/commonstack.png)
 
 The Multi-NIC CNI architecture can be found [here](./document/architecture.md).
+
 ## MultiNicNetwork
 The Multi-NIC operator operates over a custom resource named *MultiNicNetwork* defined by users.
 This definition will define a Pod global subnet, common network definition (main CNI and IPAM plugin), and attachment policy. 
@@ -81,66 +84,20 @@ namespaces|list of namespaces to apply the network definitions (i.e., to create 
   - enable allowing IP spoofing for each attached interface
   - set security group to allow IPs in the target container subnet
   - IPVLAN support (kernel version >= 4.2)
-- Utility tools
-  - Environment substitution *envsubst* ([gettext](https://www.gnu.org/software/gettext/))
-  - YAML processor *yq* ([yq](https://mikefarah.gitbook.io/yq/))
-#### Install operator
-##### 1. Build CNI operator
-1. Clone the repo and enter the workspace
-    ```bash
-    git clone https://github.com/foundation-model-stack/multi-nic-cni.git
-    cd multi-nic-cni-operator
-    ```
-2. Make bundle
-    ```bash 
-    make bundle
-    ```
-3. Modify `IMAGE_REGISTRY`  Makefile (Makefile) to target image repository for operator
-4. For private image registry, follow these additional steps to add image-pulling secret
-   1. Put your secret for pulling operator image (`operator-secret.yaml`) to the secret folder
-        ```bash
-        mv operator-secret.yaml config/secret
-        ```
-   2. Run script to update relevant kustomization files
-      ```bash 
-      export OPERATOR_SECRET_NAME=$(cat config/secret/operator-secret.yaml|yq .metadata.name)
-      make operator-secret
-      ```
-5. Build and push operator image
-    ```bash
-    make docker-build docker-push
-    ```
-##### 2. Build CNI daemon
-
-1. Modify `IMAGE_REGISTRY` daemon Makefile (daemon/Makefile) to target repository for daemon
-2. For private image registry, follow these additional steps to add image-pulling secret
-   1. Put your secret for pulling daemon image (`daemon-secret.yaml`) to the secret folder
-      ```bash
-      mv daemon-secret.yaml config/secret
-      ```
-   2. Run script to update relevant kustomization files
-      ```bash 
-      export DAEMON_SECRET_NAME=$(cat config/secret/daemon-secret.yaml|yq .metadata.name)
-      make daemon-secret
-      ```
-3. Build and push daemon image
-    ```bash
-    # build environment: 
-    #   Linux systems with netlink library
-    cd daemon
-    make docker-build-push
-    ```
-    This will also build the cni binary and copy the built binary to daemon component.
-##### 3. Deploy operator with daemon config
-1. For Openshift cluster, assign privileged security context to multi-nic-cni-operator-controller-manager service account
-    ```bash
-    oc adm policy add-scc-to-user privileged system:serviceaccount:multi-nic-cni-operator-system:multi-nic-cni-operator-controller-manager
-    ```
-2. Deploy by [kustomize](https://kustomize.io)
-    ```bash
-    make deploy
-    ```
-
+#### Quick Installation
+For **Openshift**, assign privileged security context to multi-nic-cni-operator-controller-manager service account first
+```bash
+oc adm policy add-scc-to-user privileged system:serviceaccount:multi-nic-cni-operator-system:multi-nic-cni-operator-controller-manager
+```
+##### by manifests with kubectl
+  ```bash
+  kubectl apply -f deploy/
+  ```
+##### by bundle with operator-sdk
+  ```bash
+  operator-sdk run bundle ghcr.io/foundation-model-stack/multi-nic-cni-bundle:v1.0.2
+  kubectl apply -f deploy/1_config.yaml
+  ```
 #### Deploy MultiNicNetwork resource
 1. Prepare `network.yaml` as shown in the [example](#multinicnetwork)
     
@@ -165,42 +122,14 @@ namespaces|list of namespaces to apply the network definitions (i.e., to create 
    ```bash
     kubectl logs job/multi-nic-concheck
     ```
-    The log should print the connection table like this:
+    expected log:
     ```bash
       ###########################################
-      ## Connection Check: multinic-sample
+      ## Connection Check: multinic-ipvlanl3
       ###########################################
-      FROM                            TO                               CONNECTED/TOTAL IPs                            BANDWIDTHs
-      gpu-dallas-d5l8c-worker-2-47lzt gpu-dallas-d5l8c-worker-2-5477j  2/2             [192.168.0.2 192.168.64.2]     [ 8.80Gbits/sec 7.81Gbits/sec]
-      gpu-dallas-d5l8c-worker-2-47lzt gpu-dallas-d5l8c-worker-2-6dkfv  2/2             [192.168.0.195 192.168.64.195] [ 13.1Gbits/sec 7.55Gbits/sec]
-      gpu-dallas-d5l8c-worker-2-47lzt gpu-dallas-d5l8c-worker-2-8wh6z  2/2             [192.168.1.3 192.168.65.3]     [ 7.32Gbits/sec 7.64Gbits/sec]
-      gpu-dallas-d5l8c-worker-2-47lzt gpu-dallas-d5l8c-worker-3-rfrs4  0/2             [192.168.128.1 192.168.192.1]  []
-      gpu-dallas-d5l8c-worker-2-47lzt gpu-dallas-d5l8c-worker-2-4czvd  2/2             [192.168.0.67 192.168.64.67]   [ 7.39Gbits/sec 8.08Gbits/sec]
-      gpu-dallas-d5l8c-worker-2-4czvd gpu-dallas-d5l8c-worker-2-47lzt  2/2             [192.168.0.131 192.168.64.131] [ 10.9Gbits/sec 9.79Gbits/sec]
-      gpu-dallas-d5l8c-worker-2-4czvd gpu-dallas-d5l8c-worker-2-5477j  2/2             [192.168.0.2 192.168.64.2]     [ 5.47Gbits/sec 4.96Gbits/sec]
-      gpu-dallas-d5l8c-worker-2-4czvd gpu-dallas-d5l8c-worker-2-6dkfv  2/2             [192.168.0.195 192.168.64.195] [ 8.08Gbits/sec 7.72Gbits/sec]
-      gpu-dallas-d5l8c-worker-2-4czvd gpu-dallas-d5l8c-worker-2-8wh6z  2/2             [192.168.1.3 192.168.65.3]     [ 7.55Gbits/sec 9.93Gbits/sec]
-      gpu-dallas-d5l8c-worker-2-4czvd gpu-dallas-d5l8c-worker-3-rfrs4  0/2             [192.168.128.1 192.168.192.1]  []
-      gpu-dallas-d5l8c-worker-2-5477j gpu-dallas-d5l8c-worker-2-6dkfv  2/2             [192.168.0.195 192.168.64.195] [ 8.37Gbits/sec 8.91Gbits/sec]
-      gpu-dallas-d5l8c-worker-2-5477j gpu-dallas-d5l8c-worker-2-8wh6z  2/2             [192.168.1.3 192.168.65.3]     [ 10.7Gbits/sec 5.84Gbits/sec]
-      gpu-dallas-d5l8c-worker-2-5477j gpu-dallas-d5l8c-worker-3-rfrs4  0/2             [192.168.128.1 192.168.192.1]  []
-      gpu-dallas-d5l8c-worker-2-5477j gpu-dallas-d5l8c-worker-2-47lzt  2/2             [192.168.0.131 192.168.64.131] [ 5.61Gbits/sec 9.52Gbits/sec]
-      gpu-dallas-d5l8c-worker-2-5477j gpu-dallas-d5l8c-worker-2-4czvd  2/2             [192.168.0.67 192.168.64.67]   [ 6.56Gbits/sec 7.09Gbits/sec]
-      gpu-dallas-d5l8c-worker-2-6dkfv gpu-dallas-d5l8c-worker-2-47lzt  2/2             [192.168.0.131 192.168.64.131] [ 10.5Gbits/sec 8.80Gbits/sec]
-      gpu-dallas-d5l8c-worker-2-6dkfv gpu-dallas-d5l8c-worker-2-4czvd  2/2             [192.168.0.67 192.168.64.67]   [ 7.02Gbits/sec 9.39Gbits/sec]
-      gpu-dallas-d5l8c-worker-2-6dkfv gpu-dallas-d5l8c-worker-2-5477j  2/2             [192.168.0.2 192.168.64.2]     [ 7.81Gbits/sec 7.81Gbits/sec]
-      gpu-dallas-d5l8c-worker-2-6dkfv gpu-dallas-d5l8c-worker-2-8wh6z  2/2             [192.168.1.3 192.168.65.3]     [ 9.79Gbits/sec 8.18Gbits/sec]
-      gpu-dallas-d5l8c-worker-2-6dkfv gpu-dallas-d5l8c-worker-3-rfrs4  0/2             [192.168.128.1 192.168.192.1]  []
-      gpu-dallas-d5l8c-worker-2-8wh6z gpu-dallas-d5l8c-worker-2-47lzt  2/2             [192.168.0.131 192.168.64.131] [ 9.52Gbits/sec 9.03Gbits/sec]
-      gpu-dallas-d5l8c-worker-2-8wh6z gpu-dallas-d5l8c-worker-2-4czvd  2/2             [192.168.0.67 192.168.64.67]   [ 9.65Gbits/sec 4.88Gbits/sec]
-      gpu-dallas-d5l8c-worker-2-8wh6z gpu-dallas-d5l8c-worker-2-5477j  2/2             [192.168.0.2 192.168.64.2]     [ 7.99Gbits/sec 7.39Gbits/sec]
-      gpu-dallas-d5l8c-worker-2-8wh6z gpu-dallas-d5l8c-worker-2-6dkfv  2/2             [192.168.0.195 192.168.64.195] [ 6.56Gbits/sec 6.88Gbits/sec]
-      gpu-dallas-d5l8c-worker-2-8wh6z gpu-dallas-d5l8c-worker-3-rfrs4  0/2             [192.168.128.1 192.168.192.1]  []
-      gpu-dallas-d5l8c-worker-3-rfrs4 gpu-dallas-d5l8c-worker-2-5477j  0/2             [192.168.0.2 192.168.64.2]     []
-      gpu-dallas-d5l8c-worker-3-rfrs4 gpu-dallas-d5l8c-worker-2-6dkfv  0/2             [192.168.0.195 192.168.64.195] []
-      gpu-dallas-d5l8c-worker-3-rfrs4 gpu-dallas-d5l8c-worker-2-8wh6z  0/2             [192.168.1.3 192.168.65.3]     []
-      gpu-dallas-d5l8c-worker-3-rfrs4 gpu-dallas-d5l8c-worker-2-47lzt  0/2             [192.168.0.131 192.168.64.131] []
-      gpu-dallas-d5l8c-worker-3-rfrs4 gpu-dallas-d5l8c-worker-2-4czvd  0/2             [192.168.0.67 192.168.64.67]   []
+      FROM                           TO                              CONNECTED/TOTAL IPs                          BANDWIDTHs
+      multi-nic-n7zf6-worker-2-dbjpg multi-nic-n7zf6-worker-2-zt5l5  2/2             [192.168.0.65 192.168.64.65] [ 6.10Gbits/sec 10.2Gbits/sec]
+      multi-nic-n7zf6-worker-2-zt5l5 multi-nic-n7zf6-worker-2-dbjpg  2/2             [192.168.0.1 192.168.64.1]   [ 7.81Gbits/sec 12.4Gbits/sec]
       ###########################################
     ```
 3. Clean up
@@ -210,7 +139,13 @@ namespaces|list of namespaces to apply the network definitions (i.e., to create 
     kubectl delete -f connection-check/concheck.yaml
     ```
 
-#### Uninstall operator
- ```bash
- make undeploy
- ```
+#### Clean up
+##### installed by manifests with kubectl
+  ```bash
+  kubectl delete -f deploy/
+  ```
+##### installed by bundle with operator-sdk
+  ```bash
+  operator-sdk cleanup multi-nic-cni-operator
+  ```
+

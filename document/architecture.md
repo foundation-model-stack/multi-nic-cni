@@ -1,5 +1,5 @@
 # Architecture
-![](img/multinicarch.png)
+![](img/multinicfmsio.png)
 Multi-NIC CNI operator is composed of three main components: controller, daemon, and CNI.
 The controller implements Operator SDK to create and run a reconcile loop over the CNI custom resource that is MultiNicNetwork, HostInterfaces, CIDR, and IPPool via kube-apiserver.
 
