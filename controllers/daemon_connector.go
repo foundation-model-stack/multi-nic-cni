@@ -15,7 +15,7 @@ import (
 	"bytes"
 	"errors"
 
-	netcogadvisoriov1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
+	multinicv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 )
@@ -28,7 +28,7 @@ const (
 var DAEMON_NAMESPACE, DAEMON_PORT, INTERFACE_PATH, ADD_ROUTE_PATH, DELETE_ROUTE_PATH, REGISTER_IPAM_PATH string
 
 // SetDaemon sets daemon environments
-func SetDaemon(daemonSpec netcogadvisoriov1.ConfigSpec) {
+func SetDaemon(daemonSpec multinicv1.ConfigSpec) {
 	DAEMON_PORT = fmt.Sprintf("%d", daemonSpec.Daemon.DaemonPort)
 	DAEMON_NAMESPACE = OPERATOR_NAMESPACE
 	INTERFACE_PATH = daemonSpec.InterfacePath
@@ -69,29 +69,29 @@ type RouteUpdateResponse struct {
 
 // IPAMInfo defines information about HostInterface sent to daemon for greeting
 type IPAMInfo struct {
-	HIFList []netcogadvisoriov1.InterfaceInfoType `json:"hifs"`
+	HIFList []multinicv1.InterfaceInfoType `json:"hifs"`
 }
 
 // GetInterfaces returns HostInterface of specific host
-func (dc DaemonConnector) GetInterfaces(podAddress string) ([]netcogadvisoriov1.InterfaceInfoType, error) {
-	var interfaces []netcogadvisoriov1.InterfaceInfoType
+func (dc DaemonConnector) GetInterfaces(podAddress string) ([]multinicv1.InterfaceInfoType, error) {
+	var interfaces []multinicv1.InterfaceInfoType
 	address := podAddress + INTERFACE_PATH
 	// try connect and get interface from daemon pod
 	res, err := http.Get(address)
 	if err != nil {
-		return []netcogadvisoriov1.InterfaceInfoType{}, err
+		return []multinicv1.InterfaceInfoType{}, err
 	}
 
 	body, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		return []netcogadvisoriov1.InterfaceInfoType{}, err
+		return []multinicv1.InterfaceInfoType{}, err
 	}
 	json.Unmarshal(body, &interfaces)
 	return interfaces, nil
 }
 
 // Join notifies new daemon to get knowing the existing daemons on the other hosts
-func (dc DaemonConnector) Join(podAddress string, hifs []netcogadvisoriov1.InterfaceInfoType) error {
+func (dc DaemonConnector) Join(podAddress string, hifs []multinicv1.InterfaceInfoType) error {
 	address := podAddress + REGISTER_IPAM_PATH
 
 	ipamInfo := IPAMInfo{

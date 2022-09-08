@@ -21,10 +21,10 @@ import (
 	"k8s.io/apimachinery/pkg/util/yaml"
 )
 
-//////////////////////////////////////////
+// ////////////////////////////////////////
 // SR-IOV-related resources
 // reference: github.com/k8snetworkplumbingwg/sriov-network-operator/api/v1@bc40302
-//////////////////////////////////////////
+// ////////////////////////////////////////
 const (
 	SRIOV_API_VERSION     = "sriovnetwork.openshift.io/v1"
 	SRIOV_NETWORK_KIND    = "SriovNetwork"

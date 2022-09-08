@@ -23,7 +23,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	netcogadvisoriov1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
+	multinicv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
 )
 
 const (
@@ -139,8 +139,9 @@ func (w *DaemonWatcher) Run() {
 }
 
 // ProcessPodQueue creates HostInterface when daemon is not going to be terminated
-//                 deletes HostInterface if daemon is deleted
-//                 updates CIDR according to the change
+//
+//	deletes HostInterface if daemon is deleted
+//	updates CIDR according to the change
 func (w *DaemonWatcher) ProcessPodQueue() {
 	daemon := <-w.PodQueue
 	if daemon != nil {
@@ -183,7 +184,7 @@ func (w *DaemonWatcher) IpamJoin(daemon v1.Pod) error {
 		// ip hasn't been assigned yet
 		return nil
 	}
-	var hifs []netcogadvisoriov1.InterfaceInfoType
+	var hifs []multinicv1.InterfaceInfoType
 	for _, hif := range HostInterfaceCache {
 		if hif.Spec.HostName == daemon.Status.PodIP {
 			continue

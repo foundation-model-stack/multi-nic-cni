@@ -16,7 +16,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	netcogadvisoriov1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
+	multinicv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
 	"github.com/foundation-model-stack/multi-nic-cni/plugin"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -68,15 +68,15 @@ type ConfigReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-//+kubebuilder:rbac:groups=net.cogadvisor.io,resources=configs,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=net.cogadvisor.io,resources=configs/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=multinic.fms.io,resources=configs,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=multinic.fms.io,resources=configs/status,verbs=get;update;patch
 
 const ReconcileTime = 30 * time.Minute
 
 func (r *ConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = r.Log.WithValues("config", req.NamespacedName)
 
-	instance := &netcogadvisoriov1.Config{}
+	instance := &multinicv1.Config{}
 	err := r.Client.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		// - if Config is deleted, delete daemon
@@ -115,19 +115,19 @@ func (r *ConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 // SetupWithManager sets up the controller with the Manager.
 func (r *ConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&netcogadvisoriov1.Config{}).
+		For(&multinicv1.Config{}).
 		Complete(r)
 }
 
 // newNetAttachDefWatcher restarts NetworkAttachmentDefinition watcher
-func (r *ConfigReconciler) newNetAttachDefWatcher(instance *netcogadvisoriov1.Config) {
+func (r *ConfigReconciler) newNetAttachDefWatcher(instance *multinicv1.Config) {
 	r.NetAttachDefHandler.DaemonPort = instance.Spec.Daemon.DaemonPort
 	r.NetAttachDefHandler.TargetCNI = instance.Spec.CNIType
 	SetDaemon(instance.Spec)
 }
 
 // newCNIDaemonSet creates new CNI daemonset
-func (r *ConfigReconciler) newCNIDaemonSet(client *kubernetes.Clientset, name string, daemonSpec netcogadvisoriov1.DaemonSpec) *appsv1.DaemonSet {
+func (r *ConfigReconciler) newCNIDaemonSet(client *kubernetes.Clientset, name string, daemonSpec multinicv1.DaemonSpec) *appsv1.DaemonSet {
 	labels := map[string]string{DAEMON_LABEL_NAME: DAEMON_LABEL_VALUE}
 
 	// prepare container port

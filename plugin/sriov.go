@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"strings"
 
-	netcogadvisoriov1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
+	multinicv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/dynamic"
@@ -70,7 +70,7 @@ func (p *SriovPlugin) Init(config *rest.Config) error {
 	return err
 }
 
-func (p *SriovPlugin) GetConfig(net netcogadvisoriov1.MultiNicNetwork, hifList map[string]netcogadvisoriov1.HostInterface) (string, map[string]string, error) {
+func (p *SriovPlugin) GetConfig(net multinicv1.MultiNicNetwork, hifList map[string]multinicv1.HostInterface) (string, map[string]string, error) {
 	annotation := make(map[string]string)
 	name := net.GetName()
 	namespace := net.GetNamespace()
@@ -98,7 +98,7 @@ func (p *SriovPlugin) GetConfig(net netcogadvisoriov1.MultiNicNetwork, hifList m
 	return config, annotation, nil
 }
 
-func (p *SriovPlugin) getRootDevices(net netcogadvisoriov1.MultiNicNetwork, hifList map[string]netcogadvisoriov1.HostInterface) []string {
+func (p *SriovPlugin) getRootDevices(net multinicv1.MultiNicNetwork, hifList map[string]multinicv1.HostInterface) []string {
 	masterNets := net.Spec.MasterNetAddrs
 
 	netAddrHash := make(map[string]string)
@@ -238,7 +238,7 @@ func (p *SriovPlugin) SriovnetworkName(name string) string {
 	return name + SRIOV_NETWORK_SUBFIX
 }
 
-func (p *SriovPlugin) CleanUp(net netcogadvisoriov1.MultiNicNetwork) error {
+func (p *SriovPlugin) CleanUp(net multinicv1.MultiNicNetwork) error {
 	name := net.GetName()
 	spec := net.Spec.MainPlugin
 	args := spec.CNIArgs

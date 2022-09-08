@@ -1,0 +1,37 @@
+apiVersion: multinic.fms.io/v1
+kind: Config
+metadata:
+  name: multi-nic-cni-operator-multi-nicd
+  namespace: multi-nic-cni-operator-system
+spec:
+  addRoutePath: /addl3
+  cniType: multi-nic
+  daemon:
+    env:
+    - name: DAEMON_PORT
+      value: "11000"
+    - name: RT_TABLE_PATH
+      value: /opt/rt_tables
+    image: ghcr.io/foundation-model-stack/multi-nic-cni-daemon:v1.0.2
+    imagePullPolicy: Always
+    mounts:
+    - hostpath: /var/lib/cni/bin
+      name: cnibin
+      podpath: /host/opt/cni/bin
+    - hostpath: /var/lib/kubelet/device-plugins
+      name: device-plugin
+      podpath: /var/lib/kubelet/device-plugins
+    - hostpath: /etc/iproute2/rt_tables
+      name: rt-tables
+      podpath: /opt/rt_tables
+    port: 11000
+    resources:
+      requests:
+        cpu: 100m
+        memory: 50Mi
+    securityContext:
+      privileged: true
+  deleteRoutePath: /deletel3
+  getInterfacePath: /interface
+  ipamType: multi-nic-ipam
+  joinPath: /join

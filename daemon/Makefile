@@ -2,12 +2,12 @@
 # Copyright 2022- IBM Inc. All rights reserved
 # SPDX-License-Identifier: Apache2.0
 #
-export DAEMON_REGISTRY = ghcr.io/foundation-model-stack
+export DAEMON_REGISTRY ?= ghcr.io/foundation-model-stack
 
 # DAEMON_IMG defines the image:tag used for daemon
-DAEMON_TAG_BASE = multi-nic-cni
-DAEMON_VERSION ?= v1.0.2
-DAEMON_IMG ?= $(DAEMON_REGISTRY)/$(DAEMON_TAG_BASE)-daemon:$(DAEMON_VERSION)
+IMAGE_TAG_BASE = $(DAEMON_REGISTRY)/multi-nic-cni
+VERSION ?= 1.0.2
+DAEMON_IMG ?= $(IMAGE_TAG_BASE)-daemon:v$(VERSION)
 
 
 test-verbose:

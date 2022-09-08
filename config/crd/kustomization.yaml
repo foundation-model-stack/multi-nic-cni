@@ -2,12 +2,12 @@
 # since it depends on service name and namespace that are out of this kustomize package.
 # It should be run by config/default
 resources:
-- bases/net.cogadvisor.io_cidrs.yaml
-- bases/net.cogadvisor.io_hostinterfaces.yaml
-- bases/net.cogadvisor.io_ippools.yaml
-- bases/net.cogadvisor.io_configs.yaml
-- bases/net.cogadvisor.io_multinicnetworks.yaml
-- bases/net.cogadvisor.io_deviceclasses.yaml
+- bases/multinic.fms.io_cidrs.yaml
+- bases/multinic.fms.io_hostinterfaces.yaml
+- bases/multinic.fms.io_ippools.yaml
+- bases/multinic.fms.io_configs.yaml
+- bases/multinic.fms.io_multinicnetworks.yaml
+- bases/multinic.fms.io_deviceclasses.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
 
 patchesStrategicMerge: []

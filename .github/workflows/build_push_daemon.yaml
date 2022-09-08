@@ -4,10 +4,10 @@ on:
   push:
     branches:
       - daemon
-      - ci
       
 env:
   IMAGE_VERSION: '1.0.2'
+  DAEMON_REGISTRY: ghcr.io/${{ github.repository_owner }}
 
 jobs:
   build-push-daemon:

@@ -8,7 +8,7 @@ package controllers
 import (
 	"fmt"
 
-	netcogadvisoriov1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
+	multinicv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -21,7 +21,7 @@ type RouteHandler struct {
 
 // AddRoutes add corresponding routes of CIDR
 // success: all routes is properly updated
-func (h *RouteHandler) AddRoutes(cidrSpec netcogadvisoriov1.CIDRSpec, entries []netcogadvisoriov1.CIDREntry, hostInterfaceInfoMap map[string]map[int]netcogadvisoriov1.HostInterfaceInfo, forceDelete bool) (success bool, noConnection bool) {
+func (h *RouteHandler) AddRoutes(cidrSpec multinicv1.CIDRSpec, entries []multinicv1.CIDREntry, hostInterfaceInfoMap map[string]map[int]multinicv1.HostInterfaceInfo, forceDelete bool) (success bool, noConnection bool) {
 	success = true
 	noConnection = false
 	for hostName, daemon := range DaemonCache {
@@ -39,7 +39,7 @@ func (h *RouteHandler) AddRoutes(cidrSpec netcogadvisoriov1.CIDRSpec, entries []
 }
 
 // AddRoutesToHost add route to a specific host
-func (h *RouteHandler) AddRoutesToHost(cidrSpec netcogadvisoriov1.CIDRSpec, hostName string, daemon corev1.Pod, entries []netcogadvisoriov1.CIDREntry, hostInterfaceInfoMap map[string]map[int]netcogadvisoriov1.HostInterfaceInfo, forceDelete bool) (bool, bool) {
+func (h *RouteHandler) AddRoutesToHost(cidrSpec multinicv1.CIDRSpec, hostName string, daemon corev1.Pod, entries []multinicv1.CIDREntry, hostInterfaceInfoMap map[string]map[int]multinicv1.HostInterfaceInfo, forceDelete bool) (bool, bool) {
 	change := true
 	mainSrcHostIP := daemon.Status.HostIP
 	routes := []HostRoute{}
@@ -77,7 +77,7 @@ func (h *RouteHandler) AddRoutesToHost(cidrSpec netcogadvisoriov1.CIDRSpec, host
 }
 
 // DeleteRoutes deletes corresponding routes of CIDR
-func (h *RouteHandler) DeleteRoutes(cidrSpec netcogadvisoriov1.CIDRSpec) {
+func (h *RouteHandler) DeleteRoutes(cidrSpec multinicv1.CIDRSpec) {
 	for hostName, daemon := range DaemonCache {
 		podAddress := GetDaemonAddressByPod(daemon)
 		res, err := h.DaemonConnector.DeleteL3Config(podAddress, cidrSpec.Config.Name, cidrSpec.Config.Subnet)

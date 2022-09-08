@@ -13,7 +13,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 
-	netcogadvisoriov1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
+	multinicv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
 	"github.com/foundation-model-stack/multi-nic-cni/compute"
 	"github.com/foundation-model-stack/multi-nic-cni/plugin"
 	"github.com/go-logr/logr"
@@ -85,8 +85,8 @@ func NewCIDRHandler(client client.Client, config *rest.Config, logger logr.Logge
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // GetCIDR gets CIDR from CIDR name
-func (h *CIDRHandler) GetCIDR(name string) (*netcogadvisoriov1.CIDR, error) {
-	instance := &netcogadvisoriov1.CIDR{}
+func (h *CIDRHandler) GetCIDR(name string) (*multinicv1.CIDR, error) {
+	instance := &multinicv1.CIDR{}
 	namespacedName := types.NamespacedName{
 		Name:      name,
 		Namespace: metav1.NamespaceAll,
@@ -96,10 +96,10 @@ func (h *CIDRHandler) GetCIDR(name string) (*netcogadvisoriov1.CIDR, error) {
 }
 
 // ListCIDR returns a map from CIDR name to instance
-func (h *CIDRHandler) ListCIDR() (map[string]netcogadvisoriov1.CIDR, error) {
-	cidrList := &netcogadvisoriov1.CIDRList{}
+func (h *CIDRHandler) ListCIDR() (map[string]multinicv1.CIDR, error) {
+	cidrList := &multinicv1.CIDRList{}
 	err := h.Client.List(context.TODO(), cidrList)
-	cidrSpecMap := make(map[string]netcogadvisoriov1.CIDR)
+	cidrSpecMap := make(map[string]multinicv1.CIDR)
 	if err == nil {
 		for _, cidr := range cidrList.Items {
 			cidrName := cidr.GetName()
@@ -144,7 +144,7 @@ func (h *CIDRHandler) CleanPreviousCIDR(config *rest.Config, defHandler *plugin.
 }
 
 // DeleteCIDR deletes corresponding routes and IPPools, then deletes CIDR
-func (h *CIDRHandler) DeleteCIDR(cidr netcogadvisoriov1.CIDR) error {
+func (h *CIDRHandler) DeleteCIDR(cidr multinicv1.CIDR) error {
 	errorMsg := ""
 	// delete corresponding routes
 	h.deleteRoutesFromCIDR(cidr.Spec)
@@ -169,7 +169,7 @@ func (h *CIDRHandler) DeleteCIDR(cidr netcogadvisoriov1.CIDR) error {
 }
 
 // deleteRoutesFromCIDR deletes routes from CIDR
-func (h *CIDRHandler) deleteRoutesFromCIDR(cidrInfo netcogadvisoriov1.CIDRSpec) {
+func (h *CIDRHandler) deleteRoutesFromCIDR(cidrInfo multinicv1.CIDRSpec) {
 	if h.IsL3Mode(cidrInfo.Config) {
 		h.RouteHandler.DeleteRoutes(cidrInfo)
 	}
@@ -199,8 +199,8 @@ func (h *CIDRHandler) GetAllNetAddrs() []string {
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // newCIDR returns new CIDR from PluginConfig
-func (h *CIDRHandler) newCIDR(def netcogadvisoriov1.PluginConfig, namespace string) (netcogadvisoriov1.CIDRSpec, error) {
-	entries := []netcogadvisoriov1.CIDREntry{}
+func (h *CIDRHandler) newCIDR(def multinicv1.PluginConfig, namespace string) (multinicv1.CIDRSpec, error) {
+	entries := []multinicv1.CIDREntry{}
 	masterIndex := int(0)
 	// maxInterfaceIndex = 2^(interface bits) - 1
 	maxInterfaceIndex := int(math.Pow(2, float64(def.InterfaceBlock)) - 1)
@@ -224,21 +224,21 @@ func (h *CIDRHandler) newCIDR(def netcogadvisoriov1.PluginConfig, namespace stri
 			// if tabu, find next interface index
 			masterIndex = masterIndex + 1
 			if masterIndex > maxInterfaceIndex {
-				return netcogadvisoriov1.CIDRSpec{}, errors.New("wrong request (overflow interface index)")
+				return multinicv1.CIDRSpec{}, errors.New("wrong request (overflow interface index)")
 			}
 		}
 
-		entry := netcogadvisoriov1.CIDREntry{
+		entry := multinicv1.CIDREntry{
 			NetAddress:     master,
 			InterfaceIndex: masterIndex,
 			VlanCIDR:       vlanCIDR,
-			Hosts:          []netcogadvisoriov1.HostInterfaceInfo{},
+			Hosts:          []multinicv1.HostInterfaceInfo{},
 		}
 		entries = append(entries, entry)
 		masterIndex = masterIndex + 1
 	}
 
-	cidrSpec := netcogadvisoriov1.CIDRSpec{
+	cidrSpec := multinicv1.CIDRSpec{
 		Config: def,
 		CIDRs:  entries,
 	}
@@ -246,7 +246,7 @@ func (h *CIDRHandler) newCIDR(def netcogadvisoriov1.PluginConfig, namespace stri
 }
 
 // NewCIDRWithNewConfig creates new CIDR by computing interface indexes from master networks
-func (h *CIDRHandler) NewCIDRWithNewConfig(def netcogadvisoriov1.PluginConfig, namespace string) (bool, error) {
+func (h *CIDRHandler) NewCIDRWithNewConfig(def multinicv1.PluginConfig, namespace string) (bool, error) {
 	h.Log.Info("NewCIDRWithNewConfig")
 	cidrSpec, err := h.newCIDR(def, namespace)
 	if err != nil {
@@ -256,11 +256,11 @@ func (h *CIDRHandler) NewCIDRWithNewConfig(def netcogadvisoriov1.PluginConfig, n
 }
 
 // updateEntries updates CIDR entry from current HostInterfaceCache
-func (h *CIDRHandler) updateEntries(cidrSpec netcogadvisoriov1.CIDRSpec, excludes []compute.IPValue, changed bool) (map[string]netcogadvisoriov1.CIDREntry, bool) {
+func (h *CIDRHandler) updateEntries(cidrSpec multinicv1.CIDRSpec, excludes []compute.IPValue, changed bool) (map[string]multinicv1.CIDREntry, bool) {
 	entries := cidrSpec.CIDRs
-	entriesMap := make(map[string]netcogadvisoriov1.CIDREntry)
+	entriesMap := make(map[string]multinicv1.CIDREntry)
 	for _, entry := range entries {
-		var newHostList []netcogadvisoriov1.HostInterfaceInfo
+		var newHostList []multinicv1.HostInterfaceInfo
 		for _, host := range entry.Hosts {
 			if hif, exists := HostInterfaceCache[host.HostName]; exists {
 				// to not include hanging entry
@@ -363,7 +363,7 @@ func (h *CIDRHandler) updateEntries(cidrSpec netcogadvisoriov1.CIDRSpec, exclude
 }
 
 // UpdateCIDR computes host indexes and coresponding pod VLAN from host interface list
-func (h *CIDRHandler) UpdateCIDR(cidrSpec netcogadvisoriov1.CIDRSpec, new bool) (bool, error) {
+func (h *CIDRHandler) UpdateCIDR(cidrSpec multinicv1.CIDRSpec, new bool) (bool, error) {
 	h.Mutex.Lock()
 	def := cidrSpec.Config
 	excludes := compute.SortAddress(def.ExcludeCIDRs)
@@ -371,16 +371,16 @@ func (h *CIDRHandler) UpdateCIDR(cidrSpec netcogadvisoriov1.CIDRSpec, new bool) 
 	entriesMap, changed := h.updateEntries(cidrSpec, excludes, new)
 	// if pod CIDR changes, update CIDR and create corresponding IPPools and routes
 	if changed {
-		newEntries := []netcogadvisoriov1.CIDREntry{}
+		newEntries := []multinicv1.CIDREntry{}
 		for _, entry := range entriesMap {
 			newEntries = append(newEntries, entry)
 		}
 
-		spec := netcogadvisoriov1.CIDRSpec{
+		spec := multinicv1.CIDRSpec{
 			Config: def,
 			CIDRs:  newEntries,
 		}
-		mapObj := &netcogadvisoriov1.CIDR{
+		mapObj := &multinicv1.CIDR{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: def.Name,
 			},
@@ -404,7 +404,7 @@ func (h *CIDRHandler) UpdateCIDR(cidrSpec netcogadvisoriov1.CIDRSpec, new bool) 
 			return false, err
 		}
 		// initialize the MultiNicNetwork status
-		h.MultiNicNetworkHandler.UpdateStatus(*mapObj, netcogadvisoriov1.ApplyingRoute)
+		h.MultiNicNetworkHandler.UpdateStatus(*mapObj, multinicv1.ApplyingRoute)
 
 		// update IPPools
 		for _, entry := range newEntries {
@@ -422,7 +422,7 @@ func (h *CIDRHandler) UpdateCIDR(cidrSpec netcogadvisoriov1.CIDRSpec, new bool) 
 }
 
 // SyncCIDRRoute try adding routes by CIDR
-func (h *CIDRHandler) SyncCIDRRoute(cidrSpec netcogadvisoriov1.CIDRSpec, forceDelete bool) (status netcogadvisoriov1.RouteStatus) {
+func (h *CIDRHandler) SyncCIDRRoute(cidrSpec multinicv1.CIDRSpec, forceDelete bool) (status multinicv1.RouteStatus) {
 	def := cidrSpec.Config
 	// try re-adding routes
 	if h.IsL3Mode(def) {
@@ -433,14 +433,14 @@ func (h *CIDRHandler) SyncCIDRRoute(cidrSpec netcogadvisoriov1.CIDRSpec, forceDe
 		success, noConnection := h.RouteHandler.AddRoutes(cidrSpec, entries, hostInterfaceInfoMap, forceDelete)
 		h.Mutex.Unlock()
 		if noConnection {
-			return netcogadvisoriov1.RouteUnknown
+			return multinicv1.RouteUnknown
 		}
 		if forceDelete && !success {
-			return netcogadvisoriov1.SomeRouteFailed
+			return multinicv1.SomeRouteFailed
 		}
-		return netcogadvisoriov1.AllRouteApplied
+		return multinicv1.AllRouteApplied
 	} else {
-		return netcogadvisoriov1.RouteNoApplied
+		return multinicv1.RouteNoApplied
 	}
 }
 
@@ -456,7 +456,7 @@ func (h *CIDRHandler) SyncCIDRRouteToHost(daemon corev1.Pod) {
 				change, connectFail := h.AddRoutesToHost(cidrSpec, hostName, daemon, entries, hostInterfaceInfoMap, false)
 				h.Log.Info(fmt.Sprintf("Add route to host %s change:%v, connectionFail: %v)", hostName, change, connectFail))
 				if connectFail {
-					routeStatus := netcogadvisoriov1.RouteUnknown
+					routeStatus := multinicv1.RouteUnknown
 					err := h.MultiNicNetworkHandler.SyncStatus(name, cidrSpec, routeStatus)
 					if err != nil {
 						h.Log.Info(fmt.Sprintf("failed to update route status of %s: %v", name, err))
@@ -469,7 +469,7 @@ func (h *CIDRHandler) SyncCIDRRouteToHost(daemon corev1.Pod) {
 }
 
 // DeleteOldRoutes forcefully deletes old routes from CIDR
-func (h *CIDRHandler) DeleteOldRoutes(cidrSpec netcogadvisoriov1.CIDRSpec) {
+func (h *CIDRHandler) DeleteOldRoutes(cidrSpec multinicv1.CIDRSpec) {
 	def := cidrSpec.Config
 	if h.IsL3Mode(def) {
 		h.RouteHandler.DeleteRoutes(cidrSpec)
@@ -477,7 +477,7 @@ func (h *CIDRHandler) DeleteOldRoutes(cidrSpec netcogadvisoriov1.CIDRSpec) {
 }
 
 // cleanPendingIPPools clean ippools in case that cidr is updated with new subnet entry
-func (h *CIDRHandler) cleanPendingIPPools(defName string, oldCIDR *netcogadvisoriov1.CIDR, newCIDR *netcogadvisoriov1.CIDR) {
+func (h *CIDRHandler) cleanPendingIPPools(defName string, oldCIDR *multinicv1.CIDR, newCIDR *multinicv1.CIDR) {
 	newPoolMap := make(map[string]bool)
 
 	for _, entry := range newCIDR.Spec.CIDRs {
@@ -501,7 +501,7 @@ func (h *CIDRHandler) cleanPendingIPPools(defName string, oldCIDR *netcogadvisor
 }
 
 // addNewHost finds new available host index
-func (h *CIDRHandler) addNewHost(hosts []netcogadvisoriov1.HostInterfaceInfo, maxHostIndex int, vlanCIDR string, nodeBlock int, excludes []string) (string, int, error) {
+func (h *CIDRHandler) addNewHost(hosts []multinicv1.HostInterfaceInfo, maxHostIndex int, vlanCIDR string, nodeBlock int, excludes []string) (string, int, error) {
 	nodeIndex := 0
 	// excludedIndexes = previously-assigned host indexes
 	excludedIndexes := []int{}
@@ -542,7 +542,7 @@ func (h *CIDRHandler) addNewHost(hosts []netcogadvisoriov1.HostInterfaceInfo, ma
 }
 
 // getInterfaceEntry get entry from interfaceaddress if exists, otherwise create new
-func (h *CIDRHandler) getInterfaceEntry(def netcogadvisoriov1.PluginConfig, entriesMap map[string]netcogadvisoriov1.CIDREntry, newNetAdress string) (bool, netcogadvisoriov1.CIDREntry) {
+func (h *CIDRHandler) getInterfaceEntry(def multinicv1.PluginConfig, entriesMap map[string]multinicv1.CIDREntry, newNetAdress string) (bool, multinicv1.CIDREntry) {
 	if entry, found := entriesMap[newNetAdress]; found {
 		// already exists
 		return true, entry
@@ -575,24 +575,24 @@ func (h *CIDRHandler) getInterfaceEntry(def netcogadvisoriov1.PluginConfig, entr
 		}
 		if masterIndex > maxInterfaceIndex {
 			h.Log.Info("cannot add new interface (no available index)")
-			return false, netcogadvisoriov1.CIDREntry{}
+			return false, multinicv1.CIDREntry{}
 		}
 	}
-	return true, netcogadvisoriov1.CIDREntry{
+	return true, multinicv1.CIDREntry{
 		NetAddress:     newNetAdress,
 		InterfaceIndex: masterIndex,
 		VlanCIDR:       vlanCIDR,
-		Hosts:          []netcogadvisoriov1.HostInterfaceInfo{},
+		Hosts:          []multinicv1.HostInterfaceInfo{},
 	}
 }
 
 // tryAddNewHost creates new entry of HostInterfaceInfo in CIDR and computes corresponding pod VLAN
-func (h *CIDRHandler) tryAddNewHost(existingHosts []netcogadvisoriov1.HostInterfaceInfo, entry netcogadvisoriov1.CIDREntry, maxHostIndex int, def netcogadvisoriov1.PluginConfig, hostName, interfaceName, hostIP string) (netcogadvisoriov1.CIDREntry, bool) {
+func (h *CIDRHandler) tryAddNewHost(existingHosts []multinicv1.HostInterfaceInfo, entry multinicv1.CIDREntry, maxHostIndex int, def multinicv1.PluginConfig, hostName, interfaceName, hostIP string) (multinicv1.CIDREntry, bool) {
 	h.Log.Info(fmt.Sprintf("TryAddNewHost %v %d,%s,%s,%s", entry, maxHostIndex, hostName, interfaceName, hostIP))
 	podCIDR, hostIndex, err := h.addNewHost(existingHosts, maxHostIndex, entry.VlanCIDR, def.HostBlock, def.ExcludeCIDRs)
 	if err == nil {
 		// successfully compute pod VLAN, create and append new entry of HostInterfaceInfo orderly
-		newHost := netcogadvisoriov1.HostInterfaceInfo{
+		newHost := multinicv1.HostInterfaceInfo{
 			HostIndex:     hostIndex,
 			HostName:      hostName,
 			InterfaceName: interfaceName,
@@ -612,7 +612,7 @@ func (h *CIDRHandler) tryAddNewHost(existingHosts []netcogadvisoriov1.HostInterf
 }
 
 // IsL3Mode checkes L3 VLAN mode (to add/delete L3 routes automatically)
-func (h *CIDRHandler) IsL3Mode(def netcogadvisoriov1.PluginConfig) bool {
+func (h *CIDRHandler) IsL3Mode(def multinicv1.PluginConfig) bool {
 	mode := def.VlanMode
 	switch mode {
 	case "", "l2":
@@ -627,7 +627,7 @@ func (h *CIDRHandler) IsL3Mode(def netcogadvisoriov1.PluginConfig) bool {
 }
 
 // getHostIndex finds assigned host index from the HostInterfaceInfo list
-func (h *CIDRHandler) getHostIndex(hosts []netcogadvisoriov1.HostInterfaceInfo, hostName string) int {
+func (h *CIDRHandler) getHostIndex(hosts []multinicv1.HostInterfaceInfo, hostName string) int {
 	for index, host := range hosts {
 		if hostName == host.HostName {
 			return index
@@ -637,14 +637,14 @@ func (h *CIDRHandler) getHostIndex(hosts []netcogadvisoriov1.HostInterfaceInfo, 
 }
 
 // GetHostInterfaceIndexMap finds a map from (host name, interface index) to HostInterfaceInfo of CIDR
-func (h *CIDRHandler) GetHostInterfaceIndexMap(entries []netcogadvisoriov1.CIDREntry) map[string]map[int]netcogadvisoriov1.HostInterfaceInfo {
-	hostInterfaceIndexMap := make(map[string]map[int]netcogadvisoriov1.HostInterfaceInfo)
+func (h *CIDRHandler) GetHostInterfaceIndexMap(entries []multinicv1.CIDREntry) map[string]map[int]multinicv1.HostInterfaceInfo {
+	hostInterfaceIndexMap := make(map[string]map[int]multinicv1.HostInterfaceInfo)
 	for _, entry := range entries {
 		ifaceIndex := entry.InterfaceIndex
 		for _, host := range entry.Hosts {
 			hostName := host.HostName
 			if _, exists := hostInterfaceIndexMap[hostName]; !exists {
-				hostInterfaceIndexMap[hostName] = make(map[int]netcogadvisoriov1.HostInterfaceInfo)
+				hostInterfaceIndexMap[hostName] = make(map[int]multinicv1.HostInterfaceInfo)
 			}
 			hostInterfaceIndexMap[hostName][ifaceIndex] = host
 		}

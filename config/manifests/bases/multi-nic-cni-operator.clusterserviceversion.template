@@ -5,7 +5,7 @@ metadata:
     alm-examples: '[]'
     capabilities: Basic Install
     categories: Networking
-    containerImage: ghcr.io/foundation-model-stack/multi-nic-cni-controller:v1.0.2
+    containerImage: ${IMG}
   name: multi-nic-cni-operator.v0.0.0
   namespace: placeholder
 spec:
@@ -15,57 +15,57 @@ spec:
     - description: CIDR is the Schema for the cidrs API
       displayName: CIDR
       kind: CIDR
-      name: cidrs.net.cogadvisor.io.net.cogadvisor.io
+      name: cidrs.multinic.fms.io.multinic.fms.io
       version: v1
     - description: Config is the Schema for the configs API
       displayName: Config
       kind: Config
-      name: configs.net.cogadvisor.io.net.cogadvisor.io
+      name: configs.multinic.fms.io.multinic.fms.io
       version: v1
     - description: HostInterface is the Schema for the hostinterfaces API
       displayName: Host Interface
       kind: HostInterface
-      name: hostinterfaces.net.cogadvisor.io.net.cogadvisor.io
+      name: hostinterfaces.multinic.fms.io.multinic.fms.io
       version: v1
     - description: IPPool is the Schema for the ippools API
       displayName: IPPool
       kind: IPPool
-      name: ippools.net.cogadvisor.io.net.cogadvisor.io
+      name: ippools.multinic.fms.io.multinic.fms.io
       version: v1
     - description: QoSClassPolicy is the Schema for the qosclasspolicies API
       displayName: Qo SClass Policy
       kind: QoSClassPolicy
-      name: qosclasspolicies.net.cogadvisor.io
+      name: qosclasspolicies.multinic.fms.io
       version: v1
     - description: CIDR is the Schema for the cidrs API
       displayName: CIDR
       kind: CIDR
-      name: cidrs.net.cogadvisor.io
+      name: cidrs.multinic.fms.io
       version: v1
     - description: Config is the Schema for the configs API
       displayName: Config
       kind: Config
-      name: configs.net.cogadvisor.io
+      name: configs.multinic.fms.io
       version: v1
     - description: DeviceClass is the Schema for the deviceclasses API
       displayName: Device Class
       kind: DeviceClass
-      name: deviceclasses.net.cogadvisor.io
+      name: deviceclasses.multinic.fms.io
       version: v1
     - description: HostInterface is the Schema for the hostinterfaces API
       displayName: Host Interface
       kind: HostInterface
-      name: hostinterfaces.net.cogadvisor.io
+      name: hostinterfaces.multinic.fms.io
       version: v1
     - description: IPPool is the Schema for the ippools API
       displayName: IPPool
       kind: IPPool
-      name: ippools.net.cogadvisor.io
+      name: ippools.multinic.fms.io
       version: v1
     - description: MultiNicNetwork is the Schema for the multinicnetworks API
       displayName: Multi Nic Network
       kind: MultiNicNetwork
-      name: multinicnetworks.net.cogadvisor.io
+      name: multinicnetworks.multinic.fms.io
       version: v1
   description: operate CNI for exporting and configurating multiple nics to container
     namespace

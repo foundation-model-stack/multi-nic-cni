@@ -32,7 +32,6 @@ config/samples/machine
 # to-copy folder
 daemon/cni
 daemon/cni/*
-deploy/
 daemon/bin
 cni/bin
 cni/test-bin
@@ -56,10 +55,14 @@ config/samples/vpci
 
 config/secret/*-secret.yaml
 config/*/patches/image_pull_secret.yaml
-config/*/net.cogadvisor.io_v1_config.yaml
+config/*/multinic.fms.io_v1_config.yaml
+config/manifests/bases/multi-nic-cni-operator.clusterserviceversion.yaml
 
 go.sum
 */go.sum
 */*/go.sum
 
 debug
+
+cache/
+config/default/

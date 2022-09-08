@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	CIDR_RESOURCE = "cidrs.v1.net.cogadvisor.io"
+	CIDR_RESOURCE = "cidrs.v1.multinic.fms.io"
 )
 
 type HostInterfaceInfo struct {

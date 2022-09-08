@@ -8,14 +8,14 @@ package controllers
 import (
 	"fmt"
 
-	netcogadvisoriov1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
+	multinicv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
 	"github.com/foundation-model-stack/multi-nic-cni/compute"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	//+kubebuilder:scaffold:imports
 )
 
-func updateCIDR(multinicnetwork *netcogadvisoriov1.MultiNicNetwork, cidr netcogadvisoriov1.CIDRSpec, new, expectChange bool) netcogadvisoriov1.CIDRSpec {
+func updateCIDR(multinicnetwork *multinicv1.MultiNicNetwork, cidr multinicv1.CIDRSpec, new, expectChange bool) multinicv1.CIDRSpec {
 	def := cidr.Config
 	excludes := compute.SortAddress(def.ExcludeCIDRs)
 	entriesMap, changed := multinicnetworkReconciler.CIDRHandler.updateEntries(cidr, excludes, new)
@@ -44,7 +44,7 @@ func updateCIDR(multinicnetwork *netcogadvisoriov1.MultiNicNetwork, cidr netcoga
 		Expect(totalPodCIDR).To(Equal(expectedPodCIDR))
 	}
 	reservedInterfaceIndex := make(map[int]bool)
-	newEntries := []netcogadvisoriov1.CIDREntry{}
+	newEntries := []multinicv1.CIDREntry{}
 	for _, entry := range entriesMap {
 		Expect(entry.InterfaceIndex).Should(BeNumerically(">=", 0))
 		found := reservedInterfaceIndex[entry.InterfaceIndex]
@@ -52,7 +52,7 @@ func updateCIDR(multinicnetwork *netcogadvisoriov1.MultiNicNetwork, cidr netcoga
 		reservedInterfaceIndex[entry.InterfaceIndex] = true
 		newEntries = append(newEntries, entry)
 	}
-	return netcogadvisoriov1.CIDRSpec{
+	return multinicv1.CIDRSpec{
 		Config: def,
 		CIDRs:  newEntries,
 	}

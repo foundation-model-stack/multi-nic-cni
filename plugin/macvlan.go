@@ -9,7 +9,7 @@ import (
 	"encoding/json"
 
 	"github.com/containernetworking/cni/pkg/types"
-	netcogadvisoriov1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
+	multinicv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
 	"github.com/go-logr/logr"
 	"k8s.io/client-go/rest"
 )
@@ -32,7 +32,7 @@ func (p *MACVLANPlugin) Init(config *rest.Config, logger logr.Logger) error {
 	return nil
 }
 
-func (p *MACVLANPlugin) GetConfig(net netcogadvisoriov1.MultiNicNetwork, hifList map[string]netcogadvisoriov1.HostInterface) (string, map[string]string, error) {
+func (p *MACVLANPlugin) GetConfig(net multinicv1.MultiNicNetwork, hifList map[string]multinicv1.HostInterface) (string, map[string]string, error) {
 	spec := net.Spec.MainPlugin
 	args := spec.CNIArgs
 	conf := &MACVLANTypeNetConf{}
@@ -48,6 +48,6 @@ func (p *MACVLANPlugin) GetConfig(net netcogadvisoriov1.MultiNicNetwork, hifList
 	return string(confBytes), make(map[string]string), nil
 }
 
-func (p *MACVLANPlugin) CleanUp(net netcogadvisoriov1.MultiNicNetwork) error {
+func (p *MACVLANPlugin) CleanUp(net multinicv1.MultiNicNetwork) error {
 	return nil
 }
