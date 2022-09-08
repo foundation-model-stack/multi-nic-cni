@@ -22,17 +22,17 @@ import (
 )
 
 const (
-	IPPOOL_RESOURCE = "ippools.v1.net.cogadvisor.io"
+	IPPOOL_RESOURCE = "ippools.v1.multinic.fms.io"
 	IPPOOL_KIND     = "IPPool"
 )
 
 type IPPoolType struct {
-	PodCIDR          string   `json:"podCIDR"`
-	VlanCIDR         string   `json:"vlanCIDR"`
-	NetAttachDefName string   `json:"netAttachDef"`
-	HostName         string   `json:"hostName"`
-	InterfaceName    string   `json:"interfaceName"`
-	Excludes         []string `json'"excludes"`
+	PodCIDR          string       `json:"podCIDR"`
+	VlanCIDR         string       `json:"vlanCIDR"`
+	NetAttachDefName string       `json:"netAttachDef"`
+	HostName         string       `json:"hostName"`
+	InterfaceName    string       `json:"interfaceName"`
+	Excludes         []string     `json'"excludes"`
 	Allocations      []Allocation `json:"allocations"`
 }
 
@@ -86,7 +86,7 @@ func (h *IPPoolHandler) ListIPPool() (map[string]IPPoolType, error) {
 	return poolSpecMap, err
 }
 
-func (h *IPPoolHandler) PatchIPPool(poolname string, allocations []Allocation) (*unstructured.Unstructured, error)  {
+func (h *IPPoolHandler) PatchIPPool(poolname string, allocations []Allocation) (*unstructured.Unstructured, error) {
 	allocationInByte, _ := json.Marshal(allocations)
 	allocationReplace := fmt.Sprintf(`{"op":"replace","path":"/spec/allocations","value":%s}`, allocationInByte)
 	dataStr := fmt.Sprintf(`[%s]`, allocationReplace)

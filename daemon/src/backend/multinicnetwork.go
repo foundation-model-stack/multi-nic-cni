@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	MULTINICNET_RESOURCE = "multinicnetworks.v1.net.cogadvisor.io"
+	MULTINICNET_RESOURCE = "multinicnetworks.v1.multinic.fms.io"
 	MULTINICNET_KIND     = "MultiNicNetwork"
 )
 
@@ -52,12 +52,12 @@ func NewMultiNicNetworkHandler(config *rest.Config) *MultiNicNetworkHandler {
 func (h *MultiNicNetworkHandler) Get(name string, namespace string) (MultiNicNetworkSpec, error) {
 	multinicnetwork, err := h.DynamicHandler.Get(name, namespace, metav1.GetOptions{})
 	if err != nil {
-		return 	MultiNicNetworkSpec{Policy: AttachmentPolicy{Strategy: "none",}}, err
+		return MultiNicNetworkSpec{Policy: AttachmentPolicy{Strategy: "none"}}, err
 	}
 	spec := MultiNicNetworkSpec{}
 	jsonBytes, err := json.Marshal(multinicnetwork.Object["spec"])
 	if err != nil {
-		return MultiNicNetworkSpec{Policy: AttachmentPolicy{Strategy: "none",}}, err
+		return MultiNicNetworkSpec{Policy: AttachmentPolicy{Strategy: "none"}}, err
 	}
 	err = json.Unmarshal(jsonBytes, &spec)
 	return spec, nil
