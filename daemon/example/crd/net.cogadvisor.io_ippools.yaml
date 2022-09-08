@@ -6,9 +6,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.4.1
   creationTimestamp: null
-  name: ippools.net.cogadvisor.io
+  name: ippools.multinic.fms.io
 spec:
-  group: net.cogadvisor.io
+  group: multinic.fms.io
   names:
     kind: IPPool
     listKind: IPPoolList

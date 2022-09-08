@@ -6,9 +6,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.4.1
   creationTimestamp: null
-  name: deviceclasses.net.cogadvisor.io
+  name: deviceclasses.multinic.fms.io
 spec:
-  group: net.cogadvisor.io
+  group: multinic.fms.io
   names:
     kind: DeviceClass
     listKind: DeviceClassList

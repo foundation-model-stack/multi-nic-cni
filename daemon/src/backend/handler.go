@@ -9,8 +9,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"time"
 	"log"
+	"time"
 
 	"k8s.io/apimachinery/pkg/types"
 
@@ -23,7 +23,7 @@ import (
 )
 
 const (
-	API_VERSION = "net.cogadvisor.io/v1"
+	API_VERSION = "multinic.fms.io/v1"
 )
 
 type DynamicHandler struct {
@@ -93,7 +93,7 @@ func (h *DynamicHandler) List(namespace string, options metav1.ListOptions) (*un
 	start := time.Now()
 	res, err := h.DYN.Resource(*gvr).Namespace(namespace).List(context.TODO(), options)
 	elapsed := time.Since(start)
-    log.Println(fmt.Sprintf("List%s elapsed: %d us", h.Kind, int64(elapsed/time.Microsecond)))
+	log.Println(fmt.Sprintf("List%s elapsed: %d us", h.Kind, int64(elapsed/time.Microsecond)))
 	return res, err
 }
 
@@ -125,4 +125,3 @@ func (h *DynamicHandler) Patch(name string, namespace string, pt types.PatchType
 	log.Println(fmt.Sprintf("Patch%s elapsed: %d us", h.Kind, int64(elapsed/time.Microsecond)))
 	return res, err
 }
-
