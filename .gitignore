@@ -32,7 +32,6 @@ config/samples/machine
 # to-copy folder
 daemon/cni
 daemon/cni/*
-deploy/
 daemon/bin
 cni/bin
 cni/test-bin
