@@ -16,7 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	netcogadvisoriov1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
+	multinicv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
 )
 
 // IPPoolReconciler reconciles a IPPool object
@@ -28,16 +28,16 @@ type IPPoolReconciler struct {
 	*CIDRHandler
 }
 
-//+kubebuilder:rbac:groups=net.cogadvisor.io,resources=ippools,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=net.cogadvisor.io,resources=ippools/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=net.cogadvisor.io,resources=ippools/finalizers,verbs=update
+//+kubebuilder:rbac:groups=multinic.fms.io,resources=ippools,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=multinic.fms.io,resources=ippools/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=multinic.fms.io,resources=ippools/finalizers,verbs=update
 
-const ippoolFinalizer = "finalizers.cidr.net.cogadvisor.io"
+const ippoolFinalizer = "finalizers.cidr.multinic.fms.io"
 
 func (r *IPPoolReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = r.Log.WithValues("ippool", req.NamespacedName)
 
-	instance := &netcogadvisoriov1.IPPool{}
+	instance := &multinicv1.IPPool{}
 	err := r.Client.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -83,12 +83,12 @@ func (r *IPPoolReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 // SetupWithManager sets up the controller with the Manager.
 func (r *IPPoolReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&netcogadvisoriov1.IPPool{}).
+		For(&multinicv1.IPPool{}).
 		Complete(r)
 }
 
 // callFinalizer reports remaining allocated IPs, and delete corrsponding routes
-func (r *IPPoolReconciler) callFinalizer(reqLogger logr.Logger, instance *netcogadvisoriov1.IPPool) error {
+func (r *IPPoolReconciler) callFinalizer(reqLogger logr.Logger, instance *multinicv1.IPPool) error {
 	// report remaining allocated IPs
 	allocations := instance.Spec.Allocations
 	if len(allocations) > 0 {

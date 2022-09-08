@@ -76,7 +76,7 @@ With the above annotation, one secondary interface that falls into highspeed cla
 The DeviceClass resource is composed of a list of vendor and product identifiers as below example. 
 ```yaml
 # DeviceClass example
-apiVersion: net.cogadvisor.io/v1
+apiVersion: multinic.fms.io/v1
 kind: DeviceClass
 metadata:
   name: highspeed

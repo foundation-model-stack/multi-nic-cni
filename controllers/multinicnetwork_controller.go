@@ -21,7 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	netcogadvisoriov1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
+	multinicv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
 	"github.com/foundation-model-stack/multi-nic-cni/plugin"
 )
 
@@ -60,13 +60,13 @@ func GetPluginMap(config *rest.Config, logger logr.Logger) map[string]*PluginInt
 	return pluginMap
 }
 
-//+kubebuilder:rbac:groups=net.cogadvisor.io,resources=multinicnetworks,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=net.cogadvisor.io,resources=multinicnetworks/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=net.cogadvisor.io,resources=multinicnetworks/finalizers,verbs=update
+//+kubebuilder:rbac:groups=multinic.fms.io,resources=multinicnetworks,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=multinic.fms.io,resources=multinicnetworks/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=multinic.fms.io,resources=multinicnetworks/finalizers,verbs=update
 
-const multinicnetworkFinalizer = "finalizers.multinicnetwork.net.cogadvisor.io"
+const multinicnetworkFinalizer = "finalizers.multinicnetwork.multinic.fms.io"
 
-func IsMultiNICIPAM(instance *netcogadvisoriov1.MultiNicNetwork) (bool, error) {
+func IsMultiNICIPAM(instance *multinicv1.MultiNicNetwork) (bool, error) {
 	simpleIPAM := &types.IPAM{}
 	err := json.Unmarshal([]byte(instance.Spec.IPAM), simpleIPAM)
 	if err != nil {
@@ -78,7 +78,7 @@ func IsMultiNICIPAM(instance *netcogadvisoriov1.MultiNicNetwork) (bool, error) {
 func (r *MultiNicNetworkReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = log.FromContext(ctx)
 
-	instance := &netcogadvisoriov1.MultiNicNetwork{}
+	instance := &multinicv1.MultiNicNetwork{}
 	err := r.Client.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -118,10 +118,10 @@ func (r *MultiNicNetworkReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, nil
 	}
 	routeStatus := instance.Status.Status
-	if routeStatus == netcogadvisoriov1.AllRouteApplied || routeStatus == netcogadvisoriov1.RouteNoApplied {
+	if routeStatus == multinicv1.AllRouteApplied || routeStatus == multinicv1.RouteNoApplied {
 		// status alread applied
 		return ctrl.Result{}, nil
-	} else if routeStatus == netcogadvisoriov1.RouteUnknown {
+	} else if routeStatus == multinicv1.RouteUnknown {
 		// some route is failed
 		if cidr, ok := CIDRCache[instance.Name]; ok {
 			routeStatus = r.CIDRHandler.SyncCIDRRoute(cidr, false)
@@ -129,7 +129,7 @@ func (r *MultiNicNetworkReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			if err != nil {
 				r.Log.Info(fmt.Sprintf("failed to update route status of %s: %v", instance.Name, err))
 			}
-			if routeStatus == netcogadvisoriov1.RouteUnknown {
+			if routeStatus == multinicv1.RouteUnknown {
 				return ctrl.Result{RequeueAfter: ReconcileTime}, nil
 			}
 		}
@@ -165,7 +165,7 @@ func (r *MultiNicNetworkReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	return ctrl.Result{}, nil
 }
 
-func (r *MultiNicNetworkReconciler) GetMainPluginConf(instance *netcogadvisoriov1.MultiNicNetwork, hifList map[string]netcogadvisoriov1.HostInterface) (string, map[string]string, error) {
+func (r *MultiNicNetworkReconciler) GetMainPluginConf(instance *multinicv1.MultiNicNetwork, hifList map[string]multinicv1.HostInterface) (string, map[string]string, error) {
 	spec := instance.Spec.MainPlugin
 	if p, exist := r.PluginMap[spec.Type]; exist {
 		return (*p).GetConfig(*instance, hifList)
@@ -176,14 +176,14 @@ func (r *MultiNicNetworkReconciler) GetMainPluginConf(instance *netcogadvisoriov
 // SetupWithManager sets up the controller with the Manager.
 func (r *MultiNicNetworkReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&netcogadvisoriov1.MultiNicNetwork{}).
+		For(&multinicv1.MultiNicNetwork{}).
 		Complete(r)
 }
 
 // getIPAMConfig get IPAM config from network definition
-func (r *MultiNicNetworkReconciler) getIPAMConfig(instance *netcogadvisoriov1.MultiNicNetwork) (*netcogadvisoriov1.PluginConfig, error) {
+func (r *MultiNicNetworkReconciler) getIPAMConfig(instance *multinicv1.MultiNicNetwork) (*multinicv1.PluginConfig, error) {
 	isMultiNicIPAM, err := IsMultiNICIPAM(instance)
-	ipamConfig := &netcogadvisoriov1.PluginConfig{}
+	ipamConfig := &multinicv1.PluginConfig{}
 	if err != nil {
 		return nil, err
 	}
@@ -200,7 +200,7 @@ func (r *MultiNicNetworkReconciler) getIPAMConfig(instance *netcogadvisoriov1.Mu
 }
 
 // HandleMultiNicIPAM handles ipam if target type
-func (r *MultiNicNetworkReconciler) HandleMultiNicIPAM(instance *netcogadvisoriov1.MultiNicNetwork) error {
+func (r *MultiNicNetworkReconciler) HandleMultiNicIPAM(instance *multinicv1.MultiNicNetwork) error {
 	ipamConfig, err := r.getIPAMConfig(instance)
 	if err == nil {
 		cidrName := instance.GetName()
@@ -221,7 +221,7 @@ func (r *MultiNicNetworkReconciler) HandleMultiNicIPAM(instance *netcogadvisorio
 
 // deprecated
 // isExistConfig checks if considering plugin config do not change from the config in the existing CIDR
-func (r *MultiNicNetworkReconciler) isExistConfig(instance *netcogadvisoriov1.MultiNicNetwork, ipamConfig netcogadvisoriov1.PluginConfig) bool {
+func (r *MultiNicNetworkReconciler) isExistConfig(instance *multinicv1.MultiNicNetwork, ipamConfig multinicv1.PluginConfig) bool {
 	cidrName := instance.GetName()
 	cidr, err := r.CIDRHandler.GetCIDR(cidrName)
 	if err == nil {
@@ -231,7 +231,7 @@ func (r *MultiNicNetworkReconciler) isExistConfig(instance *netcogadvisoriov1.Mu
 }
 
 // CallFinalizer deletes NetworkAttachmentDefinition, CIDR and its dependencies
-func (r *MultiNicNetworkReconciler) CallFinalizer(reqLogger logr.Logger, instance *netcogadvisoriov1.MultiNicNetwork) error {
+func (r *MultiNicNetworkReconciler) CallFinalizer(reqLogger logr.Logger, instance *multinicv1.MultiNicNetwork) error {
 	isMultiNicIPAM, err := IsMultiNICIPAM(instance)
 	if err == nil && isMultiNicIPAM {
 		cidrName := instance.GetName()

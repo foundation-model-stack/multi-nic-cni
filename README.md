@@ -37,7 +37,7 @@ After deploying *MultiNicNetwork*, *NetworkAttachmentDefinition* with the same n
 
 ```yaml
 # network.yaml
-apiVersion: net.cogadvisor.io/v1
+apiVersion: multinic.fms.io/v1
 kind: MultiNicNetwork
 metadata:
   name: multi-nic-sample

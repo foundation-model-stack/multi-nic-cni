@@ -8,7 +8,7 @@ package plugin
 import (
 	"encoding/json"
 
-	netcogadvisoriov1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
+	multinicv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -19,8 +19,8 @@ const (
 var netConfKeys []string = []string{"cniVersion", "type"}
 
 type Plugin interface {
-	GetConfig(net netcogadvisoriov1.MultiNicNetwork, hifList map[string]netcogadvisoriov1.HostInterface) (string, map[string]string, error)
-	CleanUp(net netcogadvisoriov1.MultiNicNetwork) error
+	GetConfig(net multinicv1.MultiNicNetwork, hifList map[string]multinicv1.HostInterface) (string, map[string]string, error)
+	CleanUp(net multinicv1.MultiNicNetwork) error
 }
 
 func GetMetaObject(name string, namespace string, annotations map[string]string) metav1.ObjectMeta {

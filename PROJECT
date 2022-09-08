@@ -1,4 +1,4 @@
-domain: cogadvisor.io
+domain: fms.io
 layout:
 - go.kubebuilder.io/v3
 plugins:
@@ -11,40 +11,40 @@ resources:
     crdVersion: v1
     namespaced: true
   controller: true
-  domain: cogadvisor.io
-  group: net
+  domain: fms.io
+  group: multinic
   kind: CIDR
   path: github.com/foundation-model-stack/multi-nic-cni/api/v1
   version: v1
 - api:
     crdVersion: v1
   controller: true
-  domain: cogadvisor.io
-  group: net
+  domain: fms.io
+  group: multinic
   kind: HostInterface
   path: github.com/foundation-model-stack/multi-nic-cni/api/v1
   version: v1
 - api:
     crdVersion: v1
   controller: true
-  domain: cogadvisor.io
-  group: net
+  domain: fms.io
+  group: multinic
   kind: IPPool
   path: github.com/foundation-model-stack/multi-nic-cni/api/v1
   version: v1
 - api:
     crdVersion: v1
   controller: true
-  domain: cogadvisor.io
-  group: net
+  domain: fms.io
+  group: multinic
   kind: Config
   path: github.com/foundation-model-stack/multi-nic-cni/api/v1
   version: v1
 - api:
     crdVersion: v1
   controller: true
-  domain: cogadvisor.io
-  group: net
+  domain: fms.io
+  group: multinic
   kind: CNIConfig
   path: github.com/foundation-model-stack/multi-nic-cni/api/v1
   version: v1
@@ -52,23 +52,23 @@ resources:
     crdVersion: v1
     namespaced: true
   controller: true
-  domain: cogadvisor.io
-  group: net
+  domain: fms.io
+  group: multinic
   kind: MultiNicNetwork
   path: github.com/foundation-model-stack/multi-nic-cni/api/v1
   version: v1
 - api:
     crdVersion: v1
     namespaced: true
-  domain: cogadvisor.io
-  group: net
+  domain: fms.io
+  group: multinic
   kind: QoSClassPolicy
   path: github.com/foundation-model-stack/multi-nic-cni/api/v1
   version: v1
 - api:
     crdVersion: v1
-  domain: cogadvisor.io
-  group: net
+  domain: fms.io
+  group: multinic
   kind: DeviceClass
   path: github.com/foundation-model-stack/multi-nic-cni/api/v1
   version: v1

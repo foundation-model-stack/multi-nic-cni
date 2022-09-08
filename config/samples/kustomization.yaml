@@ -1,6 +1,6 @@
 ## Append samples you want in your CSV to this file as resources ##
 resources:
-- net.cogadvisor.io_v1_config.yaml
+- multinic.fms.io_v1_config.yaml
 - net_v1_deviceclass.yaml
 - net_v1_multinicnetwork.yaml
 #+kubebuilder:scaffold:manifestskustomizesamples

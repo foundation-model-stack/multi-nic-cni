@@ -56,10 +56,13 @@ config/samples/vpci
 
 config/secret/*-secret.yaml
 config/*/patches/image_pull_secret.yaml
-config/*/net.cogadvisor.io_v1_config.yaml
+config/*/multinic.fms.io_v1_config.yaml
 
 go.sum
 */go.sum
 */*/go.sum
 
 debug
+
+cache/
+config/default/

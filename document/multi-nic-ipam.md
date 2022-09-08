@@ -34,9 +34,9 @@ The built-in Multi-NIC IPAM and L3 route auto-configuration performs by collabor
 The CNI uses orchrestrator storage to keep data synchronize by defining new three custom resources: 
 ```bash
 NAME             APIVERSION                                    NAMESPACED   KIND
-cidrs            net.cogadvisor.io/v1                          false        CIDR
-hostinterfaces   net.cogadvisor.io/v1                          false        HostInterface
-ippools          net.cogadvisor.io/v1                          false        IPPool
+cidrs            multinic.fms.io/v1                          false        CIDR
+hostinterfaces   multinic.fms.io/v1                          false        HostInterface
+ippools          multinic.fms.io/v1                          false        IPPool
 ```
 - **CIDR** for recording the computed CIDRs. This resource is created or updated when
   - *MultiNicNetwork* is created or updated with IPAM type `multi-nic-ipam`. 

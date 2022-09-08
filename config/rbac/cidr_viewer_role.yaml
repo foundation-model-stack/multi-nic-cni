@@ -5,7 +5,7 @@ metadata:
   name: cidr-viewer-role
 rules:
 - apiGroups:
-  - net.cogadvisor.io.net.cogadvisor.io
+  - multinic.fms.io.multinic.fms.io
   resources:
   - cidrs
   verbs:
@@ -13,7 +13,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - net.cogadvisor.io.net.cogadvisor.io
+  - multinic.fms.io.multinic.fms.io
   resources:
   - cidrs/status
   verbs:

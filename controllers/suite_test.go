@@ -30,7 +30,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	netcogadvisoriov1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
+	multinicv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
 	"github.com/foundation-model-stack/multi-nic-cni/plugin"
 	ctrl "sigs.k8s.io/controller-runtime"
 	//+kubebuilder:scaffold:imports
@@ -46,7 +46,7 @@ var setupLog = ctrl.Log.WithName("setup")
 var nodes []v1.Node = generateNodes()
 var interfaceNames []string = []string{"eth1", "eth2"}
 var networkPrefixes []string = []string{"10.242.0.", "10.242.1."}
-var hifList map[string]netcogadvisoriov1.HostInterface = generateHostInterfaceList(nodes)
+var hifList map[string]multinicv1.HostInterface = generateHostInterfaceList(nodes)
 
 var ipvlanPlugin *plugin.IPVLANPlugin
 var macvlanPlugin *plugin.MACVLANPlugin
@@ -89,7 +89,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
 
-	err = netcogadvisoriov1.AddToScheme(scheme.Scheme)
+	err = multinicv1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	//+kubebuilder:scaffold:scheme
@@ -189,23 +189,23 @@ var _ = BeforeSuite(func() {
 	env := v1.EnvVar{
 		Name:  "DAEMON_PORT",
 		Value: "11000"}
-	mnt := netcogadvisoriov1.HostPathMount{
+	mnt := multinicv1.HostPathMount{
 		Name:        "cnibin",
 		PodCNIPath:  "/host/opt/cni/bin",
 		HostCNIPath: "/opt/cni/bin",
 	}
-	daemonConfig := &netcogadvisoriov1.Config{
+	daemonConfig := &multinicv1.Config{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "multi-nicd",
 		},
-		Spec: netcogadvisoriov1.ConfigSpec{
+		Spec: multinicv1.ConfigSpec{
 			CNIType:         "multi-nic",
 			IPAMType:        "multi-nic-ipam",
 			JoinPath:        "/join",
 			InterfacePath:   "/interface",
 			AddRoutePath:    "/addroute",
 			DeleteRoutePath: "/deleteroute",
-			Daemon: netcogadvisoriov1.DaemonSpec{
+			Daemon: multinicv1.DaemonSpec{
 				Image:           "res-cpe-team-docker-local.artifactory.swg-devops.com/net/multi-nic-cni-daemon:v1.0.0-alpha",
 				ImagePullSecret: "multi-nic-cni-operator-res-cpe-team-docker-local",
 				ImagePullPolicy: "Always",
@@ -215,7 +215,7 @@ var _ = BeforeSuite(func() {
 				Env: []v1.EnvVar{
 					env,
 				},
-				HostPathMounts: []netcogadvisoriov1.HostPathMount{
+				HostPathMounts: []multinicv1.HostPathMount{
 					mnt,
 				},
 				DaemonPort: 11000,
@@ -277,24 +277,24 @@ func generateNodes() []v1.Node {
 }
 
 // generateNewHostInterface generates new host
-func generateNewHostInterface(hostName string, interfaceNames []string, networkPrefixes []string, i int) netcogadvisoriov1.HostInterface {
-	ifaces := []netcogadvisoriov1.InterfaceInfoType{}
+func generateNewHostInterface(hostName string, interfaceNames []string, networkPrefixes []string, i int) multinicv1.HostInterface {
+	ifaces := []multinicv1.InterfaceInfoType{}
 	for index, ifaceName := range interfaceNames {
-		iface := netcogadvisoriov1.InterfaceInfoType{
+		iface := multinicv1.InterfaceInfoType{
 			InterfaceName: ifaceName,
 			NetAddress:    networkAddresses[index],
 			HostIP:        fmt.Sprintf("%s%d", networkPrefixes[index], i),
 		}
 		ifaces = append(ifaces, iface)
 	}
-	hif := netcogadvisoriov1.HostInterface{
+	hif := multinicv1.HostInterface{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: hostName,
 			Labels: map[string]string{
 				TestModelLabel: "true",
 			},
 		},
-		Spec: netcogadvisoriov1.HostInterfaceSpec{
+		Spec: multinicv1.HostInterfaceSpec{
 			HostName:   hostName,
 			Interfaces: ifaces,
 		},
@@ -303,9 +303,9 @@ func generateNewHostInterface(hostName string, interfaceNames []string, networkP
 }
 
 // generateHostInterfaceList generates stub host and interfaces
-func generateHostInterfaceList(nodes []v1.Node) map[string]netcogadvisoriov1.HostInterface {
+func generateHostInterfaceList(nodes []v1.Node) map[string]multinicv1.HostInterface {
 
-	hifList := make(map[string]netcogadvisoriov1.HostInterface)
+	hifList := make(map[string]multinicv1.HostInterface)
 	for i, node := range nodes {
 		hostName := node.GetName()
 		hif := generateNewHostInterface(hostName, interfaceNames, networkPrefixes, i)
@@ -315,16 +315,16 @@ func generateHostInterfaceList(nodes []v1.Node) map[string]netcogadvisoriov1.Hos
 }
 
 // getMultiNicCNINetwork returns MultiNicNetwork object
-func getMultiNicCNINetwork(name string, cniVersion string, cniType string, cniArgs map[string]string) *netcogadvisoriov1.MultiNicNetwork {
-	return &netcogadvisoriov1.MultiNicNetwork{
+func getMultiNicCNINetwork(name string, cniVersion string, cniType string, cniArgs map[string]string) *multinicv1.MultiNicNetwork {
+	return &multinicv1.MultiNicNetwork{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
-		Spec: netcogadvisoriov1.MultiNicNetworkSpec{
+		Spec: multinicv1.MultiNicNetworkSpec{
 			Subnet:         globalSubnet,
 			IPAM:           multiNicIPAMConfig,
 			IsMultiNICIPAM: true,
-			MainPlugin: netcogadvisoriov1.PluginSpec{
+			MainPlugin: multinicv1.PluginSpec{
 				CNIVersion: cniVersion,
 				Type:       cniType,
 				CNIArgs:    cniArgs,

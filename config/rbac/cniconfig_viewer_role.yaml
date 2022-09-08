@@ -5,7 +5,7 @@ metadata:
   name: cniconfig-viewer-role
 rules:
 - apiGroups:
-  - net.cogadvisor.io.net.cogadvisor.io
+  - multinic.fms.io.multinic.fms.io
   resources:
   - cniconfigs
   verbs:
@@ -13,7 +13,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - net.cogadvisor.io.net.cogadvisor.io
+  - multinic.fms.io.multinic.fms.io
   resources:
   - cniconfigs/status
   verbs:

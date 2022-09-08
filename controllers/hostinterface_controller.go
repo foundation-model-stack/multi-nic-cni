@@ -16,7 +16,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	netcogadvisoriov1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
+	multinicv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 )
@@ -33,15 +33,15 @@ type HostInterfaceReconciler struct {
 const HostInterfaceReconcileTime = time.Second
 const TestModelLabel = "test-mode"
 
-var HostInterfaceCache map[string]netcogadvisoriov1.HostInterface = make(map[string]netcogadvisoriov1.HostInterface)
+var HostInterfaceCache map[string]multinicv1.HostInterface = make(map[string]multinicv1.HostInterface)
 
-//+kubebuilder:rbac:groups=net.cogadvisor.io,resources=hostinterfaces,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=net.cogadvisor.io,resources=hostinterfaces/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=net.cogadvisor.io,resources=hostinterfaces/finalizers,verbs=update
+//+kubebuilder:rbac:groups=multinic.fms.io,resources=hostinterfaces,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=multinic.fms.io,resources=hostinterfaces/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=multinic.fms.io,resources=hostinterfaces/finalizers,verbs=update
 
 func (r *HostInterfaceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = r.Log.WithValues("hostinterface", req.NamespacedName)
-	instance := &netcogadvisoriov1.HostInterface{}
+	instance := &multinicv1.HostInterface{}
 	err := r.Client.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -68,11 +68,11 @@ func (r *HostInterfaceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 // SetupWithManager sets up the controller with the Manager.
 func (r *HostInterfaceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&netcogadvisoriov1.HostInterface{}).
+		For(&multinicv1.HostInterface{}).
 		Complete(r)
 }
 
-func (r *HostInterfaceReconciler) UpdateInterfaces(instance netcogadvisoriov1.HostInterface) error {
+func (r *HostInterfaceReconciler) UpdateInterfaces(instance multinicv1.HostInterface) error {
 	nodeName := instance.Spec.HostName
 	hifName := instance.GetName()
 
@@ -113,11 +113,11 @@ func (r *HostInterfaceReconciler) UpdateInterfaces(instance netcogadvisoriov1.Ho
 	}
 }
 
-func (r *HostInterfaceReconciler) interfaceChanged(olds []netcogadvisoriov1.InterfaceInfoType, news []netcogadvisoriov1.InterfaceInfoType) bool {
+func (r *HostInterfaceReconciler) interfaceChanged(olds []multinicv1.InterfaceInfoType, news []multinicv1.InterfaceInfoType) bool {
 	if len(olds) != len(news) {
 		return true
 	}
-	oldMap := make(map[string]netcogadvisoriov1.InterfaceInfoType)
+	oldMap := make(map[string]multinicv1.InterfaceInfoType)
 	for _, old := range olds {
 		oldMap[old.InterfaceName] = old
 	}

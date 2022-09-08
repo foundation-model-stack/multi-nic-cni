@@ -6,20 +6,20 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.4.1
   creationTimestamp: null
-  name: deviceclasses.net.cogadvisor.io
+  name: ippools.multinic.fms.io
 spec:
-  group: net.cogadvisor.io
+  group: multinic.fms.io
   names:
-    kind: DeviceClass
-    listKind: DeviceClassList
-    plural: deviceclasses
-    singular: deviceclass
+    kind: IPPool
+    listKind: IPPoolList
+    plural: ippools
+    singular: ippool
   scope: Cluster
   versions:
   - name: v1
     schema:
       openAPIV3Schema:
-        description: DeviceClass is the Schema for the deviceclasses API
+        description: IPPool is the Schema for the ippools API
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -34,27 +34,53 @@ spec:
           metadata:
             type: object
           spec:
-            description: DeviceClassSpec defines the desired state of DeviceClass
+            description: IPPoolSpec defines the desired state of IPPool
             properties:
-              ids:
+              allocations:
                 items:
                   properties:
-                    products:
-                      items:
-                        type: string
-                      type: array
-                    vendor:
+                    address:
+                      type: string
+                    index:
+                      type: integer
+                    namespace:
+                      type: string
+                    pod:
                       type: string
                   required:
-                  - products
-                  - vendor
+                  - address
+                  - index
+                  - namespace
+                  - pod
                   type: object
                 type: array
+              excludes:
+                items:
+                  type: string
+                type: array
+              hostName:
+                type: string
+              interfaceName:
+                type: string
+              netAttachDef:
+                type: string
+              podCIDR:
+                description: Foo is an example field of IPPool. Edit ippool_types.go
+                  to remove/update
+                type: string
+              vlanCIDR:
+                type: string
             required:
-            - ids
+            - allocations
+            - excludes
+            - hostName
+            - interfaceName
+            - netAttachDef
+            - podCIDR
+            - vlanCIDR
             type: object
           status:
-            description: DeviceClassStatus defines the observed state of DeviceClass
+            description: IPPoolStatus defines the observed state of IPPool
             type: object
         type: object
     served: true

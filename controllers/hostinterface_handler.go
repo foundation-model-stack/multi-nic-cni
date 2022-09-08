@@ -8,7 +8,7 @@ package controllers
 import (
 	"context"
 
-	netcogadvisoriov1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
+	multinicv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -23,12 +23,12 @@ type HostInterfaceHandler struct {
 }
 
 // initHostInterface
-func (h *HostInterfaceHandler) initHostInterface(hostName string, interfaces []netcogadvisoriov1.InterfaceInfoType) *netcogadvisoriov1.HostInterface {
-	newHif := &netcogadvisoriov1.HostInterface{
+func (h *HostInterfaceHandler) initHostInterface(hostName string, interfaces []multinicv1.InterfaceInfoType) *multinicv1.HostInterface {
+	newHif := &multinicv1.HostInterface{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: hostName,
 		},
-		Spec: netcogadvisoriov1.HostInterfaceSpec{
+		Spec: multinicv1.HostInterfaceSpec{
 			HostName:   hostName,
 			Interfaces: interfaces,
 		},
@@ -37,16 +37,16 @@ func (h *HostInterfaceHandler) initHostInterface(hostName string, interfaces []n
 }
 
 // CreateHostInterface creates new HostInterface from an interface list get from daemon pods
-func (h *HostInterfaceHandler) CreateHostInterface(hostName string, interfaces []netcogadvisoriov1.InterfaceInfoType) error {
+func (h *HostInterfaceHandler) CreateHostInterface(hostName string, interfaces []multinicv1.InterfaceInfoType) error {
 	newHif := h.initHostInterface(hostName, interfaces)
 	return h.Client.Create(context.TODO(), newHif)
 }
 
 // UpdateHostInterface updates HostInterface
-func (h *HostInterfaceHandler) UpdateHostInterface(oldObj netcogadvisoriov1.HostInterface, interfaces []netcogadvisoriov1.InterfaceInfoType) (*netcogadvisoriov1.HostInterface, error) {
-	updateHif := &netcogadvisoriov1.HostInterface{
+func (h *HostInterfaceHandler) UpdateHostInterface(oldObj multinicv1.HostInterface, interfaces []multinicv1.InterfaceInfoType) (*multinicv1.HostInterface, error) {
+	updateHif := &multinicv1.HostInterface{
 		ObjectMeta: oldObj.ObjectMeta,
-		Spec: netcogadvisoriov1.HostInterfaceSpec{
+		Spec: multinicv1.HostInterfaceSpec{
 			HostName:   oldObj.Spec.HostName,
 			Interfaces: interfaces,
 		},
@@ -55,8 +55,8 @@ func (h *HostInterfaceHandler) UpdateHostInterface(oldObj netcogadvisoriov1.Host
 }
 
 // GetHostInterface gets HostInterface from hostname
-func (h *HostInterfaceHandler) GetHostInterface(name string) (*netcogadvisoriov1.HostInterface, error) {
-	instance := &netcogadvisoriov1.HostInterface{}
+func (h *HostInterfaceHandler) GetHostInterface(name string) (*multinicv1.HostInterface, error) {
+	instance := &multinicv1.HostInterface{}
 	namespacedName := types.NamespacedName{
 		Name:      name,
 		Namespace: metav1.NamespaceAll,
@@ -66,10 +66,10 @@ func (h *HostInterfaceHandler) GetHostInterface(name string) (*netcogadvisoriov1
 }
 
 // ListHostInterface returns a map from hostname to HostInterface
-func (h *HostInterfaceHandler) ListHostInterface() (map[string]netcogadvisoriov1.HostInterface, error) {
-	hifList := &netcogadvisoriov1.HostInterfaceList{}
+func (h *HostInterfaceHandler) ListHostInterface() (map[string]multinicv1.HostInterface, error) {
+	hifList := &multinicv1.HostInterfaceList{}
 	err := h.Client.List(context.TODO(), hifList)
-	hifMap := make(map[string]netcogadvisoriov1.HostInterface)
+	hifMap := make(map[string]multinicv1.HostInterface)
 	if err == nil {
 		for _, hif := range hifList.Items {
 			name := hif.GetName()

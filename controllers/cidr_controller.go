@@ -17,7 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	netcogadvisoriov1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
+	multinicv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
 )
 
 // CIDRReconciler reconciles a CIDR object
@@ -30,19 +30,19 @@ type CIDRReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-//+kubebuilder:rbac:groups=net.cogadvisor.io,resources=cidrs,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=net.cogadvisor.io,resources=cidrs/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=net.cogadvisor.io,resources=cidrs/finalizers,verbs=update
+//+kubebuilder:rbac:groups=multinic.fms.io,resources=cidrs,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=multinic.fms.io,resources=cidrs/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=multinic.fms.io,resources=cidrs/finalizers,verbs=update
 
 const CIDRReconcileTime = time.Minute
-const cidrFinalizer = "finalizers.cidr.net.cogadvisor.io"
+const cidrFinalizer = "finalizers.cidr.multinic.fms.io"
 
-var CIDRCache map[string]netcogadvisoriov1.CIDRSpec = make(map[string]netcogadvisoriov1.CIDRSpec)
+var CIDRCache map[string]multinicv1.CIDRSpec = make(map[string]multinicv1.CIDRSpec)
 
 func (r *CIDRReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = r.Log.WithValues("cidr", req.NamespacedName)
 	cidrName := req.Name
-	instance := &netcogadvisoriov1.CIDR{}
+	instance := &multinicv1.CIDR{}
 	err := r.Client.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -87,7 +87,7 @@ func (r *CIDRReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	// sync route from CIDR
 	routeStatus := r.CIDRHandler.SyncCIDRRoute(instance.Spec, true)
 	r.CIDRHandler.MultiNicNetworkHandler.UpdateStatus(*instance, routeStatus)
-	if routeStatus == netcogadvisoriov1.AllRouteApplied {
+	if routeStatus == multinicv1.AllRouteApplied {
 		//success
 		r.Log.Info(fmt.Sprintf("CIDR %s successfully applied", cidrName))
 		CIDRCache[cidrName] = *instance.Spec.DeepCopy()
@@ -98,12 +98,12 @@ func (r *CIDRReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 // SetupWithManager sets up the controller with the Manager.
 func (r *CIDRReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&netcogadvisoriov1.CIDR{}).
+		For(&multinicv1.CIDR{}).
 		Complete(r)
 }
 
 // callFinalizer deletes CIDR and its dependencies
-func (r *CIDRReconciler) callFinalizer(reqLogger logr.Logger, instance *netcogadvisoriov1.CIDR) error {
+func (r *CIDRReconciler) callFinalizer(reqLogger logr.Logger, instance *multinicv1.CIDR) error {
 	r.CIDRHandler.DeleteCIDR(*instance)
 	reqLogger.Info(fmt.Sprintf("Finalized %s", instance.ObjectMeta.Name))
 	return nil

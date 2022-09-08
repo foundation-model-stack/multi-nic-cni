@@ -1,7 +1,7 @@
 images:
 - kind: Config
   version: v1
-  group: net.cogadvisor.io
+  group: multinic.fms.io
   path: spec/daemon/image
 
 nameReference:
@@ -10,6 +10,6 @@ nameReference:
   fieldSpecs:
   - kind: Config
     version: v1
-    group: net.cogadvisor.io
+    group: multinic.fms.io
     path: spec/daemon/imagePullSecretName
 

@@ -42,7 +42,7 @@ BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 # This variable is used to construct full image tags for bundle and catalog images.
 #
 # For example, running 'make bundle-build bundle-push catalog-build catalog-push' will build and push both
-# net.cogadvisor.io/multi-nic-cni-bundle:$VERSION and net.cogadvisor.io/multi-nic-cni/catalog:$VERSION.
+# multinic.fms.io/multi-nic-cni-bundle:$VERSION and multinic.fms.io/multi-nic-cni/catalog:$VERSION.
 IMAGE_TAG_BASE = $(IMAGE_REGISTRY)/multi-nic-cni
 
 # BUNDLE_IMG defines the image:tag used for the bundle.
@@ -123,8 +123,8 @@ uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified 
 	$(KUSTOMIZE) build config/crd | kubectl delete -f -
 
 predeploy: manifests kustomize
-	rm -f config/samples/net.cogadvisor.io_v1_config.yaml
-	envsubst < config/samples/net.cogadvisor.io_v1_config.template > config/samples/net.cogadvisor.io_v1_config.yaml
+	rm -f config/samples/multinic.fms.io_v1_config.yaml
+	envsubst < config/samples/multinic.fms.io_v1_config.template > config/samples/multinic.fms.io_v1_config.yaml
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	cd config/samples && $(KUSTOMIZE) edit set image multi-nic-cni-daemon=${DAEMON_IMG}
 

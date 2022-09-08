@@ -8,4 +8,4 @@ webhook:
   port: 9443
 leaderElection:
   leaderElect: true
-  resourceName: 5aaf67fd.net.cogadvisor.io
+  resourceName: 5aaf67fd.multinic.fms.io

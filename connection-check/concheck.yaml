@@ -15,7 +15,7 @@ metadata:
   name: multi-nic-concheck-cr
 rules:
 - apiGroups:
-  - net.cogadvisor.io
+  - multinic.fms.io
   resources:
   - cidrs
   verbs:

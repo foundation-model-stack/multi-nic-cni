@@ -1,4 +1,4 @@
-apiVersion: net.cogadvisor.io/v1
+apiVersion: multinic.fms.io/v1
 kind: Config
 metadata:
   name: multi-nicd

@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	"github.com/containernetworking/cni/pkg/types"
-	netcogadvisoriov1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
+	multinicv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,7 +29,7 @@ const (
 	NET_ATTACH_DEF_KIND        = "NetworkAttachmentDefinition"
 )
 
-//////////////////////////////////////////
+// ////////////////////////////////////////
 // NetworkAttachmentDefinition
 // reference: github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1
 func NewNetworkAttachmentDefinition(metaObj metav1.ObjectMeta, spec NetworkAttachmentDefinitionSpec) NetworkAttachmentDefinition {
@@ -102,7 +102,7 @@ func GetNetAttachDefHandler(config *rest.Config, logger logr.Logger) (*NetAttach
 }
 
 // CreateOrUpdate creates new NetworkAttachmentDefinition resource if not exists, otherwise update
-func (h *NetAttachDefHandler) CreateOrUpdate(net *netcogadvisoriov1.MultiNicNetwork, pluginStr string, annotations map[string]string) error {
+func (h *NetAttachDefHandler) CreateOrUpdate(net *multinicv1.MultiNicNetwork, pluginStr string, annotations map[string]string) error {
 	defs, err := h.generate(net, pluginStr, annotations)
 	if err != nil {
 		return err
@@ -129,7 +129,7 @@ func (h *NetAttachDefHandler) CreateOrUpdate(net *netcogadvisoriov1.MultiNicNetw
 }
 
 // getNamespace returns all available namespaces if .Spec.Namespaces not specified
-func (h *NetAttachDefHandler) getNamespace(net *netcogadvisoriov1.MultiNicNetwork) ([]string, error) {
+func (h *NetAttachDefHandler) getNamespace(net *multinicv1.MultiNicNetwork) ([]string, error) {
 	namespaces := net.Spec.Namespaces
 	if len(namespaces) == 0 {
 		namespaceList, err := h.Clientset.CoreV1().Namespaces().List(context.TODO(), metav1.ListOptions{})
@@ -145,7 +145,7 @@ func (h *NetAttachDefHandler) getNamespace(net *netcogadvisoriov1.MultiNicNetwor
 }
 
 // generate initializes NetworkAttachmentDefinition objects from MultiNicNetwork and unmarshal plugin
-func (h *NetAttachDefHandler) generate(net *netcogadvisoriov1.MultiNicNetwork, pluginStr string, annotations map[string]string) ([]*NetworkAttachmentDefinition, error) {
+func (h *NetAttachDefHandler) generate(net *multinicv1.MultiNicNetwork, pluginStr string, annotations map[string]string) ([]*NetworkAttachmentDefinition, error) {
 	defs := []*NetworkAttachmentDefinition{}
 	namespaces, err := h.getNamespace(net)
 	if err != nil {
@@ -185,7 +185,7 @@ func (h *NetAttachDefHandler) generate(net *netcogadvisoriov1.MultiNicNetwork, p
 	return defs, nil
 }
 
-func (h *NetAttachDefHandler) DeleteNets(net *netcogadvisoriov1.MultiNicNetwork) error {
+func (h *NetAttachDefHandler) DeleteNets(net *multinicv1.MultiNicNetwork) error {
 	namespaces, err := h.getNamespace(net)
 	for _, ns := range namespaces {
 		nsErr := h.Delete(net.GetName(), ns)

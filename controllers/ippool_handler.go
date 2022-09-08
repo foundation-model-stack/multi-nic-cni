@@ -19,7 +19,7 @@ import (
 
 	"reflect"
 
-	netcogadvisoriov1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
+	multinicv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
 	"github.com/foundation-model-stack/multi-nic-cni/compute"
 	"k8s.io/apimachinery/pkg/types"
 
@@ -35,8 +35,8 @@ type IPPoolHandler struct {
 }
 
 // GetIPPool gets IPPool from IPPool name
-func (h *IPPoolHandler) GetIPPool(name string) (*netcogadvisoriov1.IPPool, error) {
-	ippool := &netcogadvisoriov1.IPPool{}
+func (h *IPPoolHandler) GetIPPool(name string) (*multinicv1.IPPool, error) {
+	ippool := &multinicv1.IPPool{}
 	namespacedName := types.NamespacedName{
 		Name:      name,
 		Namespace: metav1.NamespaceAll,
@@ -46,10 +46,10 @@ func (h *IPPoolHandler) GetIPPool(name string) (*netcogadvisoriov1.IPPool, error
 }
 
 // ListIPPool returns a map from IPPool name to IPPool
-func (h *IPPoolHandler) ListIPPool() (map[string]netcogadvisoriov1.IPPool, error) {
-	poolList := &netcogadvisoriov1.IPPoolList{}
+func (h *IPPoolHandler) ListIPPool() (map[string]multinicv1.IPPool, error) {
+	poolList := &multinicv1.IPPoolList{}
 	err := h.Client.List(context.TODO(), poolList)
-	poolMap := make(map[string]netcogadvisoriov1.IPPool)
+	poolMap := make(map[string]multinicv1.IPPool)
 	if err == nil {
 		for _, pool := range poolList.Items {
 			poolName := pool.GetName()
@@ -70,9 +70,10 @@ func (h *IPPoolHandler) DeleteIPPool(netAttachDef string, podCIDR string) error 
 }
 
 // UpdateIPPool creates or updates IPPool from:
-//              - network config: NetworkAttachmentDefinition name, excluded CIDR ranges
-//              - VLAN CIDR: PodCIDR, vlanCIDR
-//              - host-interface information: host name, interface name
+//   - network config: NetworkAttachmentDefinition name, excluded CIDR ranges
+//   - VLAN CIDR: PodCIDR, vlanCIDR
+//   - host-interface information: host name, interface name
+//
 // IPPool name is composed of NetworkAttachmentDefinition name and PodCIDR
 func (h *IPPoolHandler) UpdateIPPool(netAttachDef string, podCIDR string, vlanCIDR string, hostName string, interfaceName string, excludes []compute.IPValue) error {
 	excludesInterface := []string{}
@@ -107,7 +108,7 @@ func (h *IPPoolHandler) UpdateIPPool(netAttachDef string, podCIDR string, vlanCI
 	}
 
 	// init spec
-	spec := netcogadvisoriov1.IPPoolSpec{
+	spec := multinicv1.IPPoolSpec{
 		PodCIDR:          podCIDR,
 		VlanCIDR:         vlanCIDR,
 		NetAttachDefName: netAttachDef,
@@ -137,8 +138,8 @@ func (h *IPPoolHandler) UpdateIPPool(netAttachDef string, podCIDR string, vlanCI
 		}
 	} else {
 		// create new ippool
-		spec.Allocations = []netcogadvisoriov1.Allocation{}
-		newIPPool := &netcogadvisoriov1.IPPool{
+		spec.Allocations = []multinicv1.Allocation{}
+		newIPPool := &multinicv1.IPPool{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      ippoolName,
 				Namespace: metav1.NamespaceAll,
@@ -157,8 +158,8 @@ func (h *IPPoolHandler) GetIPPoolName(netAttachDef string, podCIDR string) strin
 }
 
 // checkPoolValidity checks list of allocated IPs that is in exclude CIDRs
-func (h *IPPoolHandler) checkPoolValidity(excludeCIDRs []string, allocations []netcogadvisoriov1.Allocation) []netcogadvisoriov1.Allocation {
-	var invalidAllocations []netcogadvisoriov1.Allocation
+func (h *IPPoolHandler) checkPoolValidity(excludeCIDRs []string, allocations []multinicv1.Allocation) []multinicv1.Allocation {
+	var invalidAllocations []multinicv1.Allocation
 	if excludeCIDRs == nil || allocations == nil {
 		// no exclude list or no allocation, return empty
 		return invalidAllocations
