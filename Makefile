@@ -4,7 +4,7 @@
 #
 include daemon/Makefile
 
-export IMAGE_REGISTRY = ghcr.io/foundation-model-stack
+export IMAGE_REGISTRY ?= ghcr.io/foundation-model-stack
 ifneq ($(shell kubectl get po -A --selector app=multus --ignore-not-found),)
 export CNI_BIN_HOSTPATH = $(shell kubectl get po -A --selector app=multus -o jsonpath='{.items[0].spec.volumes[?(@.name=="cnibin")].hostPath.path}')
 else
@@ -42,7 +42,7 @@ BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 # This variable is used to construct full image tags for bundle and catalog images.
 #
 # For example, running 'make bundle-build bundle-push catalog-build catalog-push' will build and push both
-# net.cogadvisor.io/multi-nic-cni-bundle:$VERSION and net.cogadvisor.io/multi-nic-cni/catalog:$VERSION.
+# multinic.fms.io/multi-nic-cni-bundle:$VERSION and multinic.fms.io/multi-nic-cni/catalog:$VERSION.
 IMAGE_TAG_BASE = $(IMAGE_REGISTRY)/multi-nic-cni
 
 # BUNDLE_IMG defines the image:tag used for the bundle.
@@ -50,7 +50,7 @@ IMAGE_TAG_BASE = $(IMAGE_REGISTRY)/multi-nic-cni
 BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:v$(VERSION)
 
 # Image URL to use all building/pushing image targets
-IMG ?= $(IMAGE_TAG_BASE)-controller:v$(VERSION)
+export IMG = $(IMAGE_TAG_BASE)-controller:v$(VERSION)
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:trivialVersions=true,preserveUnknownFields=false"
 
@@ -123,8 +123,8 @@ uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified 
 	$(KUSTOMIZE) build config/crd | kubectl delete -f -
 
 predeploy: manifests kustomize
-	rm -f config/samples/net.cogadvisor.io_v1_config.yaml
-	envsubst < config/samples/net.cogadvisor.io_v1_config.template > config/samples/net.cogadvisor.io_v1_config.yaml
+	rm -f config/samples/multinic.fms.io_v1_config.yaml
+	envsubst < config/samples/multinic.fms.io_v1_config.template > config/samples/multinic.fms.io_v1_config.yaml
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	cd config/samples && $(KUSTOMIZE) edit set image multi-nic-cni-daemon=${DAEMON_IMG}
 
@@ -174,7 +174,9 @@ rm -rf $$TMP_DIR ;\
 endef
 
 .PHONY: bundle
-bundle: manifests kustomize ## Generate bundle manifests and metadata, then validate generated files.
+bundle: manifests kustomize predeploy ## Generate bundle manifests and metadata, then validate generated files.
+	rm -f config/manifests/bases/multi-nic-cni-operator.clusterserviceversion.yaml
+	envsubst < config/manifests/bases/multi-nic-cni-operator.clusterserviceversion.template > config/manifests/bases/multi-nic-cni-operator.clusterserviceversion.yaml
 	operator-sdk generate kustomize manifests -q
 	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
 	$(KUSTOMIZE) build config/manifests | operator-sdk generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
