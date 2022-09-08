@@ -4,7 +4,7 @@
 #
 include daemon/Makefile
 
-export IMAGE_REGISTRY = ghcr.io/foundation-model-stack
+export IMAGE_REGISTRY ?= ghcr.io/foundation-model-stack
 ifneq ($(shell kubectl get po -A --selector app=multus --ignore-not-found),)
 export CNI_BIN_HOSTPATH = $(shell kubectl get po -A --selector app=multus -o jsonpath='{.items[0].spec.volumes[?(@.name=="cnibin")].hostPath.path}')
 else
@@ -50,7 +50,7 @@ IMAGE_TAG_BASE = $(IMAGE_REGISTRY)/multi-nic-cni
 BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:v$(VERSION)
 
 # Image URL to use all building/pushing image targets
-IMG ?= $(IMAGE_TAG_BASE)-controller:v$(VERSION)
+export IMG = $(IMAGE_TAG_BASE)-controller:v$(VERSION)
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:trivialVersions=true,preserveUnknownFields=false"
 
@@ -175,6 +175,8 @@ endef
 
 .PHONY: bundle
 bundle: manifests kustomize predeploy ## Generate bundle manifests and metadata, then validate generated files.
+	rm -f config/manifests/bases/multi-nic-cni-operator.clusterserviceversion.yaml
+	envsubst < config/manifests/bases/multi-nic-cni-operator.clusterserviceversion.template > config/manifests/bases/multi-nic-cni-operator.clusterserviceversion.yaml
 	operator-sdk generate kustomize manifests -q
 	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
 	$(KUSTOMIZE) build config/manifests | operator-sdk generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)

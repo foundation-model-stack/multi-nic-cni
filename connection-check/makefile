@@ -3,12 +3,11 @@
 # SPDX-License-Identifier: Apache2.0
 #
 
-export IMAGE_REGISTRY ?= res-cpe-team-docker-local.artifactory.swg-devops.com
+export IMAGE_REGISTRY ?= ghcr.io/foundation-model-stack
 
-IMAGE_TAG_BASE ?= net/multi-nic-cni
-CONCHECK_VERSION ?= v1.0.0-alpha
-
-CONCHECK_IMG ?= $(IMAGE_REGISTRY)/$(IMAGE_TAG_BASE)-concheck:$(CONCHECK_VERSION)
+IMAGE_TAG_BASE = $(IMAGE_REGISTRY)/multi-nic-cni
+VERSION ?= 1.0.2
+CONCHECK_IMG ?= $(IMAGE_TAG_BASE)-concheck:v$(VERSION)
 
 
 docker-build:

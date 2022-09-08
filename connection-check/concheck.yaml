@@ -71,7 +71,7 @@ spec:
       serviceAccountName: multi-nic-concheck-account
       containers:
       - name: concheck
-        image: res-cpe-team-docker-local.artifactory.swg-devops.com/net/multi-nic-cni-concheck:v1.0.0-alpha
+        image: ghcr.io/sunya-ch/multi-nic-cni-concheck:v1.0.2
         imagePullPolicy: Always
         securityContext:
           privileged: true
