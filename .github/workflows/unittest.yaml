@@ -3,12 +3,11 @@ name: Perform unittest for controller
 on:
   pull_request:
     branches:    
-      - '**'        # matches every branch
-      - '!doc'      # excludes master
+    - controller
+    - main
   push:
-    branches:    
-      - '**'        # matches every branch
-      - '!doc'      # excludes master
+    branches:
+    - controller
 
 jobs:
 

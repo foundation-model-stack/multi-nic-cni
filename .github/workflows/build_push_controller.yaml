@@ -4,10 +4,11 @@ on:
   push:
     branches:
       - controller
-      - ci
 
 env:
   IMAGE_VERSION: '1.0.2'
+  IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
+  DAEMON_REGISTRY: ghcr.io/${{ github.repository_owner }}
 
 jobs:
   build-push-bundle:
@@ -55,6 +56,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       IMAGE_NAME: ghcr.io/${{ github.repository }}-controller
+      IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
+      DAEMON_REGISTRY: ghcr.io/${{ github.repository_owner }}
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
