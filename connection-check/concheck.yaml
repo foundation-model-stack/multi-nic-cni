@@ -71,9 +71,7 @@ spec:
       serviceAccountName: multi-nic-concheck-account
       containers:
       - name: concheck
-        image: ghcr.io/sunya-ch/multi-nic-cni-concheck:v1.0.2
+        image: ghcr.io/foundation-model-stack/multi-nic-cni-concheck:v1.0.2
         imagePullPolicy: Always
         securityContext:
           privileged: true
-      imagePullSecrets:
-      - name: res-cpe-team-docker-local
