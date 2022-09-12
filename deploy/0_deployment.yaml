@@ -1226,6 +1226,20 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
+  name: multi-nic-cni-operator-privileged-cr
+rules:
+- apiGroups:
+  - security.openshift.io
+  resourceNames:
+  - privileged
+  resources:
+  - securitycontextconstraints
+  verbs:
+  - use
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
   name: multi-nic-cni-operator-proxy-role
 rules:
 - apiGroups:
@@ -1315,6 +1329,19 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
   name: multi-nic-cni-operator-multi-nic-cni-netattachdef
+subjects:
+- kind: ServiceAccount
+  name: multi-nic-cni-operator-controller-manager
+  namespace: multi-nic-cni-operator-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: multi-nic-cni-operator-multi-nic-cni-privileged-cr-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: multi-nic-cni-operator-privileged-cr
 subjects:
 - kind: ServiceAccount
   name: multi-nic-cni-operator-controller-manager
