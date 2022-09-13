@@ -22,3 +22,6 @@ resources:
 - netattachdef_clusterrole_binding.yaml
 - sriov_editor_role.yaml
 - sriov_editor_role_binding.yaml
+# openshift privileged role
+- privileged_clusterrole.yaml
+- privileged_clusterrole_binding.yaml
