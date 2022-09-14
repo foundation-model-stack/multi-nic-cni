@@ -5,6 +5,7 @@
   - [Usage](#usage)
       - [Requirements](#requirements)
       - [Quick Installation](#quick-installation)
+        - [by OperatorHub](#by-operatorhub)
         - [by manifests with kubectl](#by-manifests-with-kubectl)
         - [by bundle with operator-sdk](#by-bundle-with-operator-sdk)
       - [Deploy MultiNicNetwork resource](#deploy-multinicnetwork-resource)
@@ -85,10 +86,13 @@ namespaces|list of namespaces to apply the network definitions (i.e., to create 
   - set security group to allow IPs in the target container subnet
   - IPVLAN support (kernel version >= 4.2)
 #### Quick Installation
-For **Openshift**, assign privileged security context to multi-nic-cni-operator-controller-manager service account first
-```bash
-oc adm policy add-scc-to-user privileged system:serviceaccount:multi-nic-cni-operator-system:multi-nic-cni-operator-controller-manager
-```
+##### by OperatorHub
+- Kubernetes with OLM:
+  - check [multi-nic-cni-operator on OperatorHub.io](https://operatorhub.io/operator/multi-nic-cni-operator)
+    ![](./document/img/k8s-operatorhub.png)
+- Openshift Container Platform:
+  - Search for `multi-nic-cni-operator` in OperatorHub
+    ![](./document/img/openshift-operatorhub.png)
 ##### by manifests with kubectl
   ```bash
   kubectl apply -f deploy/
@@ -96,7 +100,6 @@ oc adm policy add-scc-to-user privileged system:serviceaccount:multi-nic-cni-ope
 ##### by bundle with operator-sdk
   ```bash
   operator-sdk run bundle ghcr.io/foundation-model-stack/multi-nic-cni-bundle:v1.0.2
-  kubectl apply -f deploy/1_config.yaml
   ```
 #### Deploy MultiNicNetwork resource
 1. Prepare `network.yaml` as shown in the [example](#multinicnetwork)
