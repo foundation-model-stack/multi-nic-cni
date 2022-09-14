@@ -136,7 +136,7 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "IPPool")
 		os.Exit(1)
 	}
-	if err = (&controllers.ConfigReconciler{
+	cfgReconciler := &controllers.ConfigReconciler{
 		Client:              mgr.GetClient(),
 		Clientset:           clientset,
 		Config:              config,
@@ -145,9 +145,15 @@ func main() {
 		Log:                 ctrl.Log.WithName("controllers").WithName("Config"),
 		DefLog:              defLog,
 		Scheme:              mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
+	}
+	if err = (cfgReconciler).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Config")
 		os.Exit(1)
+	}
+
+	err = cfgReconciler.CreateDefaultDaemonConfig()
+	if err != nil {
+		setupLog.Info(fmt.Sprintf("fail to create default config: %v", err))
 	}
 
 	if err = (&controllers.MultiNicNetworkReconciler{

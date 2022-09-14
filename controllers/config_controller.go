@@ -21,6 +21,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -72,6 +73,70 @@ type ConfigReconciler struct {
 //+kubebuilder:rbac:groups=multinic.fms.io,resources=configs/status,verbs=get;update;patch
 
 const ReconcileTime = 30 * time.Minute
+
+func (r *ConfigReconciler) CreateDefaultDaemonConfig() error {
+	objMeta := metav1.ObjectMeta{
+		Name: "multi-nicd",
+	}
+	daemonEnv := corev1.EnvVar{
+		Name:  "DAEMON_PORT",
+		Value: "11000",
+	}
+	routeEnv := corev1.EnvVar{
+		Name:  "RT_TABLE_PATH",
+		Value: "/opt/rt_tables",
+	}
+	env := []corev1.EnvVar{daemonEnv, routeEnv}
+	binMnt := multinicv1.HostPathMount{
+		Name:        "cnibin",
+		PodCNIPath:  "/host/opt/cni/bin",
+		HostCNIPath: "/var/lib/cni/bin",
+	}
+	devPluginMnt := multinicv1.HostPathMount{
+		Name:        "device-plugin",
+		PodCNIPath:  "/var/lib/kubelet/device-plugins",
+		HostCNIPath: "/var/lib/kubelet/device-plugins",
+	}
+	routeMnt := multinicv1.HostPathMount{
+		Name:        "rt-tables",
+		PodCNIPath:  "/opt/rt_tables",
+		HostCNIPath: "/etc/iproute2/rt_tables",
+	}
+	hostPathMounts := []multinicv1.HostPathMount{binMnt, devPluginMnt, routeMnt}
+	resources := corev1.ResourceRequirements{
+		Requests: corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("100m"),
+			corev1.ResourceMemory: resource.MustParse("50Mi"),
+		},
+	}
+	var privileged bool = true
+	securityContext := &corev1.SecurityContext{
+		Privileged: &privileged,
+	}
+	daemonSpec := multinicv1.DaemonSpec{
+		Image:           "ghcr.io/foundation-model-stack/multi-nic-cni-daemon:v1.0.2",
+		Env:             env,
+		HostPathMounts:  hostPathMounts,
+		Resources:       resources,
+		SecurityContext: securityContext,
+		DaemonPort:      11000,
+	}
+	spec := multinicv1.ConfigSpec{
+		CNIType:         "multi-nic",
+		IPAMType:        "multi-nic-ipam",
+		Daemon:          daemonSpec,
+		JoinPath:        "/join",
+		InterfacePath:   "/interface",
+		AddRoutePath:    "/addl3",
+		DeleteRoutePath: "/deletel3",
+	}
+	cfg := &multinicv1.Config{
+		ObjectMeta: objMeta,
+		Spec:       spec,
+	}
+	err := r.Client.Create(context.TODO(), cfg)
+	return err
+}
 
 func (r *ConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = r.Log.WithValues("config", req.NamespacedName)
