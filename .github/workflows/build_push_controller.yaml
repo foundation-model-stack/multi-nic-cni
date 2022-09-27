@@ -5,12 +5,12 @@ on:
     branches:
       - main
     paths:
-      - controllers
-      - compute
-      - plugin
+      - controllers/**
+      - compute/**
+      - plugin/**
       - ./main.go
       - ./go.mod
-      - config
+      - config/**
       - ./Dockerfile
       - ./bundle.Dockerfile
       - ./Makefile
