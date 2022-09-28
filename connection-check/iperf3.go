@@ -30,8 +30,9 @@ const (
 	NETWORK_ANNOTATION         = "k8s.v1.cni.cncf.io/networks"
 	NETWORK_STATUS_ANNOTATION  = "k8s.v1.cni.cncf.io/network-status"
 
-	IPERF_IMAGE     = "networkstatic/iperf3"
-	MAX_NAME_LENGTH = 60
+	IPERF_IMAGE             = "networkstatic/iperf3"
+	MAX_NAME_LENGTH         = 60
+	START_MULTI_STREAM_PORT = 5010
 )
 
 const (
@@ -82,7 +83,7 @@ func (h *IperfHandler) getMetaObject(namespace string, cidrName string, hostName
 	}
 }
 
-func (h *IperfHandler) CreateServerPod(namespace string, cidrName string, hostName string) (*v1.Pod, error) {
+func (h *IperfHandler) CreateServerPod(namespace string, cidrName string, hostName string, numberOfStreams int) (*v1.Pod, error) {
 	var period int64
 	period = 0
 	container := v1.Container{
@@ -90,7 +91,7 @@ func (h *IperfHandler) CreateServerPod(namespace string, cidrName string, hostNa
 		Image:           IPERF_IMAGE,
 		ImagePullPolicy: v1.PullIfNotPresent,
 		Command:         []string{"/bin/sh", "-c"},
-		Args:            []string{"echo started; iperf3 -s"},
+		Args:            []string{h.generateMultiStreamServerCommand(numberOfStreams)},
 	}
 	pod := &v1.Pod{
 		ObjectMeta: h.getMetaObject(namespace, cidrName, hostName, DEFAULT_SERVER_LABEL_VALUE),
@@ -149,19 +150,28 @@ func (h *IperfHandler) CheckServers(namespace string, cidrName string, totalCoun
 	return serverIPsMap, true
 }
 
-func (h *IperfHandler) generateCommand(hostName string, ipMap map[string][]string) string {
-	allIPs := []string{}
+func (h *IperfHandler) generateMultiStreamServerCommand(numberOfInterface int) string {
+	cmd := ""
+	for i := 0; i < numberOfInterface; i++ {
+		prefix_port := int((START_MULTI_STREAM_PORT + i*10) / 10)
+		cmd = fmt.Sprintf("%s (for i in {1..%d}; do iperf3 -s -p %d$i & done) & ", cmd, STREAMS_PER_IP, prefix_port)
+	}
+	cmd += "(tail -f /dev/null)"
+	return cmd
+}
+
+func (h *IperfHandler) generateMultiStreamClientCommand(hostName string, ipMap map[string][]string) string {
+	cmd := ""
 	for targetHost, ips := range ipMap {
 		if targetHost == hostName {
 			continue
 		}
-		allIPs = append(allIPs, ips...)
+		for i := 0; i < len(ips); i++ {
+			prefix_port := int((START_MULTI_STREAM_PORT + i*10) / 10)
+			cmd = fmt.Sprintf("%s (for i in {1..%d}; do iperf3 -Z -t 10s -c %s -p %d$i --connect-timeout 10s & done  | grep 'receiver' | awk '{s+=$7} END{print \"%s,\"s$8}') &", cmd, STREAMS_PER_IP, ips[i], prefix_port, ips[i])
+		}
+		cmd += "wait; sleep 1;echo '';"
 	}
-	cmd := ""
-	for _, clientIP := range allIPs {
-		cmd = fmt.Sprintf("%s echo -n %s,;iperf3 -c %s -n 1 --connect-timeout 10s|grep %s -m 1|awk '{ print $7$8 }';sleep 1;echo '';", cmd, clientIP, clientIP, BANDWIDTH_KEY)
-	}
-	// log.Printf("%s", cmd)
 	return cmd
 }
 
@@ -171,7 +181,7 @@ func (h *IperfHandler) CreateClientJob(namespace string, cidrName string, hostNa
 		Image:           IPERF_IMAGE,
 		ImagePullPolicy: v1.PullIfNotPresent,
 		Command:         []string{"/bin/sh", "-c"},
-		Args:            []string{h.generateCommand(hostName, ipMap)},
+		Args:            []string{h.generateMultiStreamClientCommand(hostName, ipMap)},
 	}
 	var period int64
 	period = 0

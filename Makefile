@@ -149,6 +149,14 @@ daemon-secret: ## Modify kustomization files for image pull secret of daemon
 	envsubst < config/samples/patches/image_pull_secret.template > config/samples/patches/image_pull_secret.yaml
 	cd config/samples;$(KUSTOMIZE) edit add patch --path patches/image_pull_secret.yaml
 
+concheck: 
+	kubectl create -f connection-check/concheck.yaml
+
+clean-concheck:
+	kubectl delete -f connection-check/concheck.yaml
+	kubectl delete pod -n default --selector multi-nic-concheck
+	kubectl delete job -n default --selector multi-nic-concheck
+
 CONTROLLER_GEN = $(shell pwd)/bin/controller-gen
 controller-gen: ## Download controller-gen locally if necessary.
 	$(call go-get-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen@v0.4.1)
