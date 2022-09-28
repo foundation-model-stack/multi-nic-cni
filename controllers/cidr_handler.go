@@ -179,8 +179,7 @@ func (h *CIDRHandler) deleteRoutesFromCIDR(cidrInfo multinicv1.CIDRSpec) {
 func (h *CIDRHandler) GetAllNetAddrs() []string {
 	netAddrSet := []string{}
 	netAddressMap := make(map[string]bool)
-	hifList, _ := h.HostInterfaceHandler.ListHostInterface()
-	for _, hif := range hifList {
+	for _, hif := range HostInterfaceCache {
 		for _, iface := range hif.Spec.Interfaces {
 			netAddr := iface.NetAddress
 			if _, exist := netAddressMap[netAddr]; !exist {
