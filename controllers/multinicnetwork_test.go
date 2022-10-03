@@ -25,7 +25,7 @@ var _ = Describe("Test deploying MultiNicNetwork", func() {
 	multinicnetwork := getMultiNicCNINetwork("test-mn", cniVersion, cniType, cniArgs)
 
 	It("successfully create/delete network attachment definition", func() {
-		mainPlugin, annotations, err := multinicnetworkReconciler.GetMainPluginConf(multinicnetwork, hifList)
+		mainPlugin, annotations, err := multinicnetworkReconciler.GetMainPluginConf(multinicnetwork)
 		Expect(err).NotTo(HaveOccurred())
 		err = multinicnetworkReconciler.NetAttachDefHandler.CreateOrUpdate(multinicnetwork, mainPlugin, annotations)
 		Expect(err).NotTo(HaveOccurred())
