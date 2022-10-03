@@ -17,6 +17,7 @@ import (
 
 const (
 	DEFAULT_NAMESPACE = "default"
+	STREAMS_PER_IP    = 5
 )
 
 func getConfig() *rest.Config {
@@ -45,9 +46,11 @@ func main() {
 	for cidrName, cidr := range cidrMap {
 		podCIDRsMap := cidrHandler.GetPodCIDRsMap(cidr)
 		totalCount := 0
+
 		// create iperf server pod for listed hosts with cidr multi-nic-network
-		for host, _ := range podCIDRsMap {
-			_, err := iperfHanlder.CreateServerPod(DEFAULT_NAMESPACE, cidrName, host)
+		for host, cidrMap := range podCIDRsMap {
+			numberOfInterface := len(cidrMap)
+			_, err := iperfHanlder.CreateServerPod(DEFAULT_NAMESPACE, cidrName, host, numberOfInterface)
 			if err != nil {
 				log.Printf("Cannot create server pod for %s, %s: %v", cidrName, host, err)
 			} else {
