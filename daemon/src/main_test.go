@@ -6,57 +6,57 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"net/http"
-	"net/http/httptest"
-	"testing"
-	"bytes"
-	backend "github.com/foundation-model-stack/multi-nic-cni/daemon/backend"
 	da "github.com/foundation-model-stack/multi-nic-cni/daemon/allocator"
+	backend "github.com/foundation-model-stack/multi-nic-cni/daemon/backend"
 	di "github.com/foundation-model-stack/multi-nic-cni/daemon/iface"
 	dr "github.com/foundation-model-stack/multi-nic-cni/daemon/router"
 	ds "github.com/foundation-model-stack/multi-nic-cni/daemon/selector"
+	"io/ioutil"
 	"k8s.io/client-go/kubernetes"
+	"net/http"
+	"net/http/httptest"
+	"testing"
 
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 
+	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/install"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer/yaml"
 	"k8s.io/client-go/discovery"
-	"k8s.io/client-go/dynamic"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/install"
-	"k8s.io/client-go/restmapper"
 	"k8s.io/client-go/discovery/cached/memory"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/restmapper"
 
 	"context"
 	"github.com/vishvananda/netlink"
-	"path/filepath"
 	"k8s.io/apimachinery/pkg/runtime"
+	"path/filepath"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"log"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	"log"
 	//+kubebuilder:scaffold:imports
 )
 
 var dyn dynamic.Interface
 var dc *discovery.DiscoveryClient
-var requestRoute = dr.HostRoute {
-	Subnet: "172.23.0.64/26",
-	NextHop: "10.244.1.6",
+var requestRoute = dr.HostRoute{
+	Subnet:        "172.23.0.64/26",
+	NextHop:       "10.244.1.6",
 	InterfaceName: "ens10",
 }
 
 var requestL3Config = dr.L3ConfigRequest{
-	Name: "l3net",
+	Name:   "l3net",
 	Subnet: "192.168.0.0/16",
 	Routes: []dr.HostRoute{
 		requestRoute,
@@ -65,7 +65,7 @@ var requestL3Config = dr.L3ConfigRequest{
 }
 
 var requestL3ConfigForceDelete = dr.L3ConfigRequest{
-	Name: "l3net",
+	Name:   "l3net",
 	Subnet: "192.168.0.0/16",
 	Routes: []dr.HostRoute{
 		requestRoute,
@@ -74,15 +74,15 @@ var requestL3ConfigForceDelete = dr.L3ConfigRequest{
 }
 
 const (
-	HOST_NAME = "master0"
-	DEF_NAME = "multi-nic-sample"
+	HOST_NAME         = "master0"
+	DEF_NAME          = "multi-nic-sample"
 	DEVCLASS_DEF_NAME = "multi-nic-dev"
-	POD_NAME = "sample-pod"
-	POD_NAMESPACE = "default"
+	POD_NAME          = "sample-pod"
+	POD_NAMESPACE     = "default"
 
-	KUBECONFIG_FILE="../../ipam/hpcg-kubeconfig"
+	KUBECONFIG_FILE = "../../ipam/hpcg-kubeconfig"
 
-	EXAMPLE_CRD_FOLDER = "../example/crd"
+	EXAMPLE_CRD_FOLDER      = "../example/crd"
 	EXAMPLE_RESOURCE_FOLDER = "../example/resource"
 
 	EXAMPLE_CHECKPOINT = "../example/example-checkpoint"
@@ -96,10 +96,8 @@ var scheme = runtime.NewScheme()
 var MASTER_INTERFACES []string = []string{"test-eth1", "test-eth2"}
 var MASTER_IPS = []string{"10.244.0.1/24", "10.244.1.1/24"}
 var MASTER_NETADDRESSES = []string{"10.244.0.0/24", "10.244.1.0/24"}
-var MASTER_VENDORS = []string{"1d0f",""}
-var MASTER_PRODUCTS = []string{"efa1",""}
-
-
+var MASTER_VENDORS = []string{"1d0f", ""}
+var MASTER_PRODUCTS = []string{"efa1", ""}
 
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -114,9 +112,9 @@ func setTestLatestInterfaces() {
 		product := MASTER_PRODUCTS[index]
 		iface := di.InterfaceInfoType{
 			InterfaceName: master,
-			NetAddress: netAddress,
-			Vendor: vendor,
-			Product: product,
+			NetAddress:    netAddress,
+			Vendor:        vendor,
+			Product:       product,
 		}
 		latestInterfaceMap[master] = iface
 	}
@@ -131,9 +129,9 @@ var _ = BeforeSuite(func() {
 	testEnv = &envtest.Environment{
 		CRDDirectoryPaths:     []string{filepath.Join("..", "example", "crd")},
 		ErrorIfCRDPathMissing: true,
-		Scheme: scheme,
+		Scheme:                scheme,
 	}
-	
+
 	err := apiextensionsv1.AddToScheme(scheme)
 	Expect(err).NotTo(HaveOccurred())
 	//+kubebuilder:scaffold:scheme
@@ -211,7 +209,6 @@ var _ = Describe("Test L3Config Add/Delete", func() {
 	})
 })
 
-
 var _ = Describe("Test Get Interfaces", func() {
 	It("get interfaces", func() {
 		req, _ := http.NewRequest("GET", INTERFACE_PATH, nil)
@@ -227,9 +224,7 @@ var _ = Describe("Test Get Interfaces", func() {
 })
 
 var _ = Describe("Test Allocation", func() {
-	It("allocate" , func() {
-		var response []da.IPResponse
-	
+	It("normaly allocate", func() {
 		request := da.IPRequest{
 			PodName:          POD_NAME,
 			PodNamespace:     POD_NAMESPACE,
@@ -237,29 +232,101 @@ var _ = Describe("Test Allocation", func() {
 			NetAttachDefName: DEF_NAME,
 			InterfaceNames:   MASTER_INTERFACES,
 		}
-	
 		ipJson, err := json.Marshal(request)
 		Expect(err).NotTo(HaveOccurred())
-		req, err := http.NewRequest("PUT", ALLOCATE_PATH, bytes.NewBuffer(ipJson))
-		Expect(err).NotTo(HaveOccurred())
-		req.Header.Set("Content-Type", "application/json; charset=utf-8")
-		res := httptest.NewRecorder()
-		handler := http.HandlerFunc(Allocate)
-		handler.ServeHTTP(res, req)
-		body, err := ioutil.ReadAll(res.Body)
-		Expect(err).NotTo(HaveOccurred())
-		err = json.Unmarshal(body, &response)
-		Expect(err).NotTo(HaveOccurred())
+		// allocate
+		allocateHandler := http.HandlerFunc(Allocate)
+		response := MakeIPRequest(ipJson, ALLOCATE_PATH, allocateHandler, true)
 		Expect(len(response)).To(Equal(len(MASTER_INTERFACES)))
+		//deallocate
+		deallocateHandler := http.HandlerFunc(Deallocate)
+		MakeIPRequest(ipJson, DEALLOCATE_PATH, deallocateHandler, false)
 	})
+
+	It("anomaly allocate from begining", func() {
+		request := da.IPRequest{
+			PodName:          "anormal1_" + POD_NAME,
+			PodNamespace:     POD_NAMESPACE,
+			HostName:         HOST_NAME,
+			NetAttachDefName: DEF_NAME,
+			InterfaceNames:   MASTER_INTERFACES,
+		}
+		ipJson, err := json.Marshal(request)
+		Expect(err).NotTo(HaveOccurred())
+		// allocate
+		allocateHandler := http.HandlerFunc(Allocate)
+		response1 := MakeIPRequest(ipJson, ALLOCATE_PATH, allocateHandler, true)
+		Expect(len(response1)).To(Equal(len(MASTER_INTERFACES)))
+		//deallocate
+		deallocateHandler := http.HandlerFunc(Deallocate)
+		MakeIPRequest(ipJson, DEALLOCATE_PATH, deallocateHandler, false)
+		//allocate again
+		response2 := MakeIPRequest(ipJson, ALLOCATE_PATH, allocateHandler, true)
+		Expect(len(response2)).To(Equal(len(MASTER_INTERFACES)))
+		log.Printf("Response 1: %v\n", response1)
+		log.Printf("Response 2: %v\n", response2)
+		//response2 should not be equal to response 1 due to anomaly consecutive allocation
+		for index, resp1 := range response1 {
+			Expect(response2[index].IPAddress).NotTo(Equal(resp1.IPAddress))
+		}
+		//deallocate
+		MakeIPRequest(ipJson, DEALLOCATE_PATH, deallocateHandler, false)
+	})
+
+	It("anomaly allocate after some allocations", func() {
+		request1 := da.IPRequest{
+			PodName:          "normal_" + POD_NAME,
+			PodNamespace:     POD_NAMESPACE,
+			HostName:         HOST_NAME,
+			NetAttachDefName: DEF_NAME,
+			InterfaceNames:   MASTER_INTERFACES,
+		}
+		ipJson1, err := json.Marshal(request1)
+		Expect(err).NotTo(HaveOccurred())
+		// allocate some
+		allocateHandler := http.HandlerFunc(Allocate)
+		response := MakeIPRequest(ipJson1, ALLOCATE_PATH, allocateHandler, true)
+		Expect(len(response)).To(Equal(len(MASTER_INTERFACES)))
+
+		request2 := da.IPRequest{
+			PodName:          "anormal2_" + POD_NAME,
+			PodNamespace:     POD_NAMESPACE,
+			HostName:         HOST_NAME,
+			NetAttachDefName: DEF_NAME,
+			InterfaceNames:   MASTER_INTERFACES,
+		}
+		ipJson2, err := json.Marshal(request2)
+		Expect(err).NotTo(HaveOccurred())
+		// allocate
+		allocateHandler = http.HandlerFunc(Allocate)
+		response1 := MakeIPRequest(ipJson2, ALLOCATE_PATH, allocateHandler, true)
+		Expect(len(response1)).To(Equal(len(MASTER_INTERFACES)))
+		//deallocate
+		deallocateHandler := http.HandlerFunc(Deallocate)
+		MakeIPRequest(ipJson2, DEALLOCATE_PATH, deallocateHandler, false)
+		//allocate again
+		response2 := MakeIPRequest(ipJson2, ALLOCATE_PATH, allocateHandler, true)
+		Expect(len(response2)).To(Equal(len(MASTER_INTERFACES)))
+		log.Printf("Response 1: %v\n", response1)
+		log.Printf("Response 2: %v\n", response2)
+		//response2 should not be equal to response 1 due to anomaly consecutive allocation
+		for index, resp1 := range response1 {
+			Expect(response2[index].IPAddress).NotTo(Equal(resp1.IPAddress))
+		}
+		//deallocate
+		MakeIPRequest(ipJson1, DEALLOCATE_PATH, deallocateHandler, false)
+		//deallocate
+		MakeIPRequest(ipJson2, DEALLOCATE_PATH, deallocateHandler, false)
+	})
+
 })
 
 var _ = Describe("Test NIC Select", func() {
-	It("select all nic" , func() {
+	It("select all nic", func() {
 		setTestLatestInterfaces()
 		di.CheckPointfile = EXAMPLE_CHECKPOINT
 		var response ds.NICSelectResponse
-	
+
 		request := ds.NICSelectRequest{
 			PodName:          POD_NAME,
 			PodNamespace:     POD_NAMESPACE,
@@ -267,7 +334,7 @@ var _ = Describe("Test NIC Select", func() {
 			NetAttachDefName: DEF_NAME,
 			MasterNetAddrs:   []string{},
 		}
-	
+
 		jsonObj, err := json.Marshal(request)
 		Expect(err).NotTo(HaveOccurred())
 		req, err := http.NewRequest("PUT", NIC_SELECT_PATH, bytes.NewBuffer(jsonObj))
@@ -282,21 +349,21 @@ var _ = Describe("Test NIC Select", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(len(response.Masters)).To(Equal(len(MASTER_NETADDRESSES)))
 	})
-	It("select one nic" , func() {
+	It("select one nic", func() {
 		setTestLatestInterfaces()
 		di.CheckPointfile = EXAMPLE_CHECKPOINT
 		var response ds.NICSelectResponse
-	
+
 		request := ds.NICSelectRequest{
 			PodName:          POD_NAME,
 			PodNamespace:     POD_NAMESPACE,
 			HostName:         HOST_NAME,
 			NetAttachDefName: DEF_NAME,
-			NicSet:           ds.NicArgs{
+			NicSet: ds.NicArgs{
 				NumOfInterfaces: 1,
 			},
 		}
-	
+
 		jsonObj, err := json.Marshal(request)
 		Expect(err).NotTo(HaveOccurred())
 		req, err := http.NewRequest("PUT", NIC_SELECT_PATH, bytes.NewBuffer(jsonObj))
@@ -311,21 +378,21 @@ var _ = Describe("Test NIC Select", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(len(response.Masters)).To(Equal(1))
 	})
-	It("select nic by dev class" , func() {
+	It("select nic by dev class", func() {
 		setTestLatestInterfaces()
 		di.CheckPointfile = EXAMPLE_CHECKPOINT
 		var response ds.NICSelectResponse
-	
+
 		request := ds.NICSelectRequest{
 			PodName:          POD_NAME,
 			PodNamespace:     POD_NAMESPACE,
 			HostName:         HOST_NAME,
 			NetAttachDefName: DEVCLASS_DEF_NAME,
-			NicSet:           ds.NicArgs{
+			NicSet: ds.NicArgs{
 				DevClass: "highspeed",
 			},
 		}
-	
+
 		jsonObj, err := json.Marshal(request)
 		Expect(err).NotTo(HaveOccurred())
 		req, err := http.NewRequest("PUT", NIC_SELECT_PATH, bytes.NewBuffer(jsonObj))
@@ -354,11 +421,11 @@ func deployExamples(folder string, ignoreErr bool) {
 			fmt.Println("No DR, deploy")
 			continue
 		}
-		_, err  = dr.Create(context.TODO(), obj, metav1.CreateOptions{})
+		_, err = dr.Create(context.TODO(), obj, metav1.CreateOptions{})
 		fmt.Printf("Deploy %s (%v): %v\n", fileLocation, ignoreErr, err)
 		if !ignoreErr {
 			Expect(err).NotTo(HaveOccurred())
-		}	
+		}
 	}
 }
 
@@ -387,7 +454,7 @@ func getResourceInterface(gvk *schema.GroupVersionKind, ns string, ignoreErr boo
 	if err != nil {
 		return nil
 	}
-	
+
 	var dr dynamic.ResourceInterface
 	if mapping.Scope.Name() == meta.RESTScopeNameNamespace {
 		dr = dyn.Resource(mapping.Resource).Namespace(ns)
@@ -412,7 +479,7 @@ func deleteExamples(folder string, ignoreErr bool) {
 		err = dr.Delete(context.TODO(), obj.GetName(), metav1.DeleteOptions{})
 		if !ignoreErr {
 			Expect(err).NotTo(HaveOccurred())
-		}	
+		}
 	}
 }
 
@@ -445,4 +512,20 @@ func deleteMasterInterfaces() {
 		netlink.LinkSetDown(masterLink)
 		netlink.LinkDel(masterLink)
 	}
+}
+
+func MakeIPRequest(ipJson []byte, path string, handler http.HandlerFunc, shouldResponse bool) []da.IPResponse {
+	var response []da.IPResponse
+	req, err := http.NewRequest("PUT", path, bytes.NewBuffer(ipJson))
+	Expect(err).NotTo(HaveOccurred())
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	body, err := ioutil.ReadAll(res.Body)
+	Expect(err).NotTo(HaveOccurred())
+	if shouldResponse {
+		err = json.Unmarshal(body, &response)
+		Expect(err).NotTo(HaveOccurred())
+	}
+	return response
 }
