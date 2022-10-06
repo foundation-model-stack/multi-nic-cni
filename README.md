@@ -74,7 +74,7 @@ ipam|ipam plugin config| string | ipam can be single-NIC IPAM (e.g., whereabouts
 multiNicIPAM| indicator of ipam type | bool | **true** if ipam returns multiple IPs from *masters* key of NetworkAttachmentDefinition config at once, **false** if ipam returns only single IP from static config in ipam block
 plugin|main plugin config|[NetConf](https://pkg.go.dev/github.com/containernetworking/cni/pkg/types#NetConf) + plugin-specific arguments | main plugin integration must implement [Plugin](./plugin/plugin.go) with GetConfig function
 attachPolicy|attachment policy|policy|[strategy](document/policy.md) with corresponding arguments to select host NICs to be master of secondary interfaces on Pod
-namespaces|list of namespaces to apply the network definitions (i.e., to create NetworkAttachmentDefinition resource)|[]string|apply to all namespace if not specified. new item can be added to the list by `kubectl edit` to create new NetworkAttachmentDefinition. the created NetworkAttachmentDefinition must be deleted manually if needed.
+namespaces| (optional) limit network definition application to list of namespaces (i.e., to create NetworkAttachmentDefinition resource)|[]string|if not specified, network definitions will be applied to all namespaces. new item can be added to the list by `kubectl edit` to create new NetworkAttachmentDefinition. the created NetworkAttachmentDefinition must be deleted manually if needed.
 
 
 ## Usage
