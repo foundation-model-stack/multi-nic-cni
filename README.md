@@ -62,8 +62,6 @@ spec:
       mode: l3
   attachPolicy:
     strategy: none
-  namespaces:
-  - default
 ```
 
 Argument|Description|Value|Remarks
