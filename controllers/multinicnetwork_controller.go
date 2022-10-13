@@ -54,9 +54,16 @@ func GetPluginMap(config *rest.Config, logger logr.Logger) map[string]*PluginInt
 		Log: logger,
 	}
 	pluginMap[plugin.SRIOV_TYPE] = new(PluginInterface)
-	sriovPlugin := &plugin.SriovPlugin{Log: logger}
+	sriovPlugin := &plugin.SriovPlugin{
+		Log: logger,
+	}
 	sriovPlugin.Init(config)
 	*pluginMap[plugin.SRIOV_TYPE] = sriovPlugin
+	pluginMap[plugin.AWS_VPC_CNI] = new(PluginInterface)
+	awsVpcCNIPlugin := &plugin.AwsVpcCNIPlugin{
+		Log: logger,
+	}
+	*pluginMap[plugin.AWS_VPC_CNI] = awsVpcCNIPlugin
 	return pluginMap
 }
 

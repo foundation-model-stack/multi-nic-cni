@@ -2,8 +2,6 @@ name: Build and push controller and its bundle image
 
 on:
   push:
-    branches:
-      - main
     paths:
       - controllers/**
       - compute/**
@@ -53,6 +51,7 @@ jobs:
           username: ${{ secrets.GH_USERNAME }}
           password: ${{ secrets.GH_TOKEN }}
       - name: Build and push bundle
+        if: ${{ github.ref == 'refs/heads/main' }}
         uses: docker/build-push-action@v2
         with:
           context: .
@@ -84,6 +83,7 @@ jobs:
           username: ${{ secrets.GH_USERNAME }}
           password: ${{ secrets.GH_TOKEN }}
       - name: Build and push controller
+        if: ${{ github.ref == 'refs/heads/main' }}
         uses: docker/build-push-action@v2
         with:
           context: .
@@ -91,4 +91,13 @@ jobs:
           tags: |
             ${{ env.IMAGE_NAME }}:latest
             ${{ env.IMAGE_NAME }}:v${{ env.IMAGE_VERSION }}
+          file: ./Dockerfile
+      - name: Build and push controller (dev)
+        if: ${{ github.ref != 'refs/heads/main' }}
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.IMAGE_NAME }}:dev
           file: ./Dockerfile
