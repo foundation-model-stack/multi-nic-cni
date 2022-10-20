@@ -141,16 +141,14 @@ func (r *MultiNicNetworkReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		err = r.NetAttachDefHandler.CreateOrUpdate(instance, mainPlugin, annotations)
 		if err != nil {
 			r.Log.Info(fmt.Sprintf("Failed to create %s: %v", instance.GetName(), err))
-		}
-		// Handle multi-nic IPAM
-		r.HandleMultiNicIPAM(instance)
-
-		// Reconcile if fail to update or create some of net-attach-def
-		if err != nil {
 			return ctrl.Result{RequeueAfter: ReconcileTime}, nil
 		}
+		// Handle multi-nic IPAM
+		err = r.HandleMultiNicIPAM(instance)
+		if err != nil {
+			r.Log.Info(fmt.Sprintf("cannot handle MultiNICIPAM: %v", err))
+		}
 	}
-
 	routeStatus := instance.Status.Status
 	if routeStatus == multinicv1.RouteUnknown {
 		// some route is failed

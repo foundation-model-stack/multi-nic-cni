@@ -199,6 +199,9 @@ func (h *CIDRHandler) GetAllNetAddrs() []string {
 
 // newCIDR returns new CIDR from PluginConfig
 func (h *CIDRHandler) newCIDR(def multinicv1.PluginConfig, namespace string) (multinicv1.CIDRSpec, error) {
+	if def.Subnet == "" {
+		return h.generateCIDRFromHostSubnet(def)
+	}
 	entries := []multinicv1.CIDREntry{}
 	masterIndex := int(0)
 	// maxInterfaceIndex = 2^(interface bits) - 1
@@ -365,7 +368,12 @@ func (h *CIDRHandler) updateEntries(cidrSpec multinicv1.CIDRSpec, excludes []com
 func (h *CIDRHandler) UpdateCIDR(cidrSpec multinicv1.CIDRSpec, new bool) (bool, error) {
 	h.Mutex.Lock()
 	def := cidrSpec.Config
-	excludes := compute.SortAddress(def.ExcludeCIDRs)
+	excludesInStr := []string{}
+	excludesInStr = append(excludesInStr, def.ExcludeCIDRs...)
+	if def.Subnet == "" {
+		excludesInStr = append(excludesInStr, getHostAddressesToExclude()...)
+	}
+	excludes := compute.SortAddress(excludesInStr)
 	h.Log.Info(fmt.Sprintf("Update CIDR %s", def.Name))
 	entriesMap, changed := h.updateEntries(cidrSpec, excludes, new)
 	// if pod CIDR changes, update CIDR and create corresponding IPPools and routes
@@ -546,6 +554,16 @@ func (h *CIDRHandler) getInterfaceEntry(def multinicv1.PluginConfig, entriesMap 
 		// already exists
 		return true, entry
 	}
+	if def.Subnet == "" {
+		index := len(entriesMap)
+		entry := multinicv1.CIDREntry{
+			NetAddress:     newNetAdress,
+			InterfaceIndex: index,
+			VlanCIDR:       newNetAdress,
+			Hosts:          []multinicv1.HostInterfaceInfo{},
+		}
+		return true, entry
+	}
 	var excludedIndexes []int
 	for _, entry := range entriesMap {
 		index := entry.InterfaceIndex
@@ -649,4 +667,61 @@ func (h *CIDRHandler) GetHostInterfaceIndexMap(entries []multinicv1.CIDREntry) m
 		}
 	}
 	return hostInterfaceIndexMap
+}
+
+// generateCIDRFromHostSubnet generates CIDR from Host Subnet
+// in the case that podCIDR must be shared with host subnet (e.g., in aws VPC)
+func (h *CIDRHandler) generateCIDRFromHostSubnet(def multinicv1.PluginConfig) (multinicv1.CIDRSpec, error) {
+	vlanIndexMap := make(map[string]int)
+	entryMap := make(map[string]multinicv1.CIDREntry)
+	lastIndex := 0
+
+	// maxHostIndex = 2^(host bits) - 1
+	maxHostIndex := int(math.Pow(2, float64(def.HostBlock)) - 1)
+
+	for hostName, hif := range HostInterfaceCache {
+		for _, iface := range hif.Spec.Interfaces {
+			netAddr := iface.NetAddress
+			if _, exist := vlanIndexMap[netAddr]; !exist {
+				// new address
+				vlanIndexMap[netAddr] = lastIndex
+				entry := multinicv1.CIDREntry{
+					NetAddress:     netAddr,
+					InterfaceIndex: vlanIndexMap[netAddr],
+					VlanCIDR:       netAddr,
+					Hosts:          []multinicv1.HostInterfaceInfo{},
+				}
+				entryMap[netAddr] = entry
+				lastIndex += 1
+			}
+			entry := entryMap[netAddr]
+			entry, changed := h.tryAddNewHost(entry.Hosts, entry, maxHostIndex, def, hostName, iface.InterfaceName, iface.HostIP)
+			if !changed {
+				return multinicv1.CIDRSpec{}, fmt.Errorf("failed to add host to CIDR entry")
+			}
+			entryMap[netAddr] = entry
+		}
+	}
+	entries := []multinicv1.CIDREntry{}
+	for _, entry := range entryMap {
+		entries = append(entries, entry)
+	}
+	cidrSpec := multinicv1.CIDRSpec{
+		Config: def,
+		CIDRs:  entries,
+	}
+	return cidrSpec, nil
+}
+
+// getHostAddressesToExclude returns host addresses to be excluded
+// in the case that dedicated podCIDR must be shared with host subnet (e.g., in aws VPC)
+func getHostAddressesToExclude() []string {
+	excludes := []string{}
+	for _, hif := range HostInterfaceCache {
+		for _, iface := range hif.Spec.Interfaces {
+			hostIPCIDR := fmt.Sprintf("%s/32", iface.HostIP)
+			excludes = append(excludes, hostIPCIDR)
+		}
+	}
+	return excludes
 }
