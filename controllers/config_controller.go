@@ -102,7 +102,12 @@ func (r *ConfigReconciler) CreateDefaultDaemonConfig() error {
 		PodCNIPath:  "/opt/rt_tables",
 		HostCNIPath: "/etc/iproute2/rt_tables",
 	}
-	hostPathMounts := []multinicv1.HostPathMount{binMnt, devPluginMnt, routeMnt}
+	logMnt := multinicv1.HostPathMount{
+		Name:        "cni-log",
+		PodCNIPath:  "/host/var/log/multi-nic-cni.log",
+		HostCNIPath: "/var/log/multi-nic-cni.log",
+	}
+	hostPathMounts := []multinicv1.HostPathMount{binMnt, devPluginMnt, routeMnt, logMnt}
 	resources := corev1.ResourceRequirements{
 		Requests: corev1.ResourceList{
 			corev1.ResourceCPU:    resource.MustParse("100m"),
