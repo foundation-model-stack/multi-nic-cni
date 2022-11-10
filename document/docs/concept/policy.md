@@ -1,4 +1,4 @@
-# Attachment Policy
+# Policy-based secondary network attachment
 To apply attachment policy, the key `attachPolicy` need to be specified in MultiNicNetwork and specific arguments can be added specific to Pod annotation (if needed).
 ```yaml
 # MultiNicNetwork 

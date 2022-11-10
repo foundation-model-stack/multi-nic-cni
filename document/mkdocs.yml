@@ -1,0 +1,7 @@
+site_name: Multi-NIC CNI
+theme:
+    name: readthedocs
+    highlightjs: true
+    hljs_languages:
+        - yaml
+        - rust
