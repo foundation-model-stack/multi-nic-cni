@@ -125,6 +125,9 @@ func (w *DaemonWatcher) UpdateCurrentList() error {
 	}
 	for _, existingDaemon := range initialList.Items {
 		if isContainerReady(existingDaemon) {
+			// early add to the spec for CIDR check
+			nodeName := existingDaemon.Spec.NodeName
+			DaemonCache[nodeName] = *existingDaemon.DeepCopy()
 			w.PodQueue <- existingDaemon.DeepCopy()
 		}
 	}
@@ -238,10 +241,9 @@ func (w *DaemonWatcher) createHostInterfaceInfo(daemon v1.Pod) error {
 // updateCIDR modifies existing CIDR from the new HostInterface information
 func (w *DaemonWatcher) UpdateCIDRs() {
 	routeChange := false
-	cidrMap, _ := w.CIDRHandler.ListCIDR()
-	for cidrName, cidr := range cidrMap {
+	for cidrName, cidr := range CIDRCache {
 		w.Log.Info(fmt.Sprintf("Update cidr %s", cidrName))
-		change, err := w.CIDRHandler.UpdateCIDR(cidr.Spec, false)
+		change, err := w.CIDRHandler.UpdateCIDR(cidr, false)
 		if err != nil {
 			w.Log.Info(fmt.Sprintf("Fail to update CIDR: %v", err))
 		} else if change {
