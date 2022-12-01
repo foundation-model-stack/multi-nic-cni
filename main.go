@@ -179,8 +179,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	cidrHandler.CleanPreviousCIDR(config, defHandler)
-
 	ticker := time.NewTicker(TICKET_INTERVAL)
 	defer ticker.Stop()
 	syncLog := ctrl.Log.WithName("controllers").WithName("Synchronizer")

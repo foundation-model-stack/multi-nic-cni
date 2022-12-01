@@ -78,6 +78,18 @@ func NewCIDRHandler(client client.Client, config *rest.Config, logger logr.Logge
 	return handler
 }
 
+// InitCustomCRCache inits existing list of IPPool and HostInterface to avoid unexpected recomputation of CIDR
+func (h *CIDRHandler) InitCustomCRCache() {
+	err := InitIppoolCache(h.IPPoolHandler)
+	if err != nil {
+		h.IPPoolHandler.Log.Info(fmt.Sprintf("Failed to InitIppoolCache: %v", err))
+	}
+	err = InitHostInterfaceCache(h.HostInterfaceHandler)
+	if err != nil {
+		h.HostInterfaceHandler.Log.Info(fmt.Sprintf("Failed to InitHostInterfaceCache: %v", err))
+	}
+}
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 // General handling: Get, List, Delete
@@ -109,37 +121,27 @@ func (h *CIDRHandler) ListCIDR() (map[string]multinicv1.CIDR, error) {
 	return cidrSpecMap, err
 }
 
-// CleanPreviousCIDR deletes CIDRs if corresponding NetworkAttachmentDefinition does not exist
-//
-//	deletes IPPools if corresponding CIDR does not exist
-//
+// SyncAllPendingCustomCR sync CIDRs and IPPools corresponding to MultiNICNetwork
 // note: CIDR name = NetworkAttachmentDefinition name
-func (h *CIDRHandler) CleanPreviousCIDR(config *rest.Config, defHandler *plugin.NetAttachDefHandler) {
+func (h *CIDRHandler) SyncAllPendingCustomCR(defHandler *plugin.NetAttachDefHandler) {
+	h.InitCustomCRCache()
 	cidrMap, err := h.ListCIDR()
-	h.Log.Info(fmt.Sprintf("Clean cidr: err=%v", err))
 	if err == nil {
 		h.Log.Info(fmt.Sprintf("Checking %d cidrs", len(cidrMap)))
 		for name, cidr := range cidrMap {
-			defName := cidr.Spec.Config.Name
-			err := defHandler.Delete(defName, metav1.NamespaceAll)
+			_, err = h.MultiNicNetworkHandler.GetNetwork(name)
 			if err != nil {
-				// corresponding NetworkAttachmentDefinition does not exist, delete CIDR
+				// not found
+				h.Log.Info(fmt.Sprintf("%v, delete pending resources (CIDR)", err))
+				defHandler.Delete(name, metav1.NamespaceAll)
 				h.DeleteCIDR(cidr)
-				h.Log.Info(fmt.Sprintf("%v, CIDR %s deleted", err, name))
+			} else {
+				h.CleanPendingIPPools(name, cidr.Spec)
+				CIDRCache[name] = cidr.Spec
 			}
 		}
-	}
-
-	poolMap, err := h.IPPoolHandler.ListIPPool()
-	if err == nil {
-		for _, ippool := range poolMap {
-			defName := ippool.Spec.NetAttachDefName
-			_, err := h.GetCIDR(defName)
-			if err != nil {
-				// corresponding CIDR does not exist, delete CIDR
-				h.DeleteIPPool(defName, ippool.Spec.PodCIDR)
-			}
-		}
+	} else {
+		h.Log.Info(fmt.Sprintf("Failed to list cidr: %v", err))
 	}
 }
 
@@ -270,6 +272,7 @@ func (h *CIDRHandler) updateEntries(cidrSpec multinicv1.CIDRSpec, excludes []com
 					}
 				}
 			} else {
+				h.Log.Info(fmt.Sprintf("Host %s no longer exist, delete from entry of CIDR %s", host.HostName, cidrSpec.Config.Name))
 				// host not exist anymore
 				changed = true
 			}
@@ -363,6 +366,10 @@ func (h *CIDRHandler) updateEntries(cidrSpec multinicv1.CIDRSpec, excludes []com
 
 // UpdateCIDR computes host indexes and coresponding pod VLAN from host interface list
 func (h *CIDRHandler) UpdateCIDR(cidrSpec multinicv1.CIDRSpec, new bool) (bool, error) {
+	if !ConfigReady {
+		h.Log.Info("Config is not ready yet, skip CIDR update")
+		return false, nil
+	}
 	h.Mutex.Lock()
 	def := cidrSpec.Config
 	excludes := compute.SortAddress(def.ExcludeCIDRs)
@@ -391,10 +398,11 @@ func (h *CIDRHandler) UpdateCIDR(cidrSpec multinicv1.CIDRSpec, new bool) (bool, 
 		if err == nil {
 			updateCIDR := existCIDR.DeepCopy()
 			updateCIDR.Spec = spec
-			h.cleanPendingIPPools(def.Name, existCIDR, updateCIDR)
+			h.CleanPendingIPPools(def.Name, updateCIDR.Spec)
 			err = h.Client.Update(context.TODO(), updateCIDR)
 		} else {
 			err = h.Client.Create(context.TODO(), mapObj)
+			h.CleanPendingIPPools(def.Name, mapObj.Spec)
 		}
 
 		if err != nil {
@@ -475,25 +483,20 @@ func (h *CIDRHandler) DeleteOldRoutes(cidrSpec multinicv1.CIDRSpec) {
 	}
 }
 
-// cleanPendingIPPools clean ippools in case that cidr is updated with new subnet entry
-func (h *CIDRHandler) cleanPendingIPPools(defName string, oldCIDR *multinicv1.CIDR, newCIDR *multinicv1.CIDR) {
+// CleanPendingIPPools clean ippools in case that cidr is updated with new subnet entry
+func (h *CIDRHandler) CleanPendingIPPools(defName string, newCIDR multinicv1.CIDRSpec) {
 	newPoolMap := make(map[string]bool)
-
-	for _, entry := range newCIDR.Spec.CIDRs {
+	for _, entry := range newCIDR.CIDRs {
 		for _, host := range entry.Hosts {
 			ippoolName := h.IPPoolHandler.GetIPPoolName(defName, host.PodCIDR)
 			newPoolMap[ippoolName] = true
 		}
 	}
-	for _, entry := range oldCIDR.Spec.CIDRs {
-		for _, host := range entry.Hosts {
-			ippoolName := h.IPPoolHandler.GetIPPoolName(defName, host.PodCIDR)
+	// delete IPPool that not in valid list
+	for ippoolName, ippool := range IPPoolCache {
+		if ippool.NetAttachDefName == defName {
 			if _, exist := newPoolMap[ippoolName]; !exist {
-				ippool, err := h.IPPoolHandler.GetIPPool(ippoolName)
-				if err == nil {
-					// corresponding CIDR does not exist, delete CIDR
-					h.DeleteIPPool(defName, ippool.Spec.PodCIDR)
-				}
+				h.DeleteIPPool(ippool.NetAttachDefName, ippool.PodCIDR)
 			}
 		}
 	}
