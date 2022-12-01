@@ -22,6 +22,7 @@ func RunPeriodicUpdate(ticker *time.Ticker, cidrHandler *CIDRHandler, hostInterf
 				}
 				for name, instanceSpec := range CIDRCache {
 					routeStatus := cidrHandler.SyncCIDRRoute(instanceSpec, false)
+					cidrHandler.CleanPendingIPPools(name, instanceSpec)
 					err := cidrHandler.MultiNicNetworkHandler.SyncStatus(name, instanceSpec, routeStatus)
 					if err != nil {
 						logger.Info(fmt.Sprintf("failed to update route status of %s: %v", name, err))

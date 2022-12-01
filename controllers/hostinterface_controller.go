@@ -35,6 +35,16 @@ const TestModelLabel = "test-mode"
 
 var HostInterfaceCache map[string]multinicv1.HostInterface = make(map[string]multinicv1.HostInterface)
 
+func InitHostInterfaceCache(hostInterfaceHandler *HostInterfaceHandler) error {
+	listObjects, err := hostInterfaceHandler.ListHostInterface()
+	if err == nil {
+		for name, instance := range listObjects {
+			HostInterfaceCache[name] = instance
+		}
+	}
+	return err
+}
+
 //+kubebuilder:rbac:groups=multinic.fms.io,resources=hostinterfaces,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=multinic.fms.io,resources=hostinterfaces/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=multinic.fms.io,resources=hostinterfaces/finalizers,verbs=update

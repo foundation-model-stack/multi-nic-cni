@@ -42,6 +42,7 @@ const (
 
 var (
 	OPERATOR_NAMESPACE string = getOperatorNamespace()
+	ConfigReady        bool   = false
 )
 
 func getOperatorNamespace() string {
@@ -159,6 +160,10 @@ func (r *ConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		r.Log.Info(fmt.Sprintf("Cannot get #%v ", err))
 		// Error reading the object - requeue the request.
 		return ctrl.Result{RequeueAfter: ReconcileTime}, nil
+	}
+	if !ConfigReady {
+		r.CIDRHandler.SyncAllPendingCustomCR(r.NetAttachDefHandler)
+		ConfigReady = true
 	}
 
 	dsName := instance.GetName()
@@ -282,14 +287,14 @@ func (r *ConfigReconciler) callFinalizer(reqLogger logr.Logger, dsName string) e
 	}
 	// wait for all ippools deleted
 	for {
-		poolMap, err := r.CIDRHandler.IPPoolHandler.ListIPPool()
-		if err != nil || len(poolMap) == 0 {
+		if err != nil || len(IPPoolCache) == 0 {
 			break
 		}
-		reqLogger.Info(fmt.Sprintf("%d ippools left, wait...", len(poolMap)))
+		reqLogger.Info(fmt.Sprintf("%d ippools left, wait...", len(IPPoolCache)))
 		time.Sleep(1 * time.Second)
 	}
 	// delete CNI deamonset
 	err = r.Clientset.AppsV1().DaemonSets(OPERATOR_NAMESPACE).Delete(context.TODO(), dsName, metav1.DeleteOptions{})
+	ConfigReady = false
 	return nil
 }
