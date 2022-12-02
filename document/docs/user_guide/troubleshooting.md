@@ -264,16 +264,7 @@ Log in to FAILED_NODE with `oc debug node/$FAILED_NODE` or using [nettools](http
             kubectl get multinicnetwork -o yaml|grep routeStatus
               routeStatus: Success
 
-      If all changes are applied (up-to-date) in your current version, there is no need to stop the running workload to reinstall the operator. Check [update the daemon pods](#update-daemon-pod-to-use-latest-version) and [update the controller](#update-controller-to-use-latest-version) to get the image with latest minor updates and bug fixes.
+     If all changes are applied (up-to-date) in your current version, there is no need to stop the running workload to reinstall the operator. Check [update the daemon pods](#update-daemon-pod-to-use-latest-version) and [update the controller](#update-controller-to-use-latest-version) to get the image with latest minor updates and bug fixes.
+    <br>
 
-      Otherwise, need the following steps for safe migration:
-
-      1. Clean all running pods with IP assigned by Multi-NIC CNI operator
-      2. Delete multinicnetwork (or cidr if multinicnetwork resource is not available)
-  
-            kubectl delete multinicnetwork --all
-            # or
-            kubectl delete cidr --all
-
-      3. Delete all multi-nic-cni operator resources (depends on your deployed version)
-      4. [Install the multi-nic-cni-operator by Operator Hub](./index.md#quick-installation)
+    Otherwise, check [live migration](https://github.com/foundation-model-stack/multi-nic-cni/tree/doc/live-migration)
