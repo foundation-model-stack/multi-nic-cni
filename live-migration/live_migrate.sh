@@ -40,7 +40,7 @@ deactivate_route_config() {
     kubectl apply -f multinicnetwork_l2.yaml
     netname=$(kubectl get multinicnetwork -ojson|jq .items| jq '.[].metadata.name')
     sleep 5
-    kubectl get net-attach-def multinic-ipvlanl3 -ojson|jq '.spec.config'
+    kubectl get net-attach-def $netname -ojson|jq '.spec.config'
 }
 
 uninstall_operator() {
@@ -66,7 +66,7 @@ activate_route_config() {
     kubectl apply -f $snapshot_dir/$activate_cr.yaml
     netname=$(kubectl get multinicnetwork -ojson|jq .items| jq '.[].metadata.name')
     sleep 5
-    kubectl get net-attach-def multinic-ipvlanl3 -ojson|jq '.spec.config'
+    kubectl get net-attach-def $netname -ojson|jq '.spec.config'
 }
 
 "$@"
