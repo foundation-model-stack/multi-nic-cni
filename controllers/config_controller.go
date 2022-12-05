@@ -159,6 +159,7 @@ func (r *ConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	if !ConfigReady {
 		r.CIDRHandler.SyncAllPendingCustomCR(r.NetAttachDefHandler)
 		ConfigReady = true
+		r.Log.Info("Set ConfigReady")
 	}
 
 	dsName := instance.GetName()

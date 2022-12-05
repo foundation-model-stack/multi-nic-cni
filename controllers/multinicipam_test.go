@@ -109,4 +109,29 @@ var _ = Describe("Test Multi-NIC IPAM", func() {
 		// Clean up
 		delete(HostInterfaceCache, newHostName)
 	})
+
+	It("Sync CIDR/IPPool", func() {
+		// get index at bytes[3]
+		podCIDR := "192.168.0.0/16"
+		unsyncedIp := "192.168.0.10"
+		contains, index := multinicnetworkReconciler.CIDRHandler.CIDRCompute.GetIndexInRange(podCIDR, unsyncedIp)
+		Expect(contains).To(Equal(true))
+		Expect(index).To(Equal(10))
+		// get index at bytes[2]
+		unsyncedIp = "192.168.1.1"
+		contains, index = multinicnetworkReconciler.CIDRHandler.CIDRCompute.GetIndexInRange(podCIDR, unsyncedIp)
+		Expect(contains).To(Equal(true))
+		Expect(index).To(Equal(257))
+		// get index at bytes[1]
+		podCIDR = "10.0.0.0/8"
+		unsyncedIp = "10.1.1.1"
+		contains, index = multinicnetworkReconciler.CIDRHandler.CIDRCompute.GetIndexInRange(podCIDR, unsyncedIp)
+		Expect(contains).To(Equal(true))
+		Expect(index).To(Equal(256*256 + 256 + 1))
+		// uncontain
+		podCIDR = "192.168.0.0/26"
+		unsyncedIp = "192.168.1.1"
+		contains, index = multinicnetworkReconciler.CIDRHandler.CIDRCompute.GetIndexInRange(podCIDR, unsyncedIp)
+		Expect(contains).To(Equal(false))
+	})
 })
