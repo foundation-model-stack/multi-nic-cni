@@ -202,3 +202,26 @@ func (c CIDRCompute) GetCIDRFromByte(cidrInByte [4]byte, subnet string, blocksiz
 	blockSize := int(baseBlock) + blocksize
 	return fmt.Sprintf("%s/%d", bytesToStr(cidrInByte), blockSize)
 }
+
+func (c CIDRCompute) GetIndexInRange(podCIDR string, podIPAddress string) (bool, int) {
+	startPodIP, podNet, _ := net.ParseCIDR(podCIDR)
+	netIP, _, _ := net.ParseCIDR(podIPAddress + "/32")
+	if !podNet.Contains(netIP) {
+		return false, -1
+	}
+	cidrValues := strings.Split(startPodIP.String(), ".")
+	podValues := strings.Split(podIPAddress, ".")
+
+	podIndex := int(0)
+	for index, value := range podValues {
+		if value == cidrValues[index] {
+			continue
+		}
+		cidrValue, _ := strconv.Atoi(cidrValues[index])
+		podValue, _ := strconv.Atoi(podValues[index])
+		diff := podValue - cidrValue
+		diff *= int(math.Pow(256, float64(3-index)))
+		podIndex += int(diff)
+	}
+	return true, podIndex
+}

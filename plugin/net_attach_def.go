@@ -27,6 +27,8 @@ const (
 	NET_ATTACH_DEF_API_VERSION = "k8s.cni.cncf.io/v1"
 	NET_ATTACH_DEF_RESOURCE    = "network-attachment-definitions.v1.k8s.cni.cncf.io"
 	NET_ATTACH_DEF_KIND        = "NetworkAttachmentDefinition"
+	SelectionsKey              = "k8s.v1.cni.cncf.io/networks"
+	StatusesKey                = "k8s.v1.cni.cncf.io/networks-status"
 )
 
 // ////////////////////////////////////////
@@ -73,6 +75,15 @@ type NetConf struct {
 	IsMultiNICIPAM bool        `json:"multiNICIPAM,omitempty"`
 	DaemonIP       string      `json:"daemonIP"`
 	DaemonPort     int         `json:"daemonPort"`
+}
+
+type NetworkStatus struct {
+	Name      string    `json:"name"`
+	Interface string    `json:"interface,omitempty"`
+	IPs       []string  `json:"ips,omitempty"`
+	Mac       string    `json:"mac,omitempty"`
+	Default   bool      `json:"default,omitempty"`
+	DNS       types.DNS `json:"dns,omitempty"`
 }
 
 type NetAttachDefHandler struct {
