@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        
+        
+        <link rel="shortcut icon" href="../../img/favicon.ico">
+        <title>Troubleshooting - My Docs</title>
+        <link href="../../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../../css/font-awesome.min.css" rel="stylesheet">
+        <link href="../../css/base.css" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css">
+
+        <script src="../../js/jquery-1.10.2.min.js" defer></script>
+        <script src="../../js/bootstrap.min.js" defer></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
+        <script>hljs.initHighlightingOnLoad();</script> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="../..">My Docs</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-toggle="collapse" data-target="#navbar-collapse">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="navitem">
+                                <a href="../.." class="nav-link">Welcome to MkDocs</a>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Concept <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../concept/" class="dropdown-item">Concept</a>
+</li>
+                                    
+<li>
+    <a href="../../concept/architecture/" class="dropdown-item">Architecture</a>
+</li>
+                                    
+<li>
+    <a href="../../concept/multi-nic-ipam/" class="dropdown-item">Multi nic ipam</a>
+</li>
+                                    
+<li>
+    <a href="../../concept/policy/" class="dropdown-item">Attachment Policy</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Contributor <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../contributor/" class="dropdown-item">Contributing</a>
+</li>
+                                    
+<li>
+    <a href="../../contributor/local_build_push/" class="dropdown-item">Locally Build and Deploy</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="dropdown active">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">User <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../" class="dropdown-item">User Guide</a>
+</li>
+                                    
+<li>
+    <a href="./" class="dropdown-item active">Troubleshooting</a>
+</li>
+                                </ul>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ml-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-toggle="modal" data-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                            <li class="nav-item">
+                                <a rel="prev" href="../" class="nav-link">
+                                    <i class="fa fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a rel="next" class="nav-link disabled">
+                                    Next <i class="fa fa-arrow-right"></i>
+                                </a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-light navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-toggle="collapse" data-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-secondary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-level="1"><a href="#troubleshooting" class="nav-link">Troubleshooting</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-level="2"><a href="#pod-failed-to-start" class="nav-link">Pod failed to start</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#ping-failed" class="nav-link">Ping failed</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#tcpudp-communication-failed" class="nav-link">TCP/UDP communication failed.</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+            
+            <li class="nav-item" data-level="1"><a href="#actions" class="nav-link">Actions</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-level="2"><a href="#get-cni-log" class="nav-link">Get CNI log</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#get-controller-log" class="nav-link">Get Controller log</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#get-multi-nicd-log" class="nav-link">Get multi-nicd log</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#deploy-multi-nicd-config" class="nav-link">Deploy multi-nicd config</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#set-security-groups" class="nav-link">Set security groups</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#add-secondary-interfaces" class="nav-link">Add secondary interfaces</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#restart-controller" class="nav-link">Restart controller</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#check-host-secondary-interfaces" class="nav-link">Check host secondary interfaces</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="troubleshooting">Troubleshooting</h1>
+<p>Set common variables to be used for troubleshooting:</p>
+<pre><code class="language-bash">export FAILED_POD= # pod that fails to run
+export FAILED_POD_NAMESPACE= # namespace where the failed pod is supposed to run
+export FAILED_NODE= # node where pod is deployed
+export FAILED_NODE_IP = # IP of FAILED_NODE
+export MULTI_NIC_NAMESPACE= # namespace where multi-nic cni operator is deployed, default=openshift-operators
+</code></pre>
+<h2 id="pod-failed-to-start">Pod failed to start</h2>
+<p>Pod stays pending in <code>ContainerCreating</code> status.
+Get more information from <code>describe</code></p>
+<pre><code class="language-bash">kubectl describe $FAILED_POD -n $FAILED_POD_NAMESPACE
+</code></pre>
+<ul>
+<li><code>FailedCreatePodSandBox</code><ul>
+<li><a href="#cni-binary-not-exist">CNI binary not found</a></li>
+<li><a href="#ipam-execadd-failed">IPAM ExecAdd failed</a></li>
+</ul>
+</li>
+</ul>
+<h4 id="cni-binary-not-exist">CNI binary not exist</h4>
+<p>The binary file of CNI is not in the expected location read by Multus. The expected location can be found in Multus daemonset as below.</p>
+<pre><code class="language-bash">kubectl get ds $(kubectl get ds -A\
+|grep multus|head -n 1|awk '{printf &quot;%s -n %s&quot;, $2, $1}')  -ojson\
+|jq .spec.template.spec.volumes
+</code></pre>
+<p>Example output:</p>
+<pre><code class="language-json">[
+...
+  {
+    &quot;hostPath&quot;: {
+      &quot;path&quot;: &quot;/var/lib/cni/bin&quot;,
+      &quot;type&quot;: &quot;&quot;
+    },
+    &quot;name&quot;: &quot;cnibin&quot;
+  },
+...
+]
+</code></pre>
+<p>The expected location is in <em>hostPath</em> of <em>cnibin</em>.
+- <strong>missing multi-nic/multi-nic-ipam CNI</strong>
+  The CNI directory is probably mounted to a wrong location in the configs.multinic.fms.io CR. 
+    <code>bash
+    kubectl edit config.multinic multi-nicd -n $MULTI_NIC_NAMESPACE</code>
+    Modify mount path ( <em>hostpath</em> attribute ) in <code>spec.daemon.mounts</code> of <em>cnibin</em> to the target location above.
+- <strong>missing other CNI such as ipvlan</strong>
+  The missing CNI may not be supported. </p>
+<h4 id="ipam-execadd-failed">IPAM ExecAdd failed</h4>
+<ul>
+<li><code>failed to load netconf</code>
+   The configuration cannot be loaded. This is delegated CNI (such as IPVLAN) issue. 
+   Find more details from <a href="#get-cni-log">CNI log</a>.</li>
+<li><code>failed to request ip Response nothing</code>
+   Get more information from HostInterface CR.
+   <code>bash
+   kubectl get HostInterface $FAILED_NODE -oyaml</code></li>
+<li>hostinterfaces.multinic.fms.io "FAILED_NODE" not found, check <a href="#hostinterface-not-created">HostInterface is not be created.</a> </li>
+<li>no interfaces in <code>.spec.interfaces</code>, check <a href="#no-secondary-interfaces-in-hostinterface">HostInterface does not show the secondary interfaces.</a></li>
+<li>check whether it reaches CIDR block limit, confirm <a href="#no-secondary-interfaces-in-hostinterface">no available IP address</a></li>
+<li>other cases, find more details from <a href="#get-multi-nicd-log">multi-nicd log</a></li>
+<li>other CNI plugin (such as aws-vpc-cni, sr-iov) failure, check each CNI log.<ul>
+<li>aws-vpc-cni: <code>/host/var/log/aws-routed-eni</code></li>
+</ul>
+</li>
+</ul>
+<h5 id="hostinterface-not-created">HostInterface not created</h5>
+<p>There are a couple of reasons that the HostInterface is not created. First check the multi-nicd DaemonSet.</p>
+<pre><code class="language-bash">kubectl get ds multi-nicd -n $MULTI_NIC_NAMESPACE -oyaml
+</code></pre>
+<ul>
+<li><em>daemonsets.apps "multi-nicd" not found</em></li>
+<li>Check whether no config.multinic.fms.io deployed in the cluster.
+    <code>bash
+    kubectl get config.multinic multi-nicd -n $MULTI_NIC_NAMESPACE</code>
+    If no config.multinic.fms.io deployed, see <a href="#deploy-multi-nicd-config">Deploy multi-nicd</a></li>
+<li>The node has taint that the daemon is not tolerate. 
+    <code>bash
+    kubectl get nodes $FAILED_NODE -o json|jq -r .spec.taints</code>
+    To tolerate the taint, add the tolerate manually to the multi-nicd DaemonSet.
+    <code>bash
+    kubectl edit $(kubectl get po -owide -A|grep multi-nicd\
+    |grep $FAILED_NODE|awk '{printf "%s -n %s", $2, $1}')</code>
+    More detail: <a href="https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/">taints and torelations</a></li>
+<li>Other cases, check <a href="#get-controller-log">controller log</a></li>
+</ul>
+<h5 id="no-secondary-interfaces-in-hostinterface">No secondary interfaces in HostInterface</h5>
+<p>The HostInterface is created but there is no interface listed in the custom resource.
+Check whether the controller can communicate with multi-nicd.</p>
+<pre><code class="language-bash">kubectl logs --selector control-plane=controller-manager \
+-n $MULTI_NIC_NAMESPACE -c manager| grep Join| grep $FAILED_NODE_IP
+</code></pre>
+<ul>
+<li>If no line shown up and the full <a href="#get-controller-log">controller log</a> keep printing <code>Fail to create hostinterface ... cannot update interfaces: Get "&lt;node IP&gt;/interface": dial tcp &lt;node IP&gt;:11000: i/o timeout</code>, check <a href="#set-security-groups">set required security group rules</a></li>
+<li>Other cases, <a href="#check-host-secondary-interfaces">check interfaces at node's host network</a></li>
+</ul>
+<h5 id="no-available-ip-address">No available IP address</h5>
+<p>List corresponding Pod CIDR from HostInterface.</p>
+<pre><code class="language-bash">kubectl get HostInterface $FAILED_NODE -oyaml
+</code></pre>
+<p>Check ippools.multinic.fms.io of the corresponding pod CIDR whether the IP address actually reach the limit. If yes, consider changing the host block and interface block in multinicnetworks.multinic.fms.io.</p>
+<h2 id="ping-failed">Ping failed</h2>
+<p>Check route status in multinicnetworks.multinic.fms.io.</p>
+<pre><code class="language-bash">kubectl get multinicnetwork.multinic.fms.io multinic-ipvlanl3 -o json\ 
+| jq -r .status.routeStatus
+</code></pre>
+<ul>
+<li><em>WaitForRoutes</em>:  the new cidr is just recomputed and waiting for route update.</li>
+<li><em>Failed</em>: some route cannot be applied, need attention. Check <a href="#get-multi-nicd-log">multi-nicd log</a></li>
+<li><em>Unknown</em>: some daemon cannot be connected. </li>
+<li><em>N/A</em>: there is no L3 configuration applied. Check whether multinicnetwork.multinic.fms.io is defined with L3 mode and cidrs.multinic.fms.io is created. 
+    <code>bash
+    kubectl get cidrs.multinic.fms.io</code></li>
+<li><em>Success</em>: check <a href="#set-security-groups">set required security group rules</a></li>
+</ul>
+<h2 id="tcpudp-communication-failed">TCP/UDP communication failed.</h2>
+<p>Check whether the multi-nicd detects the other host interfaces.</p>
+<pre><code class="language-bash">kubectl get po $(kubectl get po -owide -A|grep multi-nicd\
+   |grep $FAILED_NODE|awk '{printf &quot;%s -n %s&quot;, $2, $1}') -o json\
+   |jq -r .metadata.labels
+</code></pre>
+<p>The nubmer in <code>multi-nicd-join</code> should be equal to accumulated number of interfaces from each host in the same zone. <a href="#check-host-secondary-interfaces">Check whether the host secondary interfaces between hosts are connected</a>. If so, try <a href="#restart-controller">restarting multi-nic-cni controller node</a> to forcefully synchronize host interfaces.</p>
+<h1 id="actions">Actions</h1>
+<h2 id="get-cni-log">Get CNI log</h2>
+<p><code>bash
+   kubectl exec $(kubectl get po -owide -A|grep multi-nicd\
+   |grep $FAILED_NODE|awk '{printf "%s -n %s", $2, $1}')\
+   -- cat /host/var/log/multi-nic-cni.log</code></p>
+<h2 id="get-controller-log">Get Controller log</h2>
+<pre><code class="language-bash">kubectl logs --selector control-plane=controller-manager \
+-n $MULTI_NIC_NAMESPACE -c manager
+</code></pre>
+<h2 id="get-multi-nicd-log">Get multi-nicd log</h2>
+<pre><code class="language-bash">kubectl logs $(kubectl get po -owide -A|grep multi-nicd\
+|grep $FAILED_NODE|awk '{printf &quot;%s -n %s&quot;, $2, $1}')
+</code></pre>
+<h2 id="deploy-multi-nicd-config">Deploy multi-nicd config</h2>
+<p>Restart the controller pod should create the multi-nicd config automatically.</p>
+<pre><code class="language-bash">kubectl delete po --selector control-plane=controller-manager \
+-n $MULTI_NIC_NAMESPACE
+</code></pre>
+<p>If not, update the controller to the latest image and <a href="#restart-multi-nic-cni-controller">restart the controller</a> (recommended).
+Otherwise, deploy config manually.</p>
+<pre><code class="language-bash">kubectl create -f https://raw.githubusercontent.com/foundation-model-stack/multi-nic-cni/main/config/samples/config.yaml \
+-n $MULTI_NIC_NAMESPACE
+</code></pre>
+<h2 id="set-security-groups">Set security groups</h2>
+<p>There are four security group rules that must be opened for Multi-nic CNI.
+1. outbound/inbound communication within the same security group
+2. outbound/inbound communication of Pod networks
+3. inbound multi-nicd serving TCP port (default: 11000)</p>
+<h2 id="add-secondary-interfaces">Add secondary interfaces</h2>
+<ul>
+<li>Prepare secondary subnets with <a href="#set-required-security-group-rules">required security group rules</a> and enable multiple source IPs from a single vNIC (i.e.g, enable IP spoofing on IBM Cloud) </li>
+<li>Attach the secondary subnets to instance</li>
+<li>manual attachment: follows Cloud provider instruction</li>
+<li>by machine-api-operator: updates an image of machine api controller of the provider to support secondary interface on provider spec. Check <a href="https://github.com/openshift/machine-api-provider-ibmcloud/compare/main...sunya-ch:machine-api-provider-ibmcloud:multi-nic">example commit</a> in <a href="https://github.com/sunya-ch/machine-api-provider-ibmcloud/tree/multi-nic">modified controller</a></li>
+</ul>
+<h2 id="restart-controller">Restart controller</h2>
+<pre><code class="language-bash">kubectl delete --selector control-plane=controller-manager \
+-n $MULTI_NIC_NAMESPACE
+</code></pre>
+<h2 id="check-host-secondary-interfaces">Check host secondary interfaces</h2>
+<p>Log in to FAILED_NODE with <code>oc debug node/$FAILED_NODE</code> or using <a href="https://github.com/jedrecord/nettools">nettools</a> with <code>hostNetwork: true</code>. If secondary interfaces do not exist at the host network, <a href="#add-secondary-interfaces-at-nodes-host-network">add the secondary interfaces</a></p></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script>
+            var base_url = "../..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../../js/base.js" defer></script>
+        <script src="../../search/main.js" defer></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>

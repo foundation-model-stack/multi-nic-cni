@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        
+        
+        <link rel="shortcut icon" href="../../img/favicon.ico">
+        <title>Multi nic ipam - My Docs</title>
+        <link href="../../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../../css/font-awesome.min.css" rel="stylesheet">
+        <link href="../../css/base.css" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css">
+
+        <script src="../../js/jquery-1.10.2.min.js" defer></script>
+        <script src="../../js/bootstrap.min.js" defer></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
+        <script>hljs.initHighlightingOnLoad();</script> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="../..">My Docs</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-toggle="collapse" data-target="#navbar-collapse">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="navitem">
+                                <a href="../.." class="nav-link">Welcome to MkDocs</a>
+                            </li>
+                            <li class="dropdown active">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Concept <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../" class="dropdown-item">Concept</a>
+</li>
+                                    
+<li>
+    <a href="../architecture/" class="dropdown-item">Architecture</a>
+</li>
+                                    
+<li>
+    <a href="./" class="dropdown-item active">Multi nic ipam</a>
+</li>
+                                    
+<li>
+    <a href="../policy/" class="dropdown-item">Attachment Policy</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Contributor <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../contributor/" class="dropdown-item">Contributing</a>
+</li>
+                                    
+<li>
+    <a href="../../contributor/local_build_push/" class="dropdown-item">Locally Build and Deploy</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">User <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../user/" class="dropdown-item">User Guide</a>
+</li>
+                                    
+<li>
+    <a href="../../user/troubleshooting/" class="dropdown-item">Troubleshooting</a>
+</li>
+                                </ul>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ml-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-toggle="modal" data-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                            <li class="nav-item">
+                                <a rel="prev" href="../architecture/" class="nav-link">
+                                    <i class="fa fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a rel="next" href="../policy/" class="nav-link">
+                                    Next <i class="fa fa-arrow-right"></i>
+                                </a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-light navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-toggle="collapse" data-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-secondary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-level="1"><a href="#common-nat-bypassing-network-solution-without-underlay-infrastructure-dependency-l3-ipvlan-with-neighbor-routing-entries" class="nav-link">Common NAT-bypassing network solution without underlay infrastructure dependency: L3 IPVLAN with neighbor routing entries</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-level="2"><a href="#multi-nic-cni-components" class="nav-link">Multi-NIC CNI Components</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#vpc-cluster-requirements" class="nav-link">VPC Cluster Requirements</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#ipam-configuration" class="nav-link">IPAM Configuration</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#workflows" class="nav-link">Workflows</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<!-- TOC -->
+
+<ul>
+<li><a href="#common-nat-bypassing-network-solution-without-underlay-infrastructure-dependency-l3-ipvlan-with-neighbor-routing-entries">Common NAT-bypassing network solution without underlay infrastructure dependency: L3 IPVLAN with neighbor routing entries</a></li>
+<li><a href="#multi-nic-cni-components">Multi-NIC CNI Components</a></li>
+<li><a href="#vpc-cluster-requirements">VPC Cluster Requirements</a></li>
+<li><a href="#ipam-configuration">IPAM Configuration</a></li>
+<li><a href="#workflows">Workflows</a><ul>
+<li><a href="#interface-discovery">Interface Discovery</a></li>
+<li><a href="#cidr-generation-and-l3-route-auto-configuration--clean-up">CIDR Generation and L3 Route Auto-configuration / Clean up</a></li>
+<li><a href="#cidr-generation">CIDR Generation</a></li>
+<li><a href="#l3-route-auto-configuration">L3 Route Auto-configuration</a></li>
+<li><a href="#ip-allocation--deallocation">IP Allocation / Deallocation</a></li>
+</ul>
+</li>
+</ul>
+<!-- /TOC -->
+<h1 id="common-nat-bypassing-network-solution-without-underlay-infrastructure-dependency-l3-ipvlan-with-neighbor-routing-entries">Common NAT-bypassing network solution without underlay infrastructure dependency: L3 IPVLAN with neighbor routing entries</h1>
+<p>The target is to attach secondary network interface cards at hosts to the container pods and bypass the costly network address translation to efficiently deliver network packets between pods on different hosts. </p>
+<p><img alt="" src="img/illustrate.PNG" /></p>
+<p>IPVLAN is a software multiplexing tool that exposes Pod packet and Pod IP directly to master interface (NIC) on the host. In most cases, Pod IPs are not routable by the underlay virtual Cloud infrastructure. Configuring a neighbor route entry (L3 routes) on the host will enable communication between endpoints on the different hosts.</p>
+<p>Multi-NIC CNI computes a specific CIDR range for each interface and each host  incrementally from the user-defined global subnet limiting by defined block sizes. </p>
+<p>In the above example, as the global subnet is 192.168.0.0/16 with 2 interface bits and 6 host bits, the IP addresses assigned to the first master interface (eth1) will start with 192.168.0.x - 192.168.63.x while that assigned to the second one (eth2) will start with 192.168.64.x - 192.168.127.x. </p>
+<p>The IP addresses assigned to the first master interface in the first host are further specified to the range 192.168.1.0 - 192.168.1.255. The first and the last addresses are reserved for network address and broadcast address to be managed later.</p>
+<p>With this blocking range of IP, the L3 routes on each host and interface can be configured without conflict.</p>
+<h2 id="multi-nic-cni-components">Multi-NIC CNI Components</h2>
+<p>The built-in Multi-NIC IPAM and L3 route auto-configuration performs by collaboration of the controller with <a href="../cni/">Multi-NIC CNI</a> and <a href="../daemon/">Multi-NIC daemon</a>. </p>
+<p>The CNI uses orchrestrator storage to keep data synchronize by defining new three custom resources: </p>
+<pre><code class="language-bash">NAME             APIVERSION                                    NAMESPACED   KIND
+cidrs            multinic.fms.io/v1                          false        CIDR
+hostinterfaces   multinic.fms.io/v1                          false        HostInterface
+ippools          multinic.fms.io/v1                          false        IPPool
+</code></pre>
+<ul>
+<li><strong>CIDR</strong> for recording the computed CIDRs. This resource is created or updated when</li>
+<li><em>MultiNicNetwork</em> is created or updated with IPAM type <code>multi-nic-ipam</code>. </li>
+<li><em>HostInterface</em> is updated</li>
+<li><strong>HostInterface</strong> for keeping discoveried host interface data. This resource is updated if there is a change of host interfaces checked every minute.</li>
+<li><strong>IPPool</strong> for managing IP allocation/deallocation. This resource is created or updated at the same time when CIDR is created or updated.</li>
+</ul>
+<h2 id="vpc-cluster-requirements">VPC Cluster Requirements</h2>
+<ul>
+<li>main plugin support (e.g., kernel version &gt;= 4.2 for ipvlan)</li>
+</ul>
+<p>For L3 mode,
+- enable allowing IP spoofing for each attached interface
+- security group
+  - allow target global subnet on secondary subnets
+  - allow daemon port (default: 11000) on primary subnet</p>
+<h2 id="ipam-configuration">IPAM Configuration</h2>
+<p>In addition to global <em>subnet</em> and designated <em>masterNets</em>, Multi-NIC IPAM requires the following arguments to compute CIDR for each host and each interface.
+Argument|Description|Value|Remarks
+---|---|---|---
+vlanMode|mode for creating ipvlan|l2, l3, l3s|For ls3 and l3s mode, the cni will automatically create corresponding host routes in level 3
+hostBlock|number of address bits for host indexing| int (n) | the number of assignable host = 2^n
+interfaceBlock|number of address bits for interface indexing| int (m) | the number of assignable interfaces = 2^m
+excludeCIDRs|list of ip range (CIDR) to exclude|list of string|</p>
+<p>example of IPAM-related spec in <em>MultiNicNetwork</em> resource:</p>
+<pre><code class="language-yaml">spec:
+  subnet: &quot;192.168.0.0/16&quot;
+  ipam: |
+    {
+      &quot;type&quot;: &quot;multi-nic-ipam&quot;,
+      &quot;hostBlock&quot;: 6, 
+      &quot;interfaceBlock&quot;: 2,
+      &quot;vlanMode&quot;: &quot;l3&quot;
+    }
+  multiNICIPAM: true
+  masterNets:
+    - &quot;10.0.1.0/24&quot;
+    - &quot;10.0.2.0/24&quot;
+</code></pre>
+<h2 id="workflows">Workflows</h2>
+<h3 id="interface-discovery">Interface Discovery</h3>
+<p><img alt="" src="img/interface_discovery.png" /></p>
+<h3 id="cidr-generation-and-l3-route-auto-configuration-clean-up">CIDR Generation and L3 Route Auto-configuration / Clean up</h3>
+<p><img alt="" src="img/cidr_gen.png" /></p>
+<h4 id="cidr-generation">CIDR Generation</h4>
+<p>The current version of CIDR is based on IPv4 which contains 32 bits.</p>
+<p>Given,</p>
+<pre><code class="language-json">hosts=[&quot;Host1&quot;, &quot;Host2&quot;]
+subnet=192.168.0.0/16
+hostBlock=6
+interfaceBlock=2
+masterNets=[&quot;10.0.1.0/24&quot;, &quot;10.0.2.0/24&quot;]
+</code></pre>
+<p>Host1 and Host2 are assigned with index 0 and 1 respectively and, at the same time, interfaces with 10.0.1.0/24 and with 10.0.2.0/24 are assigned with index 0 and 1 respectively. 
+The first 16 bits are reserved for global subnet. 
+The next 2 bits are reserved for interface index.
+The next 6 bits are reserved for host index.
+The rest 8 bits are for pod-specific IP address. 
+Accordingly,
+the pod CIDR for Host1 with network addresss 10.0.1.0/24 is 192.168.0.0/24. (00|000000 from bit 17 to 24)
+the pod CIDR for Host1 with network addresss 10.0.2.0/24 is 192.168.64.0/24. (01|000000 from bit 17 to 24)
+the pod CIDR for Host2 with network addresss 10.0.1.0/24 is 192.168.1.0/24. (00|000001 from bit 17 to 24)
+the pod CIDR for Host2 with network addresss 10.0.2.0/24 is 192.168.65.0/24. (01|000001 from bit 17 to 24)</p>
+<h4 id="l3-route-auto-configuration">L3 Route Auto-configuration</h4>
+<p>If the vlanMode is set to l3 or l3s, the CNI will configure route table on Pod and Host when the <em>CIDR</em> resource is created as follows.
+On Pod, the vlan CIDR of each interface is set up to interface block.
+On Host, the next-hop route is set up to host block.</p>
+<p>For example, routes configured regarding the above example,</p>
+<pre><code class="language-bash"># On Pod index 1 at Host1 (IPs = 192.168.0.1, 192.168.64.1)
+&gt; ip route
+192.168.0.0/18 dev net1-0 proto kernel scope link src 192.168.0.1
+192.168.64.0/18 dev net1-1 proto kernel scope link src 192.168.64.1
+# On Host1 (IPs = 10.0.1.1, 10.0.2.1) when Host2 has IPs 10.0.1.2, 10.0.2.2, 
+&gt; ip route
+192.168.1.0/24 via 10.0.1.2 dev eth1
+192.168.65.0/24 via 10.0.2.2 dev eth2
+</code></pre>
+<h3 id="ip-allocation-deallocation">IP Allocation / Deallocation</h3>
+<p><img alt="" src="img/ip_allocate.png" />
+The CNI will send a request to daemon running on the deployed host to get a set of IP addresses regarding a set of the interface names. This is a locked operation within the daemon function to prevent allocating the same IP address to different pods at the same time.</p></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script>
+            var base_url = "../..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../../js/base.js" defer></script>
+        <script src="../../search/main.js" defer></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>

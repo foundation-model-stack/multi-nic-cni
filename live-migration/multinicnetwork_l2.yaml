@@ -1,0 +1,17 @@
+apiVersion: multinic.fms.io/v1
+kind: MultiNicNetwork
+metadata:
+  finalizers:
+    - finalizers.multinicnetwork.multinic.fms.io
+  name: multinic-ipvlanl3
+spec:
+  ipam: ""
+  multiNICIPAM: false
+  namespaces:
+    - default
+  plugin:
+    args:
+      mode: l2
+    cniVersion: 0.3.0
+    type: ipvlan
+  subnet: 192.168.0.0/16
