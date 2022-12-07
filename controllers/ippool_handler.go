@@ -176,3 +176,13 @@ func (h *IPPoolHandler) checkPoolValidity(excludeCIDRs []string, allocations []m
 	}
 	return invalidAllocations
 }
+
+func (h *IPPoolHandler) AppendIPPoolAllocations(ippoolName string, newAllocations []multinicv1.Allocation) error {
+	ippool, err := h.GetIPPool(ippoolName)
+	if err != nil {
+		return err
+	}
+	patch := client.MergeFrom(ippool.DeepCopy())
+	ippool.Spec.Allocations = append(ippool.Spec.Allocations, newAllocations...)
+	return h.Client.Patch(context.Background(), ippool, patch)
+}
