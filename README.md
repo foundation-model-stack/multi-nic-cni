@@ -147,6 +147,6 @@ namespaces| (optional) limit network definition application to list of namespace
   ```
 ##### installed by bundle with operator-sdk
   ```bash
-  operator-sdk cleanup multi-nic-cni-operator
+  operator-sdk cleanup multi-nic-cni-operator --delete-all
   ```
 
