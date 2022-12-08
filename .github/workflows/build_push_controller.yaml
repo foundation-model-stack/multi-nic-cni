@@ -89,6 +89,7 @@ jobs:
           context: .
           push: true
           tags: |
+            ${{ env.IMAGE_NAME }}:${{ github.sha }}-${{ github.run_number }}
             ${{ env.IMAGE_NAME }}:latest
             ${{ env.IMAGE_NAME }}:v${{ env.IMAGE_VERSION }}
           file: ./Dockerfile
