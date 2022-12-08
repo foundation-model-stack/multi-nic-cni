@@ -3,7 +3,7 @@ kind: MultiNicNetwork
 metadata:
   finalizers:
     - finalizers.multinicnetwork.multinic.fms.io
-  name: multinic-ipvlanl3
+  name: default
 spec:
   ipam: ""
   multiNICIPAM: false
