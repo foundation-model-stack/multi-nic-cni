@@ -12,9 +12,11 @@ To reinstall/upgrade multi-nic-cni-operator without affecting workloads running 
    cd multi-nic-cni
    git checkout -b doc origin/doc
    cd live_migration
-   chmod +x ./live-migrate.sh
-   ```
+   chmod +x ./live_migrate.sh
 
+   ##  If operator is not installed in the openshift-operators namespace, also run
+   # export OPERATOR_NAMESPACE=<deployed namespace>
+   ```
 2. Snapshot multi-nic-cni CR on your cluster
     ```bash
     CLUSTER_NAME=<cluster-name>
@@ -33,16 +35,22 @@ To reinstall/upgrade multi-nic-cni-operator without affecting workloads running 
     ```bash
     ./live_migrate.sh uninstall_operator
     ```
-    Wait until all multi-nicd daemon is terminated
+    For OperatorSDK, run `operator-sdk cleanup --delete-all`<br>
+    Wait until all multi-nicd daemon is terminated<br>
     ```bash
     watch kubectl get po -n openshift-operators
     ```
 5. Reinstall operator
    
-    5.1 install operator via GUI
+    5.1 install operator via GUI (recommended). For other installation, check [Installation Guide](https://foundation-model-stack.github.io/multi-nic-cni/user_guide/#quick-installation).
+
+    If multi-nicd image also need to be updated, run
+    ```bash
+    ./live_migrate.sh patch_daemon
+    ```
     Wait until multi-nicd daemon is all running:
     ```bash
-    watch kubectl get pods -n openshift-operators
+    ./live_migrate.sh wait_daemon
     ```
     Check if CRs are deleted or not (not deleted by default):
     ```bash
@@ -50,8 +58,7 @@ To reinstall/upgrade multi-nic-cni-operator without affecting workloads running 
     # NAME                AGE
     # multinic-ipvlanl3   
     ```
-    [if CRs are deleted, do 5.2 and 5.3] 
-
+    *[if CRs are deleted (for example, by operator-sdk cleanup), do 5.2 - 5.4]* <br>
     5.2 deploy dump multinicnetwork with l2
     ```bash
     ./live_migrate.sh deactivate_route_config
@@ -62,6 +69,11 @@ To reinstall/upgrade multi-nic-cni-operator without affecting workloads running 
     ```bash
     ./live_migrate.sh deploy_status_cr $CLUSTER_NAME
     ```
+    5.4 restart controller to activate cache initialization
+    ```bash
+    ./live_migrate.sh restart_controller
+    ```
+    > Wait for deployment to be available<br>deployment.apps/multi-nic-cni-operator-controller-manager condition met<br>Wait for config to be ready...<br>Config Ready
 6. activate route config
     ```bash
     ./live_migrate.sh activate_route_config $CLUSTER_NAME
