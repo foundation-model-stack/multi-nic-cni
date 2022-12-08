@@ -20,27 +20,32 @@ _snapshot() {
 status_cr="cidr.multinic ippool.multinic hostinterface.multinic"
 activate_cr="multinicnetwork"
 
+get_netname() {
+    kubectl get multinicnetwork -ojson|jq .items| jq '.[].metadata.name'| tr -d '"'
+}
+
 snapshot() {
+    mkdir -p snapshot
     # update l2 file used to stop controller to modify the route
-    netname=$(kubectl get multinicnetwork -ojson|jq .items| jq '.[].metadata.name')
-    yq -e -i .metadata.name=$netname multinicnetwork_l2.yaml
+    cp multinicnetwork_l2.yaml snapshot/multinicnetwork_l2.yaml
+    netname=$(get_netname)
+    yq -e -i .metadata.name=\"$netname\" snapshot/multinicnetwork_l2.yaml
     echo "rename multinicnetwork_l2.yaml with $netname"
     # snapshot state
-    snapshot_dir="snapshot-$1"
+    snapshot_dir="snapshot/$1"
     mkdir -p $snapshot_dir
     for cr in $status_cr $activate_cr
     do
         _snapshot $snapshot_dir $cr
     done
-    ls $dir
-    echo "saved in $dir"
+    ls $snapshot_dir
+    echo "saved in $snapshot_dir"
 }
 
 deactivate_route_config() {
-    kubectl apply -f multinicnetwork_l2.yaml
-    netname=$(kubectl get multinicnetwork -ojson|jq .items| jq '.[].metadata.name')
+    kubectl apply -f snapshot/multinicnetwork_l2.yaml
     sleep 5
-    kubectl get net-attach-def $netname -ojson|jq '.spec.config'
+    kubectl get net-attach-def $(get_netname) -ojson|jq '.spec.config'
 }
 
 uninstall_operator() {
@@ -54,7 +59,7 @@ uninstall_operator() {
 # deactivate_route_config
 
 deploy_status_cr() {
-    snapshot_dir="snapshot-$1"
+    snapshot_dir="snapshot/$1"
     for cr in $status_cr
     do
         kubectl apply -f $snapshot_dir/$cr.yaml
@@ -62,11 +67,10 @@ deploy_status_cr() {
 }
 
 activate_route_config() {
-    snapshot_dir="snapshot-$1"
+    snapshot_dir="snapshot/$1"
     kubectl apply -f $snapshot_dir/$activate_cr.yaml
-    netname=$(kubectl get multinicnetwork -ojson|jq .items| jq '.[].metadata.name')
     sleep 5
-    kubectl get net-attach-def $netname -ojson|jq '.spec.config'
+    kubectl get net-attach-def $(get_netname) -ojson|jq '.spec.config'
 }
 
 "$@"
