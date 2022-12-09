@@ -24,7 +24,8 @@ func updateCIDR(multinicnetwork *multinicv1.MultiNicNetwork, cidr multinicv1.CID
 
 	expectedPodCIDR := 0
 	if changed {
-		for _, hif := range HostInterfaceCache {
+		snapshot := multinicnetworkReconciler.CIDRHandler.HostInterfaceHandler.ListCache()
+		for _, hif := range snapshot {
 			for _, iface := range hif.Spec.Interfaces {
 				for _, masterAddresses := range networkAddresses {
 					if iface.NetAddress == masterAddresses {
@@ -77,37 +78,37 @@ var _ = Describe("Test Multi-NIC IPAM", func() {
 		// Add Host
 		fmt.Println("Add Host")
 		newHostName := "newHost"
-		newHostIndex := len(HostInterfaceCache)
+		newHostIndex := multinicnetworkReconciler.CIDRHandler.HostInterfaceHandler.SafeCache.GetSize()
 		newHif := generateNewHostInterface(newHostName, interfaceNames, networkPrefixes, newHostIndex)
-		HostInterfaceCache[newHostName] = newHif
+		multinicnetworkReconciler.CIDRHandler.HostInterfaceHandler.SetCache(newHostName, newHif)
 		cidr = updateCIDR(multinicnetwork, cidr, false, true)
 		// Add Interface
 		fmt.Println("Add Interface")
 		newInterfaceName := "eth99"
 		newNetworkPrefix := "0.0.0.0"
 		newHif = generateNewHostInterface(newHostName, append(interfaceNames, newInterfaceName), append(networkPrefixes, newNetworkPrefix), newHostIndex)
-		HostInterfaceCache[newHostName] = newHif
+		multinicnetworkReconciler.CIDRHandler.HostInterfaceHandler.SetCache(newHostName, newHif)
 		cidr = updateCIDR(multinicnetwork, cidr, false, true)
 		// Remove Interface
 		fmt.Println("Remove Interface")
 		newHif = generateNewHostInterface(newHostName, interfaceNames, networkPrefixes, newHostIndex)
-		HostInterfaceCache[newHostName] = newHif
+		multinicnetworkReconciler.CIDRHandler.HostInterfaceHandler.SetCache(newHostName, newHif)
 		cidr = updateCIDR(multinicnetwork, cidr, false, true)
 		// Add Interface back
 		fmt.Println("Add Interface Back")
 		newHif = generateNewHostInterface(newHostName, append(interfaceNames, newInterfaceName), append(networkPrefixes, newNetworkPrefix), newHostIndex)
-		HostInterfaceCache[newHostName] = newHif
+		multinicnetworkReconciler.CIDRHandler.HostInterfaceHandler.SetCache(newHostName, newHif)
 		cidr = updateCIDR(multinicnetwork, cidr, false, true)
 		// Remove Host
 		fmt.Println("Remove Host")
-		delete(HostInterfaceCache, newHostName)
+		multinicnetworkReconciler.CIDRHandler.HostInterfaceHandler.SafeCache.UnsetCache(newHostName)
 		cidr = updateCIDR(multinicnetwork, cidr, false, true)
 		// Add Host back
 		fmt.Println("Add Host Back")
-		HostInterfaceCache[newHostName] = newHif
+		multinicnetworkReconciler.CIDRHandler.HostInterfaceHandler.SetCache(newHostName, newHif)
 		cidr = updateCIDR(multinicnetwork, cidr, false, true)
 		// Clean up
-		delete(HostInterfaceCache, newHostName)
+		multinicnetworkReconciler.CIDRHandler.HostInterfaceHandler.SafeCache.UnsetCache(newHostName)
 	})
 
 	It("Sync CIDR/IPPool", func() {

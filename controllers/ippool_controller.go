@@ -34,19 +34,20 @@ type IPPoolReconciler struct {
 
 const ippoolFinalizer = "finalizers.cidr.multinic.fms.io"
 
-var IPPoolCache map[string]multinicv1.IPPoolSpec = make(map[string]multinicv1.IPPoolSpec)
-
 func InitIppoolCache(ippoolHandler *IPPoolHandler) error {
 	listObjects, err := ippoolHandler.ListIPPool()
 	if err == nil {
 		for name, instance := range listObjects {
-			IPPoolCache[name] = instance.Spec
+			ippoolHandler.SetCache(name, instance.Spec)
 		}
 	}
 	return err
 }
 
 func (r *IPPoolReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	if !ConfigReady {
+		return ctrl.Result{RequeueAfter: ConfigWaitingReconcileTime}, nil
+	}
 	_ = r.Log.WithValues("ippool", req.NamespacedName)
 
 	instance := &multinicv1.IPPool{}
@@ -55,8 +56,6 @@ func (r *IPPoolReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
 			// Return and don't requeue
-			r.Log.Info(fmt.Sprintf("IPPool %s deleted", instance.GetName()))
-			delete(IPPoolCache, req.Name)
 			return ctrl.Result{}, nil
 		}
 		r.Log.Info(fmt.Sprintf("Cannot get #%v ", err))
@@ -82,7 +81,7 @@ func (r *IPPoolReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		return ctrl.Result{}, nil
 	} else {
 		ippoolName := instance.GetName()
-		IPPoolCache[ippoolName] = instance.Spec
+		r.CIDRHandler.IPPoolHandler.SetCache(ippoolName, instance.Spec)
 	}
 
 	// Add finalizer to instance
@@ -115,5 +114,6 @@ func (r *IPPoolReconciler) callFinalizer(reqLogger logr.Logger, instance *multin
 		reqLogger.Info(fmt.Sprintf("IPPool %s remains %v allocated", instance.GetName(), remainPods))
 	}
 	reqLogger.Info(fmt.Sprintf("Finalized %s", instance.ObjectMeta.Name))
+	r.CIDRHandler.IPPoolHandler.SafeCache.UnsetCache(instance.ObjectMeta.Name)
 	return nil
 }

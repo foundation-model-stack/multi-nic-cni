@@ -16,7 +16,6 @@ import (
 	"errors"
 
 	multinicv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
-	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -38,8 +37,8 @@ func SetDaemon(daemonSpec multinicv1.ConfigSpec) {
 }
 
 // GetDaemonAddressByPod returns daemon IP address (pod IP:daemon port)
-func GetDaemonAddressByPod(daemon v1.Pod) string {
-	return fmt.Sprintf("http://%s:%s", daemon.Status.PodIP, DAEMON_PORT)
+func GetDaemonAddressByPod(daemon DaemonPod) string {
+	return fmt.Sprintf("http://%s:%s", daemon.HostIP, DAEMON_PORT)
 }
 
 type DaemonConnector struct {

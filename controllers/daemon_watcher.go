@@ -7,15 +7,12 @@ package controllers
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"strconv"
 
 	"github.com/go-logr/logr"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
@@ -27,13 +24,9 @@ import (
 )
 
 const (
-	DEFAULT_DAEMON_NAMESPACE   = "multi-nic-cni"
-	DEFAULT_DAEMON_LABEL_NAME  = "app"
-	DEFAULT_DAEMON_LABEL_VALUE = "multi-nicd"
-	JOIN_LABEL_NAME            = "multi-nicd-join"
+	DEFAULT_DAEMON_NAMESPACE = "multi-nic-cni"
+	JOIN_LABEL_NAME          = "multi-nicd-join"
 )
-
-var DaemonCache map[string]v1.Pod = make(map[string]v1.Pod)
 
 // DaemonWatcher watches daemon pods and updates HostInterface and CIDR
 type DaemonWatcher struct {
@@ -41,13 +34,14 @@ type DaemonWatcher struct {
 	PodQueue chan *v1.Pod
 	Quit     chan struct{}
 	Log      logr.Logger
-
 	*HostInterfaceHandler
-	*CIDRHandler
-	DaemonConnector
+	*DaemonCacheHandler
 }
 
 func isContainerReady(pod v1.Pod) bool {
+	if pod.Status.ContainerStatuses == nil {
+		return false
+	}
 	if len(pod.Status.ContainerStatuses) > 0 {
 		return pod.Status.ContainerStatuses[0].Ready
 	}
@@ -55,25 +49,24 @@ func isContainerReady(pod v1.Pod) bool {
 }
 
 // NewDaemonWatcher creates new daemon watcher
-func NewDaemonWatcher(client client.Client, config *rest.Config, logger logr.Logger, hifLog logr.Logger, cidrHandler *CIDRHandler, podQueue chan *v1.Pod, quit chan struct{}) *DaemonWatcher {
+func NewDaemonWatcher(client client.Client, config *rest.Config, logger logr.Logger, hostInterfaceHandler *HostInterfaceHandler, daemonCacheHandler *DaemonCacheHandler, podQueue chan *v1.Pod, quit chan struct{}) *DaemonWatcher {
 	clientset, _ := kubernetes.NewForConfig(config)
 
 	watcher := &DaemonWatcher{
-		Clientset: clientset,
-		PodQueue:  podQueue,
-		Quit:      quit,
-		Log:       logger,
-		HostInterfaceHandler: &HostInterfaceHandler{
-			Client: client,
-			Log:    hifLog,
-		},
-		CIDRHandler: cidrHandler,
-		DaemonConnector: DaemonConnector{
-			Clientset: clientset,
-		},
+		Clientset:            clientset,
+		PodQueue:             podQueue,
+		Quit:                 quit,
+		Log:                  logger,
+		HostInterfaceHandler: hostInterfaceHandler,
+		DaemonCacheHandler:   daemonCacheHandler,
 	}
 	// add existing daemon pod to the process queue
-	watcher.UpdateCurrentList()
+	err := watcher.UpdateCurrentList()
+	if err != nil {
+		watcher.Log.Info(fmt.Sprintf("cannot UpdateCurrentList: %v", err))
+	}
+
+	watcher.Log.Info("Init Informer")
 
 	factory := informers.NewSharedInformerFactory(clientset, 0)
 	podInformer := factory.Core().V1().Pods()
@@ -123,12 +116,19 @@ func (w *DaemonWatcher) UpdateCurrentList() error {
 	if err != nil {
 		return err
 	}
+	w.Log.Info(fmt.Sprintf("Found %d daemons running", len(initialList.Items)))
 	for _, existingDaemon := range initialList.Items {
 		if isContainerReady(existingDaemon) {
 			// early add to the spec for CIDR check
 			nodeName := existingDaemon.Spec.NodeName
-			DaemonCache[nodeName] = *existingDaemon.DeepCopy()
-			w.PodQueue <- existingDaemon.DeepCopy()
+			daemonPod := DaemonPod{
+				Name:      existingDaemon.Name,
+				Namespace: existingDaemon.Namespace,
+				HostIP:    existingDaemon.Status.HostIP,
+				NodeName:  nodeName,
+				Labels:    existingDaemon.Labels,
+			}
+			w.DaemonCacheHandler.SetCache(nodeName, daemonPod)
 		}
 	}
 	return nil
@@ -152,19 +152,24 @@ func (w *DaemonWatcher) ProcessPodQueue() {
 		if daemon.GetDeletionTimestamp() == nil {
 			w.Log.Info(fmt.Sprintf("Daemon pod %s for %s update", daemon.GetName(), nodeName))
 			// set daemon
-			DaemonCache[nodeName] = *daemon.DeepCopy()
+			daemonPod := DaemonPod{
+				Name:      daemon.Name,
+				Namespace: daemon.Namespace,
+				HostIP:    daemon.Status.HostIP,
+				NodeName:  nodeName,
+				Labels:    daemon.Labels,
+			}
+			w.DaemonCacheHandler.SetCache(nodeName, daemonPod)
 
 			// not terminating, update HostInterface
 			err := w.createHostInterfaceInfo(*daemon)
 			if err != nil {
 				w.Log.Info(fmt.Sprintf("Fail to create hostinterface %s: %v", daemon.GetName(), err))
 			}
-			// sync route is node in the deploying CIDR
-			w.CIDRHandler.SyncCIDRRouteToHost(*daemon)
 		} else {
 			w.Log.Info(fmt.Sprintf("Daemon pod for %s deleted", nodeName))
 			// deleted, delete HostInterface
-			delete(DaemonCache, nodeName)
+			w.DaemonCacheHandler.SafeCache.UnsetCache(nodeName)
 			w.HostInterfaceHandler.DeleteHostInterface(daemon.Spec.NodeName)
 		}
 	}
@@ -172,109 +177,29 @@ func (w *DaemonWatcher) ProcessPodQueue() {
 
 // isDaemonPod checks if created/updated pod label with DEFAULT_DAEMON_LABEL_NAME=DEFAULT_DAEMON_LABEL_VALUE
 func isDaemonPod(pod *v1.Pod) bool {
-	if val, ok := pod.ObjectMeta.Labels[DEFAULT_DAEMON_LABEL_NAME]; ok {
-		if val == DEFAULT_DAEMON_LABEL_VALUE {
+	if val, ok := pod.ObjectMeta.Labels[DAEMON_LABEL_NAME]; ok {
+		if val == DAEMON_LABEL_VALUE {
 			return true
 		}
 	}
 	return false
 }
 
-// ipamJoin calls daemon to greet the existing hosts by referring to HostInterface list
-func (w *DaemonWatcher) IpamJoin(daemon v1.Pod) error {
-	podIP := daemon.Status.PodIP
-	if podIP == "" {
-		// ip hasn't been assigned yet
-		return nil
-	}
-	var hifs []multinicv1.InterfaceInfoType
-	for _, hif := range HostInterfaceCache {
-		if hif.Spec.HostName == daemon.Status.PodIP {
-			continue
-		}
-		hifs = append(hifs, hif.Spec.Interfaces...)
-	}
-	hifLen := len(hifs)
-	if lastLenStr, exists := daemon.ObjectMeta.Labels[JOIN_LABEL_NAME]; exists {
-		// already join
-		lastLen, _ := strconv.ParseInt(lastLenStr, 10, 64)
-		if hifLen == int(lastLen) {
-			// join with the same number of hostinterfaces
-			return nil
-		}
-	}
-	podAddress := GetDaemonAddressByPod(daemon)
-	w.Log.Info(fmt.Sprintf("Join %s with %d hifs", daemon.Status.PodIP, hifLen))
-	err := w.DaemonConnector.Join(podAddress, hifs)
-	if err != nil {
-		return err
-	}
-	err = w.addLabel(daemon, JOIN_LABEL_NAME, fmt.Sprintf("%d", hifLen))
-	if err != nil {
-		w.Log.Info("Fail to add label to %s: %v", daemon.GetName(), err)
-	}
-	return nil
-}
-
-// updateHostInterfaceInfo creates if HostInterface is not exists and calls ipamJoin
+// updateHostInterfaceInfo creates if HostInterface is not exists
 func (w *DaemonWatcher) createHostInterfaceInfo(daemon v1.Pod) error {
-	podAddress := GetDaemonAddressByPod(daemon)
-	interfaces, connectErr := w.DaemonConnector.GetInterfaces(podAddress)
 	_, hifFoundErr := w.HostInterfaceHandler.GetHostInterface(daemon.Spec.NodeName)
 	if hifFoundErr != nil && errors.IsNotFound(hifFoundErr) {
 		// not exists, create new HostInterface
-		createErr := w.HostInterfaceHandler.CreateHostInterface(daemon.Spec.NodeName, interfaces)
-		if connectErr == nil {
-			w.IpamJoin(daemon)
-		}
-		if connectErr != nil || hifFoundErr != nil {
-			w.Log.Info(fmt.Sprintf("%v,%v", connectErr, hifFoundErr))
-		}
+		createErr := w.HostInterfaceHandler.CreateHostInterface(daemon.Spec.NodeName, []multinicv1.InterfaceInfoType{})
 		return createErr
 	}
-	if connectErr == nil && hifFoundErr == nil {
-		return nil
-	}
-	return fmt.Errorf("%v,%v", connectErr, hifFoundErr)
+	return hifFoundErr
 }
 
-// updateCIDR modifies existing CIDR from the new HostInterface information
-func (w *DaemonWatcher) UpdateCIDRs() {
-	routeChange := false
-	for cidrName, cidr := range CIDRCache {
-		w.Log.Info(fmt.Sprintf("Update cidr %s", cidrName))
-		change, err := w.CIDRHandler.UpdateCIDR(cidr, false)
-		if err != nil {
-			w.Log.Info(fmt.Sprintf("Fail to update CIDR: %v", err))
-		} else if change {
-			routeChange = true
-		}
+func (w *DaemonWatcher) IsDaemonSetReady() bool {
+	ds, err := w.Clientset.AppsV1().DaemonSets(DAEMON_NAMESPACE).Get(context.TODO(), DaemonName, metav1.GetOptions{})
+	if err == nil {
+		return ds.Status.NumberAvailable == ds.Status.DesiredNumberScheduled
 	}
-	// call greeting if route changed
-	if routeChange {
-		for _, daemon := range DaemonCache {
-			w.IpamJoin(daemon)
-		}
-	}
-}
-
-// addLabel labels daemon pod with node name to update HostInterface
-type patchStringValue struct {
-	Op    string `json:"op"`
-	Path  string `json:"path"`
-	Value string `json:"value"`
-}
-
-func (w *DaemonWatcher) addLabel(daemon v1.Pod, labelName string, labelValue string) error {
-	namespace := daemon.GetNamespace()
-	podName := daemon.GetName()
-	payload := []patchStringValue{{
-		Op:    "replace",
-		Path:  fmt.Sprintf("/metadata/labels/%s", labelName),
-		Value: labelValue,
-	}}
-	payloadBytes, _ := json.Marshal(payload)
-
-	_, err := w.Clientset.CoreV1().Pods(namespace).Patch(context.TODO(), podName, types.JSONPatchType, payloadBytes, metav1.PatchOptions{})
-	return err
+	return false
 }

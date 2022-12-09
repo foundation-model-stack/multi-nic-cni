@@ -76,6 +76,9 @@ func IsMultiNICIPAM(instance *multinicv1.MultiNicNetwork) (bool, error) {
 }
 
 func (r *MultiNicNetworkReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	if !ConfigReady {
+		return ctrl.Result{RequeueAfter: ConfigWaitingReconcileTime}, nil
+	}
 	_ = log.FromContext(ctx)
 
 	instance := &multinicv1.MultiNicNetwork{}
@@ -145,9 +148,10 @@ func (r *MultiNicNetworkReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 
 	routeStatus := instance.Status.Status
-	if routeStatus == multinicv1.RouteUnknown {
-		// some route is failed
-		if cidr, ok := CIDRCache[instance.Name]; ok {
+	if routeStatus == multinicv1.RouteUnknown || (instance.Spec.IsMultiNICIPAM && routeStatus == multinicv1.RouteNoApplied) {
+		// some route is failed or route not applied yet
+		cidr, err := r.CIDRHandler.GetCache(instance.Name)
+		if err == nil {
 			routeStatus = r.CIDRHandler.SyncCIDRRoute(cidr, false)
 			err := r.CIDRHandler.MultiNicNetworkHandler.SyncStatus(instance.Name, cidr, routeStatus)
 			if err != nil {
@@ -155,6 +159,10 @@ func (r *MultiNicNetworkReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			}
 			if routeStatus == multinicv1.RouteUnknown {
 				return ctrl.Result{RequeueAfter: ReconcileTime}, nil
+			} else if routeStatus == multinicv1.AllRouteApplied {
+				//success
+				r.Log.Info(fmt.Sprintf("CIDR %s successfully applied", instance.Name))
+				r.CIDRHandler.SetCache(instance.Name, cidr)
 			}
 		}
 	}
@@ -164,7 +172,7 @@ func (r *MultiNicNetworkReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 func (r *MultiNicNetworkReconciler) GetMainPluginConf(instance *multinicv1.MultiNicNetwork) (string, map[string]string, error) {
 	spec := instance.Spec.MainPlugin
 	if p, exist := r.PluginMap[spec.Type]; exist {
-		return (*p).GetConfig(*instance, HostInterfaceCache)
+		return (*p).GetConfig(*instance, r.CIDRHandler.HostInterfaceHandler.ListCache())
 	}
 	return "", map[string]string{}, fmt.Errorf("cannot find plugin %s", spec.Type)
 }

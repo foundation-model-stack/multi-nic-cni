@@ -161,7 +161,7 @@ func (h *NetAttachDefHandler) generate(net *multinicv1.MultiNicNetwork, pluginSt
 	if err != nil {
 		return defs, err
 	}
-	h.Log.Info(fmt.Sprintf("generate config for %v (specify: %d)", namespaces, len(net.Spec.Namespaces)))
+	h.Log.Info(fmt.Sprintf("generate net-attach-def config on %d namespaces", len(namespaces)))
 	for _, ns := range namespaces {
 		name := net.GetName()
 		namespace := ns

@@ -7,7 +7,7 @@ import (
 	"github.com/go-logr/logr"
 )
 
-func RunPeriodicUpdate(ticker *time.Ticker, cidrHandler *CIDRHandler, hostInterfaceReconciler *HostInterfaceReconciler, logger logr.Logger, quit chan struct{}) {
+func RunPeriodicUpdate(ticker *time.Ticker, daemonWatcher *DaemonWatcher, cidrHandler *CIDRHandler, hostInterfaceReconciler *HostInterfaceReconciler, logger logr.Logger, quit chan struct{}) {
 	go func() {
 		for {
 			select {
@@ -15,17 +15,21 @@ func RunPeriodicUpdate(ticker *time.Ticker, cidrHandler *CIDRHandler, hostInterf
 				return
 			case <-ticker.C:
 				// update interface
-
-				logger.Info(fmt.Sprintf("synchronizing state... %d HostInterfaces, %d CIDRs", len(HostInterfaceCache), len(CIDRCache)))
-				for _, instance := range HostInterfaceCache {
-					hostInterfaceReconciler.UpdateInterfaces(instance)
-				}
-				for name, instanceSpec := range CIDRCache {
-					routeStatus := cidrHandler.SyncCIDRRoute(instanceSpec, false)
-					cidrHandler.CleanPendingIPPools(name, instanceSpec)
-					err := cidrHandler.MultiNicNetworkHandler.SyncStatus(name, instanceSpec, routeStatus)
-					if err != nil {
-						logger.Info(fmt.Sprintf("failed to update route status of %s: %v", name, err))
+				if ConfigReady && daemonWatcher.IsDaemonSetReady() {
+					logger.Info(fmt.Sprintf("synchronizing state... %d HostInterfaces, %d CIDRs", cidrHandler.HostInterfaceHandler.SafeCache.GetSize(), cidrHandler.SafeCache.GetSize()))
+					hostInterfaceSnapshot := cidrHandler.HostInterfaceHandler.ListCache()
+					for _, instance := range hostInterfaceSnapshot {
+						hostInterfaceReconciler.UpdateInterfaces(instance)
+					}
+					cidrSnapshot := cidrHandler.ListCache()
+					ippoolSnapshot := cidrHandler.IPPoolHandler.ListCache()
+					for name, instanceSpec := range cidrSnapshot {
+						routeStatus := cidrHandler.SyncCIDRRoute(instanceSpec, false)
+						cidrHandler.CleanPendingIPPools(ippoolSnapshot, name, instanceSpec)
+						err := cidrHandler.MultiNicNetworkHandler.SyncStatus(name, instanceSpec, routeStatus)
+						if err != nil {
+							logger.Info(fmt.Sprintf("failed to update route status of %s: %v", name, err))
+						}
 					}
 				}
 			}

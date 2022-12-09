@@ -7,19 +7,42 @@ package controllers
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"strconv"
 
 	multinicv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // HostInterfaceHandler handles HostInterface object
 // - general handling: Get, List, Delete
 type HostInterfaceHandler struct {
+	*kubernetes.Clientset
 	client.Client
 	Log logr.Logger
+	*SafeCache
+	DaemonConnector
+}
+
+// NewHostInterfaceHandler
+func NewHostInterfaceHandler(config *rest.Config, client client.Client, logger logr.Logger) *HostInterfaceHandler {
+	clientset, _ := kubernetes.NewForConfig(config)
+
+	return &HostInterfaceHandler{
+		Clientset: clientset,
+		Client:    client,
+		Log:       logger,
+		SafeCache: InitSafeCache(),
+		DaemonConnector: DaemonConnector{
+			Clientset: clientset,
+		},
+	}
 }
 
 // initHostInterface
@@ -85,5 +108,89 @@ func (h *HostInterfaceHandler) DeleteHostInterface(name string) error {
 	if err == nil {
 		err = h.Client.Delete(context.TODO(), instance)
 	}
+	h.SafeCache.UnsetCache(name)
+	return err
+}
+
+func (h *HostInterfaceHandler) SetCache(key string, value multinicv1.HostInterface) {
+	h.SafeCache.SetCache(key, value)
+}
+
+func (h *HostInterfaceHandler) GetCache(key string) (multinicv1.HostInterface, error) {
+	value := h.SafeCache.GetCache(key)
+	if value == nil {
+		return multinicv1.HostInterface{}, fmt.Errorf("Not Found")
+	}
+	return value.(multinicv1.HostInterface), nil
+}
+
+func (h *HostInterfaceHandler) ListCache() map[string]multinicv1.HostInterface {
+	snapshot := make(map[string]multinicv1.HostInterface)
+	h.SafeCache.Lock()
+	for key, value := range h.cache {
+		snapshot[key] = value.(multinicv1.HostInterface)
+	}
+	h.SafeCache.Unlock()
+	return snapshot
+}
+
+//////////////////////////////////////////////////////////////
+// Connecting with daemon pod
+
+// ipamJoin calls daemon to greet the existing hosts by referring to HostInterface list
+func (h *HostInterfaceHandler) IpamJoin(daemon DaemonPod) error {
+	podIP := daemon.HostIP
+	if podIP == "" {
+		// ip hasn't been assigned yet
+		return nil
+	}
+	var hifs []multinicv1.InterfaceInfoType
+	snapshot := h.ListCache()
+	for _, hif := range snapshot {
+		if hif.Spec.HostName == daemon.HostIP {
+			continue
+		}
+		hifs = append(hifs, hif.Spec.Interfaces...)
+	}
+	hifLen := len(hifs)
+	if lastLenStr, exists := daemon.Labels[JOIN_LABEL_NAME]; exists {
+		// already join
+		lastLen, _ := strconv.ParseInt(lastLenStr, 10, 64)
+		if hifLen == int(lastLen) {
+			// join with the same number of hostinterfaces
+			return nil
+		}
+	}
+	podAddress := GetDaemonAddressByPod(daemon)
+	h.Log.Info(fmt.Sprintf("Join %s with %d hifs", daemon.HostIP, hifLen))
+	err := h.DaemonConnector.Join(podAddress, hifs)
+	if err != nil {
+		return err
+	}
+	err = h.addLabel(daemon, JOIN_LABEL_NAME, fmt.Sprintf("%d", hifLen))
+	if err != nil {
+		h.Log.Info(fmt.Sprintf("Fail to add label to %s: %v", daemon.Name, err))
+	}
+	return nil
+}
+
+// addLabel labels daemon pod with node name to update HostInterface
+type patchStringValue struct {
+	Op    string `json:"op"`
+	Path  string `json:"path"`
+	Value string `json:"value"`
+}
+
+func (h *HostInterfaceHandler) addLabel(daemon DaemonPod, labelName string, labelValue string) error {
+	podName := daemon.Name
+	namespace := daemon.Namespace
+	payload := []patchStringValue{{
+		Op:    "replace",
+		Path:  fmt.Sprintf("/metadata/labels/%s", labelName),
+		Value: labelValue,
+	}}
+	payloadBytes, _ := json.Marshal(payload)
+
+	_, err := h.Clientset.CoreV1().Pods(namespace).Patch(context.TODO(), podName, types.JSONPatchType, payloadBytes, metav1.PatchOptions{})
 	return err
 }
