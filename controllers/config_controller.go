@@ -35,14 +35,17 @@ const (
 
 	// NetworkAttachmentDefinition watching queue size
 	MAX_QSIZE = 100
-	// referred by daemon watcher
-	DAEMON_LABEL_NAME  = "app"
-	DAEMON_LABEL_VALUE = "multi-nicd"
+
+	ConfigWaitingReconcileTime = 5 * time.Second
 )
 
 var (
 	OPERATOR_NAMESPACE string = getOperatorNamespace()
 	ConfigReady        bool   = false
+	// referred by daemon watcher
+	DAEMON_LABEL_NAME         = "app"
+	DAEMON_LABEL_VALUE        = "multi-nicd"
+	DaemonName         string = DAEMON_LABEL_VALUE
 )
 
 func getOperatorNamespace() string {
@@ -77,7 +80,7 @@ const ReconcileTime = 30 * time.Minute
 
 func (r *ConfigReconciler) CreateDefaultDaemonConfig() error {
 	objMeta := metav1.ObjectMeta{
-		Name: "multi-nicd",
+		Name: DaemonName,
 	}
 	daemonEnv := corev1.EnvVar{
 		Name:  "DAEMON_PORT",
@@ -158,8 +161,10 @@ func (r *ConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	}
 	if !ConfigReady {
 		r.CIDRHandler.SyncAllPendingCustomCR(r.NetAttachDefHandler)
-		ConfigReady = true
 		r.Log.Info("Set ConfigReady")
+		ConfigReady = true
+		// initial run
+		r.CIDRHandler.UpdateCIDRs()
 	}
 
 	dsName := instance.GetName()
@@ -194,6 +199,7 @@ func (r *ConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 func (r *ConfigReconciler) newNetAttachDefWatcher(instance *multinicv1.Config) {
 	r.NetAttachDefHandler.DaemonPort = instance.Spec.Daemon.DaemonPort
 	r.NetAttachDefHandler.TargetCNI = instance.Spec.CNIType
+	DaemonName = instance.GetName()
 	SetDaemon(instance.Spec)
 }
 
@@ -272,6 +278,8 @@ func (r *ConfigReconciler) newCNIDaemonSet(client *kubernetes.Clientset, name st
 
 // callFinalizer deletes all CIDRs, waits for all ippools deleted, deletes CNI deamonset, and stops NetworkAttachmentDefinition watcher
 func (r *ConfigReconciler) callFinalizer(reqLogger logr.Logger, dsName string) error {
+	// reset default name
+	DaemonName = DAEMON_LABEL_VALUE
 	reqLogger.Info(fmt.Sprintf("Finalize %s", dsName))
 
 	// delete all CIDRs
@@ -283,10 +291,10 @@ func (r *ConfigReconciler) callFinalizer(reqLogger logr.Logger, dsName string) e
 	}
 	// wait for all ippools deleted
 	for {
-		if err != nil || len(IPPoolCache) == 0 {
+		if err != nil || r.CIDRHandler.IPPoolHandler.SafeCache.GetSize() == 0 {
 			break
 		}
-		reqLogger.Info(fmt.Sprintf("%d ippools left, wait...", len(IPPoolCache)))
+		reqLogger.Info(fmt.Sprintf("%d ippools left, wait...", r.CIDRHandler.IPPoolHandler.SafeCache.GetSize()))
 		time.Sleep(1 * time.Second)
 	}
 	// delete CNI deamonset

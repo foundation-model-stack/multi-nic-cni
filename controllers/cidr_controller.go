@@ -37,9 +37,10 @@ type CIDRReconciler struct {
 const CIDRReconcileTime = time.Minute
 const cidrFinalizer = "finalizers.cidr.multinic.fms.io"
 
-var CIDRCache map[string]multinicv1.CIDRSpec = make(map[string]multinicv1.CIDRSpec)
-
 func (r *CIDRReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	if !ConfigReady {
+		return ctrl.Result{RequeueAfter: ConfigWaitingReconcileTime}, nil
+	}
 	_ = r.Log.WithValues("cidr", req.NamespacedName)
 	cidrName := req.Name
 	instance := &multinicv1.CIDR{}
@@ -48,8 +49,6 @@ func (r *CIDRReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
 			// Return and don't requeue
-			r.Log.Info(fmt.Sprintf("CIDR %s deleted ", cidrName))
-			delete(CIDRCache, cidrName)
 			return ctrl.Result{}, nil
 		}
 		r.Log.Info(fmt.Sprintf("Requeue CIDR %s: %v", cidrName, err))
@@ -84,13 +83,14 @@ func (r *CIDRReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, nil
 	}
 
+	r.CIDRHandler.UpdateCIDR(instance.Spec, false)
 	// sync route from CIDR
 	routeStatus := r.CIDRHandler.SyncCIDRRoute(instance.Spec, true)
 	r.CIDRHandler.MultiNicNetworkHandler.UpdateStatus(*instance, routeStatus)
 	if routeStatus == multinicv1.AllRouteApplied {
 		//success
 		r.Log.Info(fmt.Sprintf("CIDR %s successfully applied", cidrName))
-		CIDRCache[cidrName] = *instance.Spec.DeepCopy()
+		r.CIDRHandler.SetCache(cidrName, *instance.Spec.DeepCopy())
 	}
 	return ctrl.Result{}, nil
 }
@@ -105,6 +105,7 @@ func (r *CIDRReconciler) SetupWithManager(mgr ctrl.Manager) error {
 // callFinalizer deletes CIDR and its dependencies
 func (r *CIDRReconciler) callFinalizer(reqLogger logr.Logger, instance *multinicv1.CIDR) error {
 	r.CIDRHandler.DeleteCIDR(*instance)
+	r.CIDRHandler.SafeCache.UnsetCache(instance.ObjectMeta.Name)
 	reqLogger.Info(fmt.Sprintf("Finalized %s", instance.ObjectMeta.Name))
 	return nil
 }

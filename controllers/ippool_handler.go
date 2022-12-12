@@ -8,6 +8,7 @@ package controllers
 import (
 	"context"
 	"strings"
+	"sync"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -32,6 +33,8 @@ import (
 type IPPoolHandler struct {
 	client.Client
 	Log logr.Logger
+	*SafeCache
+	mu sync.Mutex
 }
 
 // GetIPPool gets IPPool from IPPool name
@@ -185,4 +188,37 @@ func (h *IPPoolHandler) AppendIPPoolAllocations(ippoolName string, newAllocation
 	patch := client.MergeFrom(ippool.DeepCopy())
 	ippool.Spec.Allocations = append(ippool.Spec.Allocations, newAllocations...)
 	return h.Client.Patch(context.Background(), ippool, patch)
+}
+
+func (h *IPPoolHandler) UpdateIPPools(defName string, entries []multinicv1.CIDREntry, excludes []compute.IPValue) {
+	for _, entry := range entries {
+		for _, host := range entry.Hosts {
+			err := h.UpdateIPPool(defName, host.PodCIDR, entry.VlanCIDR, host.HostName, host.InterfaceName, excludes)
+			if err != nil {
+				h.Log.Info(fmt.Sprintf("Cannot update IPPools for host %s: error=%v", host.HostName, err))
+			}
+		}
+	}
+}
+
+func (h *IPPoolHandler) SetCache(key string, value multinicv1.IPPoolSpec) {
+	h.SafeCache.SetCache(key, value)
+}
+
+func (h *IPPoolHandler) GetCache(key string) (multinicv1.IPPoolSpec, error) {
+	value := h.SafeCache.GetCache(key)
+	if value == nil {
+		return multinicv1.IPPoolSpec{}, fmt.Errorf("Not Found")
+	}
+	return value.(multinicv1.IPPoolSpec), nil
+}
+
+func (h *IPPoolHandler) ListCache() map[string]multinicv1.IPPoolSpec {
+	snapshot := make(map[string]multinicv1.IPPoolSpec)
+	h.SafeCache.Lock()
+	for key, value := range h.cache {
+		snapshot[key] = value.(multinicv1.IPPoolSpec)
+	}
+	h.SafeCache.Unlock()
+	return snapshot
 }

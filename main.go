@@ -82,12 +82,18 @@ func main() {
 	quit := make(chan struct{})
 	defer close(quit)
 
+	daemonCacheHandler := &controllers.DaemonCacheHandler{
+		SafeCache: controllers.InitSafeCache(),
+	}
+
 	daemonLog := ctrl.Log.WithName("controllers").WithName("Daemon")
 	defLog := ctrl.Log.WithName("controllers").WithName("NetAttachDef")
 	cidrLog := ctrl.Log.WithName("controllers").WithName("CIDR")
 	hifLog := ctrl.Log.WithName("controllers").WithName("HostInterface")
 	ippoolLog := ctrl.Log.WithName("controllers").WithName("IPPool")
 	networkLog := ctrl.Log.WithName("controllers").WithName("MultiNicNetwork")
+
+	hostInterfaceHandler := controllers.NewHostInterfaceHandler(config, mgr.GetClient(), hifLog)
 
 	defHandler, err := plugin.GetNetAttachDefHandler(config, defLog)
 	if err != nil {
@@ -98,15 +104,17 @@ func main() {
 	defHandler.DaemonPort = controllers.DEFAULT_DAEMON_PORT
 
 	clientset, err := kubernetes.NewForConfig(config)
-	cidrHandler := controllers.NewCIDRHandler(mgr.GetClient(), config, cidrLog, hifLog, ippoolLog, networkLog)
+	cidrHandler := controllers.NewCIDRHandler(mgr.GetClient(), config, cidrLog, ippoolLog, networkLog, hostInterfaceHandler, daemonCacheHandler)
 
 	pluginMap := controllers.GetPluginMap(config, networkLog)
 	setupLog.Info(fmt.Sprintf("Plugin Map: %v", pluginMap))
 
 	podQueue := make(chan *v1.Pod, MAX_QSIZE)
-	daemonWatcher := controllers.NewDaemonWatcher(mgr.GetClient(), config, daemonLog, hifLog, cidrHandler, podQueue, quit)
+	setupLog.Info("New Daemon Watcher")
+	daemonWatcher := controllers.NewDaemonWatcher(mgr.GetClient(), config, daemonLog, hostInterfaceHandler, daemonCacheHandler, podQueue, quit)
+	setupLog.Info("Run Daemon Watcher")
 	go daemonWatcher.Run()
-
+	setupLog.Info("New Reconcilers")
 	if err = (&controllers.CIDRReconciler{
 		Client:      mgr.GetClient(),
 		Log:         cidrLog,
@@ -117,10 +125,12 @@ func main() {
 		os.Exit(1)
 	}
 	hostInterfaceReconciler := &controllers.HostInterfaceReconciler{
-		Client:        mgr.GetClient(),
-		Log:           hifLog,
-		Scheme:        mgr.GetScheme(),
-		DaemonWatcher: daemonWatcher,
+		Client:               mgr.GetClient(),
+		Log:                  hifLog,
+		Scheme:               mgr.GetScheme(),
+		DaemonWatcher:        daemonWatcher,
+		HostInterfaceHandler: hostInterfaceHandler,
+		CIDRHandler:          cidrHandler,
 	}
 	if err = (hostInterfaceReconciler).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "HostInterface")
@@ -182,7 +192,7 @@ func main() {
 	ticker := time.NewTicker(TICKET_INTERVAL)
 	defer ticker.Stop()
 	syncLog := ctrl.Log.WithName("controllers").WithName("Synchronizer")
-	controllers.RunPeriodicUpdate(ticker, cidrHandler, hostInterfaceReconciler, syncLog, quit)
+	controllers.RunPeriodicUpdate(ticker, daemonWatcher, cidrHandler, hostInterfaceReconciler, syncLog, quit)
 
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {

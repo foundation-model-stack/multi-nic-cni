@@ -10,13 +10,13 @@ import (
 
 	multinicv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
 	"github.com/go-logr/logr"
-	corev1 "k8s.io/api/core/v1"
 )
 
 // RouteHandler handles routes according to CIDR by connecting DaemonConnector
 type RouteHandler struct {
 	DaemonConnector
 	Log logr.Logger
+	*DaemonCacheHandler
 }
 
 // AddRoutes add corresponding routes of CIDR
@@ -24,7 +24,8 @@ type RouteHandler struct {
 func (h *RouteHandler) AddRoutes(cidrSpec multinicv1.CIDRSpec, entries []multinicv1.CIDREntry, hostInterfaceInfoMap map[string]map[int]multinicv1.HostInterfaceInfo, forceDelete bool) (success bool, noConnection bool) {
 	success = true
 	noConnection = false
-	for hostName, daemon := range DaemonCache {
+	daemonCache := h.DaemonCacheHandler.ListCache()
+	for hostName, daemon := range daemonCache {
 		if _, ok := hostInterfaceInfoMap[hostName]; ok {
 			change, connectFail := h.AddRoutesToHost(cidrSpec, hostName, daemon, entries, hostInterfaceInfoMap, forceDelete)
 			if !change || connectFail {
@@ -39,15 +40,20 @@ func (h *RouteHandler) AddRoutes(cidrSpec multinicv1.CIDRSpec, entries []multini
 }
 
 // AddRoutesToHost add route to a specific host
-func (h *RouteHandler) AddRoutesToHost(cidrSpec multinicv1.CIDRSpec, hostName string, daemon corev1.Pod, entries []multinicv1.CIDREntry, hostInterfaceInfoMap map[string]map[int]multinicv1.HostInterfaceInfo, forceDelete bool) (bool, bool) {
+func (h *RouteHandler) AddRoutesToHost(cidrSpec multinicv1.CIDRSpec, hostName string, daemon DaemonPod, entries []multinicv1.CIDREntry, hostInterfaceInfoMap map[string]map[int]multinicv1.HostInterfaceInfo, forceDelete bool) (bool, bool) {
 	change := true
-	mainSrcHostIP := daemon.Status.HostIP
+	mainSrcHostIP := daemon.HostIP
 	routes := []HostRoute{}
 	for _, entry := range entries {
 		interfaceIndex := entry.InterfaceIndex
 		for _, host := range entry.Hosts {
 			destHostName := host.HostName
-			mainDestHostIP := DaemonCache[destHostName].Status.HostIP
+			destDaemon, err := h.DaemonCacheHandler.GetCache(destHostName)
+			if err != nil {
+				h.Log.Info(fmt.Sprintf("AddRoutesToHost %s failed: %v", destHostName, err))
+				continue
+			}
+			mainDestHostIP := destDaemon.HostIP
 			net := host.PodCIDR
 			if mainDestHostIP != mainSrcHostIP {
 				if ifaceInfo, exist := hostInterfaceInfoMap[hostName][interfaceIndex]; exist {
@@ -78,7 +84,8 @@ func (h *RouteHandler) AddRoutesToHost(cidrSpec multinicv1.CIDRSpec, hostName st
 
 // DeleteRoutes deletes corresponding routes of CIDR
 func (h *RouteHandler) DeleteRoutes(cidrSpec multinicv1.CIDRSpec) {
-	for hostName, daemon := range DaemonCache {
+	daemonCache := h.DaemonCacheHandler.ListCache()
+	for hostName, daemon := range daemonCache {
 		podAddress := GetDaemonAddressByPod(daemon)
 		res, err := h.DaemonConnector.DeleteL3Config(podAddress, cidrSpec.Config.Name, cidrSpec.Config.Subnet)
 		h.Log.Info(fmt.Sprintf("Delete L3config %s from %s: %v (%v)", cidrSpec.Config.Name, hostName, res, err))

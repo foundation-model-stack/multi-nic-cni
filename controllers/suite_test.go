@@ -104,6 +104,8 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).ToNot(HaveOccurred())
 
+	daemonCacheHandler := &DaemonCacheHandler{SafeCache: InitSafeCache()}
+
 	// initial Logs
 	daemonLog := ctrl.Log.WithName("controllers").WithName("Daemon")
 	defLog := ctrl.Log.WithName("controllers").WithName("NetAttachDef")
@@ -112,13 +114,15 @@ var _ = BeforeSuite(func() {
 	ippoolLog := ctrl.Log.WithName("controllers").WithName("IPPool")
 	networkLog := ctrl.Log.WithName("controllers").WithName("MultiNicNetwork")
 
+	hostInterfaceHandler := NewHostInterfaceHandler(cfg, mgr.GetClient(), hifLog)
+
 	defHandler, err := plugin.GetNetAttachDefHandler(cfg, defLog)
 	Expect(err).ToNot(HaveOccurred())
 	defHandler.TargetCNI = DEFAULT_MULTI_NIC_CNI_TYPE
 	defHandler.DaemonPort = DEFAULT_DAEMON_PORT
 
 	clientset, err := kubernetes.NewForConfig(cfg)
-	cidrHandler := NewCIDRHandler(mgr.GetClient(), cfg, cidrLog, hifLog, ippoolLog, networkLog)
+	cidrHandler := NewCIDRHandler(mgr.GetClient(), cfg, cidrLog, ippoolLog, networkLog, hostInterfaceHandler, daemonCacheHandler)
 
 	pluginMap := GetPluginMap(cfg, networkLog)
 
@@ -126,7 +130,7 @@ var _ = BeforeSuite(func() {
 	quit := make(chan struct{})
 	defer close(quit)
 	podQueue := make(chan *v1.Pod, MAX_QSIZE)
-	daemonWatcher := NewDaemonWatcher(mgr.GetClient(), cfg, daemonLog, hifLog, cidrHandler, podQueue, quit)
+	daemonWatcher := NewDaemonWatcher(mgr.GetClient(), cfg, daemonLog, hostInterfaceHandler, daemonCacheHandler, podQueue, quit)
 	go daemonWatcher.Run()
 
 	err = (&CIDRReconciler{
@@ -138,10 +142,12 @@ var _ = BeforeSuite(func() {
 	Expect(err).ToNot(HaveOccurred())
 
 	err = (&HostInterfaceReconciler{
-		Client:        mgr.GetClient(),
-		Log:           hifLog,
-		Scheme:        mgr.GetScheme(),
-		DaemonWatcher: daemonWatcher,
+		Client:               mgr.GetClient(),
+		Log:                  hifLog,
+		Scheme:               mgr.GetScheme(),
+		DaemonWatcher:        daemonWatcher,
+		HostInterfaceHandler: hostInterfaceHandler,
+		CIDRHandler:          cidrHandler,
 	}).SetupWithManager(mgr)
 	Expect(err).ToNot(HaveOccurred())
 
@@ -157,8 +163,8 @@ var _ = BeforeSuite(func() {
 		Client:              mgr.GetClient(),
 		Clientset:           clientset,
 		Config:              cfg,
-		NetAttachDefHandler: defHandler,
 		CIDRHandler:         cidrHandler,
+		NetAttachDefHandler: defHandler,
 		Log:                 ctrl.Log.WithName("controllers").WithName("Config"),
 		DefLog:              defLog,
 		Scheme:              mgr.GetScheme(),
@@ -227,7 +233,7 @@ var _ = BeforeSuite(func() {
 	// Deploy host interface
 	for _, hif := range hifList {
 		Expect(k8sClient.Create(context.TODO(), &hif)).Should(Succeed())
-		HostInterfaceCache[hif.Spec.HostName] = hif
+		cidrHandler.HostInterfaceHandler.SetCache(hif.Spec.HostName, hif)
 	}
 	// Deploy sriov dependency
 
