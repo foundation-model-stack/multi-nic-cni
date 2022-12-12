@@ -145,9 +145,9 @@ var _ = BeforeSuite(func() {
 		Client:               mgr.GetClient(),
 		Log:                  hifLog,
 		Scheme:               mgr.GetScheme(),
-		DaemonWatcher:        daemonWatcher,
 		HostInterfaceHandler: hostInterfaceHandler,
 		CIDRHandler:          cidrHandler,
+		DaemonWatcher:        daemonWatcher,
 	}).SetupWithManager(mgr)
 	Expect(err).ToNot(HaveOccurred())
 
