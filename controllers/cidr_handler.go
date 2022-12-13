@@ -562,84 +562,102 @@ func (h *CIDRHandler) CleanPendingIPPools(snapshot map[string]multinicv1.IPPoolS
 	return snapshot
 }
 
+func (h *CIDRHandler) getSyncAllocations(ippool multinicv1.IPPoolSpec, allocationMap map[string]map[string]multinicv1.Allocation, crAllocationMap map[string]map[string]multinicv1.Allocation) (bool, []multinicv1.Allocation) {
+	changed := false
+	newAllocations := make([]multinicv1.Allocation, 0)
+	defName := ippool.NetAttachDefName
+	if allocations, defFound := allocationMap[defName]; defFound && len(allocations) > 0 {
+		for syncIP, allocation := range allocations {
+			contains, index := h.CIDRCompute.GetIndexInRange(ippool.PodCIDR, allocation.Address)
+			if !contains {
+				continue
+			}
+			if crAllocations, found := crAllocationMap[defName]; found {
+				if crAllocation, found := crAllocations[syncIP]; found && crAllocation.Pod == allocation.Pod && crAllocation.Namespace == allocation.Namespace {
+					// existing item
+					newAllocations = append(newAllocations, crAllocation)
+					delete(allocationMap[defName], syncIP)
+					delete(crAllocationMap[defName], syncIP)
+					continue
+				}
+			}
+			// new item
+			allocation.Index = index
+			newAllocations = append(newAllocations, allocation)
+			delete(allocationMap[defName], syncIP)
+			changed = true
+		}
+	}
+	if len(ippool.Allocations) != len(newAllocations) {
+		// some need to be cleaned
+		changed = true
+	}
+	return changed, newAllocations
+}
+
 // SyncIPPoolWithActivePods adds assigned IP to the IPPool and reported unsync IPs
 func (h *CIDRHandler) SyncIPPoolWithActivePods(cidrMap map[string]multinicv1.CIDR, ippoolSnapshot map[string]multinicv1.IPPoolSpec) {
 	h.Log.Info("SyncIPPoolWithActivePods")
-	syncedMap := make(map[string]int)
-	validIPPoolCache := make(map[string]multinicv1.IPPoolSpec)
-	// get syncedMap mapping Pod ID with the number of IPs found in valid IPPool based on CIDR
+	crAllocationMap := make(map[string]map[string]multinicv1.Allocation)
+	// delete pending ippool
 	for ippoolName, ippool := range ippoolSnapshot {
 		defName := ippool.NetAttachDefName
-		if cidr, found := cidrMap[defName]; !found {
+		if _, found := cidrMap[defName]; !found {
 			h.Log.Info(fmt.Sprintf("Delete IPPool: %s (no corresponding CIDR)", ippoolName))
 			h.DeleteIPPool(ippool.NetAttachDefName, ippool.PodCIDR)
-		} else {
-			for _, entry := range cidr.Spec.CIDRs {
-				for _, host := range entry.Hosts {
-					ippoolName := h.IPPoolHandler.GetIPPoolName(defName, host.PodCIDR)
-					if ippool, exist := ippoolSnapshot[ippoolName]; exist {
-						for _, allocation := range ippool.Allocations {
-							syncID := getPodIPsSyncedMapID(defName, allocation.Pod, allocation.Namespace)
-							syncedMap[syncID] += 1
-						}
-						validIPPoolCache[ippoolName] = ippool
+		}
+	}
+	// get syncedMap mapping Pod ID with the number of IPs found in valid IPPool based on CIDR
+	for defName, cidr := range cidrMap {
+		crAllocationMap[defName] = make(map[string]multinicv1.Allocation)
+		for _, entry := range cidr.Spec.CIDRs {
+			for _, host := range entry.Hosts {
+				ippoolName := h.IPPoolHandler.GetIPPoolName(defName, host.PodCIDR)
+				if ippool, exist := ippoolSnapshot[ippoolName]; exist {
+					for _, allocation := range ippool.Allocations {
+						crAllocationMap[defName][allocation.Address] = allocation
 					}
 				}
 			}
 		}
 	}
 
-	unsyncedIPMap, err := h.getUnsyncPodIPs(cidrMap, syncedMap)
+	allocationMap, err := h.getCurrentAllocationMap(cidrMap)
 	if err != nil {
-		h.Log.Info(fmt.Sprintf("Cannot getUnsyncPodIPs: %v", err))
+		h.Log.Info(fmt.Sprintf("Cannot getCurrentAllocationMap: %v", err))
 		return
 	}
+	h.Log.Info(fmt.Sprintf("allocationMap: %v", allocationMap))
+	h.Log.Info(fmt.Sprintf("crAllocationMap: %v", crAllocationMap))
 	// check all valid ippool cache
-	for ippoolName, ippool := range validIPPoolCache {
-		defName := ippool.NetAttachDefName
-		if allocationMap, defFound := unsyncedIPMap[defName]; !defFound || len(allocationMap) == 0 {
-			// no unsynced
-			continue
-		} else {
-			newAllocations := make([]multinicv1.Allocation, 0)
-			for unsyncedIp, unsyncedAllocation := range allocationMap {
-				contains, index := h.CIDRCompute.GetIndexInRange(ippool.PodCIDR, unsyncedIp)
-				if contains {
-					unsyncedAllocation.Index = index
-					newAllocations = append(newAllocations, unsyncedAllocation)
-					delete(unsyncedIPMap[defName], unsyncedIp)
-				}
-			}
-			if len(newAllocations) > 0 {
-				err = h.IPPoolHandler.AppendIPPoolAllocations(ippoolName, newAllocations)
-				if err != nil {
-					h.Log.Info(fmt.Sprintf("Cannot AppendIPPoolAllocations %v to %s: %v", newAllocations, ippoolName, err))
-				} else {
-					h.Log.Info(fmt.Sprintf("Patch IPPool %s, add allocations: %v", ippoolName, newAllocations))
-				}
+	for ippoolName, ippool := range ippoolSnapshot {
+		changed, newAllocations := h.getSyncAllocations(ippool, allocationMap, crAllocationMap)
+		if changed {
+			err = h.IPPoolHandler.PatchIPPoolAllocations(ippoolName, newAllocations)
+			if err != nil {
+				h.Log.Info(fmt.Sprintf("Cannot PatchIPPoolAllocations %v to %s: %v", newAllocations, ippoolName, err))
+			} else {
+				h.Log.Info(fmt.Sprintf("Patch IPPool %s, new allocations: %v", ippoolName, newAllocations))
 			}
 		}
 	}
-	for defName, ipMap := range unsyncedIPMap {
+	for defName, ipMap := range allocationMap {
 		if len(ipMap) > 0 {
 			h.Log.Info(fmt.Sprintf("List of IPs still unsync for %s: %v", defName, ipMap))
 		}
 	}
 }
 
-// getUnsyncPodIPs returns mapping of deName->allocations of that is unsync from syncedMap defName/podName/podNamespace
-func (h *CIDRHandler) getUnsyncPodIPs(cidrMap map[string]multinicv1.CIDR, syncedMap map[string]int) (map[string]map[string]multinicv1.Allocation, error) {
+// getCurrentAllocationMap returns mapping of deName->allocations
+func (h *CIDRHandler) getCurrentAllocationMap(cidrMap map[string]multinicv1.CIDR) (map[string]map[string]multinicv1.Allocation, error) {
 	selectors := fmt.Sprintf("%s=%s", POD_STATUS_FIELD, POD_STATUS_VALUE)
 	listOptions := metav1.ListOptions{
 		FieldSelector: selectors,
 	}
 	pods, err := h.Clientset.CoreV1().Pods(metav1.NamespaceAll).List(context.TODO(), listOptions)
-	unsyncedIPMap := make(map[string]map[string]multinicv1.Allocation)
+	allocationMap := make(map[string]map[string]multinicv1.Allocation)
 	if err == nil {
 		for _, pod := range pods.Items {
-			// for unsynced pods
-			podName := pod.GetName()
-			podNamespace := pod.GetNamespace()
 			networksStatus := make([]plugin.NetworkStatus, 0)
 			if networkStatusStr, valid := pod.Annotations[plugin.StatusesKey]; valid {
 				err := json.Unmarshal([]byte(networkStatusStr), &networksStatus)
@@ -659,15 +677,10 @@ func (h *CIDRHandler) getUnsyncPodIPs(cidrMap map[string]multinicv1.CIDR, synced
 						// irrelevant status
 						continue
 					}
-					syncID := getPodIPsSyncedMapID(defName, podName, podNamespace)
-					if count, synced := syncedMap[syncID]; synced && count == len(status.IPs) {
-						// already synced
-						continue
-					}
-					h.Log.Info(fmt.Sprintf("%s unsynced", syncID))
-					_, found := unsyncedIPMap[defName]
+
+					_, found := allocationMap[defName]
 					if !found {
-						unsyncedIPMap[defName] = make(map[string]multinicv1.Allocation)
+						allocationMap[defName] = make(map[string]multinicv1.Allocation)
 					}
 					for _, ip := range status.IPs {
 						allocation := multinicv1.Allocation{
@@ -675,13 +688,13 @@ func (h *CIDRHandler) getUnsyncPodIPs(cidrMap map[string]multinicv1.CIDR, synced
 							Namespace: pod.GetNamespace(),
 							Address:   ip,
 						}
-						unsyncedIPMap[defName][ip] = allocation
+						allocationMap[defName][ip] = allocation
 					}
 				}
 			}
 		}
 	}
-	return unsyncedIPMap, err
+	return allocationMap, err
 }
 
 // addNewHost finds new available host index
@@ -741,7 +754,6 @@ func (h *CIDRHandler) getInterfaceEntry(def multinicv1.PluginConfig, entriesMap 
 	vlanCIDR := ""
 	for vlanCIDR == "" {
 		masterIndex = h.CIDRCompute.FindAvailableIndex(excludedIndexes, -1, 0)
-		fmt.Printf("excludedIndexes: %v\n", excludedIndexes)
 		if masterIndex < 0 {
 			masterIndex = len(excludedIndexes)
 		}
