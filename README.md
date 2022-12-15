@@ -1,6 +1,8 @@
 > Documents and source codes for the deprecated domain `cogadvisor.io` are moved to [cogadvisor-net branch](https://github.com/foundation-model-stack/multi-nic-cni/tree/cogadvisor-net)
 > 
-- [Multi-NIC CNI](#multi-nic-cni)
+- [Multi-NIC CNI Operator v1.0.2](#multi-nic-cni-operator-v102)
+  - [Features](#features)
+  - [Overview](#overview)
   - [MultiNicNetwork](#multinicnetwork)
   - [Usage](#usage)
       - [Requirements](#requirements)
@@ -11,9 +13,22 @@
       - [Deploy MultiNicNetwork resource](#deploy-multinicnetwork-resource)
       - [Check connections](#check-connections)
         - [installed by bundle with operator-sdk](#installed-by-bundle-with-operator-sdk)
-# Multi-NIC CNI
-Attaching secondary network interfaces that is linked to different network interfaces on host (NIC) to pod provides benefits of network segmentation and top-up network bandwidth in the containerization system. 
+  
+# Multi-NIC CNI Operator v1.0.2
+## Features
+- Host-interface auto-discovery
+- Single definition for multiple secondary network attachments
+- NIC selection based on specific requested number or specific interface name list
+- Multi-NIC IPAM (CIDR computation, IP allocation/deallocation) for multiple secondary subnets
+- L3 configurations on host neighbor route table corresponding to ipvlan CNI plugin with l3 mode
+- Dynamic CIDR updates when
+  - detecting added/removed hosts at creation/deletion of multi-nic daemon
+  - (periodically) discovering added/removed secondary interfaces
+- Fault tolerance in scale (tested upto 100 nodes x 2 secondary interfaces) with
+  - initial synchronization of CIDR, IPPool after controller restarted
+  - periodic synchronization of L3 routes for hosts which were restarted and lost the configuration
 
+## Overview
 Multi-NIC CNI is the CNI plugin operating on top of [Multus CNI](https://github.com/k8snetworkplumbingwg/multus-cni). However, unlike Multus, instead of defining and handling each secondary network interface one by one, this CNI automatically discovers all available secondary interfaces and handles them as a NIC pool.
 With this manner, it can provide the following benefits.
 
