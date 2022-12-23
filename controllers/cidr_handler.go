@@ -18,6 +18,7 @@ import (
 	"github.com/foundation-model-stack/multi-nic-cni/compute"
 	"github.com/foundation-model-stack/multi-nic-cni/plugin"
 	"github.com/go-logr/logr"
+	k8serr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
@@ -312,7 +313,7 @@ func (h *CIDRHandler) updateEntries(cidrSpec multinicv1.CIDRSpec, excludes []com
 				if _, died := diedHost[host.HostName]; died {
 					changed = true
 				} else {
-					if _, foundErr := h.Clientset.CoreV1().Nodes().Get(context.TODO(), host.HostName, metav1.GetOptions{}); foundErr != nil {
+					if _, foundErr := h.Clientset.CoreV1().Nodes().Get(context.TODO(), host.HostName, metav1.GetOptions{}); foundErr != nil && k8serr.IsNotFound(foundErr) {
 						// host died
 						h.Log.Info(fmt.Sprintf("Host %s no longer exist, delete from entry of CIDR %s", host.HostName, cidrSpec.Config.Name))
 						// host not exist anymore
