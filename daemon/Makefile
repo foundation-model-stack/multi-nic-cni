@@ -6,8 +6,8 @@ export DAEMON_REGISTRY ?= ghcr.io/foundation-model-stack
 
 # DAEMON_IMG defines the image:tag used for daemon
 IMAGE_TAG_BASE = $(DAEMON_REGISTRY)/multi-nic-cni
-VERSION ?= 1.0.2
-DAEMON_IMG ?= $(IMAGE_TAG_BASE)-daemon:v$(VERSION)
+IMAGE_VERSION ?= 1.0.0
+DAEMON_IMG ?= $(IMAGE_TAG_BASE)-daemon:v$(IMAGE_VERSION)
 
 
 test-verbose:
