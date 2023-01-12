@@ -66,6 +66,9 @@ func main() {
 
 	config := ctrl.GetConfigOrDie()
 
+	leaseDuration := 30 * time.Second
+	renewDeadline := 20 * time.Second
+
 	mgr, err := ctrl.NewManager(config, ctrl.Options{
 		Scheme:                 scheme,
 		MetricsBindAddress:     metricsAddr,
@@ -73,7 +76,10 @@ func main() {
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "5aaf67fd.fms.io",
+		LeaseDuration:          &leaseDuration,
+		RenewDeadline:          &renewDeadline,
 	})
+
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
