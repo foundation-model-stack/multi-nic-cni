@@ -67,7 +67,7 @@ func (r *HostInterfaceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
 			// Return and don't requeue
-			r.CIDRHandler.UpdateCIDRs()
+			r.UpdateCIDRs()
 			return ctrl.Result{}, nil
 		}
 		// error by other reasons, requeue
@@ -108,8 +108,8 @@ func (r *HostInterfaceReconciler) UpdateInterfaces(instance multinicv1.HostInter
 		}
 		if !r.HostInterfaceHandler.SafeCache.Contains(hifName) {
 			r.HostInterfaceHandler.SetCache(hifName, *instance.DeepCopy())
-			r.handleUpdatedHostInterface(true)
-		} else if r.interfaceChanged(instance.Spec.Interfaces, interfaces) {
+		}
+		if r.interfaceChanged(instance.Spec.Interfaces, interfaces) {
 			r.DaemonWatcher.IpamJoin(pod)
 			updatedHif, err := r.HostInterfaceHandler.UpdateHostInterface(instance, interfaces)
 			if err != nil {
