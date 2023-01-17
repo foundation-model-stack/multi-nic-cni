@@ -284,7 +284,7 @@ func (r *ConfigReconciler) callFinalizer(reqLogger logr.Logger, dsName string) e
 
 	// delete all CIDRs
 	cidrMap, err := r.CIDRHandler.ListCIDR()
-	if err != nil {
+	if err == nil {
 		for _, cidr := range cidrMap {
 			r.CIDRHandler.DeleteCIDR(cidr)
 		}

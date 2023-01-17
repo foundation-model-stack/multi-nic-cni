@@ -18,6 +18,7 @@ import (
 	"github.com/foundation-model-stack/multi-nic-cni/compute"
 	"github.com/foundation-model-stack/multi-nic-cni/plugin"
 	"github.com/go-logr/logr"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
@@ -135,7 +136,7 @@ func (h *CIDRHandler) SyncAllPendingCustomCR(defHandler *plugin.NetAttachDefHand
 		h.Log.Info(fmt.Sprintf("Checking %d cidrs", len(cidrMap)))
 		for name, cidr := range cidrMap {
 			_, err = h.MultiNicNetworkHandler.GetNetwork(name)
-			if err != nil {
+			if err != nil && k8serrors.IsNotFound(err) {
 				// not found
 				h.Log.Info(fmt.Sprintf("%v, delete pending resources (CIDR)", err))
 				defHandler.Delete(name, metav1.NamespaceAll)
@@ -312,7 +313,7 @@ func (h *CIDRHandler) updateEntries(cidrSpec multinicv1.CIDRSpec, excludes []com
 				if _, died := diedHost[host.HostName]; died {
 					changed = true
 				} else {
-					if _, foundErr := h.Clientset.CoreV1().Nodes().Get(context.TODO(), host.HostName, metav1.GetOptions{}); foundErr != nil {
+					if _, foundErr := h.Clientset.CoreV1().Nodes().Get(context.TODO(), host.HostName, metav1.GetOptions{}); foundErr != nil && k8serrors.IsNotFound(foundErr) {
 						// host died
 						h.Log.Info(fmt.Sprintf("Host %s no longer exist, delete from entry of CIDR %s", host.HostName, cidrSpec.Config.Name))
 						// host not exist anymore

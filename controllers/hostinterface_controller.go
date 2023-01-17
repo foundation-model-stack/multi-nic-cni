@@ -126,7 +126,7 @@ func (r *HostInterfaceReconciler) UpdateInterfaces(instance multinicv1.HostInter
 		return nil
 	}
 	_, err = r.DaemonWatcher.Clientset.CoreV1().Nodes().Get(context.TODO(), nodeName, metav1.GetOptions{})
-	if err != nil {
+	if err != nil && errors.IsNotFound(err) {
 		// not found node
 		r.HostInterfaceHandler.DeleteHostInterface(nodeName)
 		r.Log.Info(fmt.Sprintf("Delete Hostinterface %s: node no more exists", nodeName))
