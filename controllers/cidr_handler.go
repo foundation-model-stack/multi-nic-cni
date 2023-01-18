@@ -147,8 +147,7 @@ func (h *CIDRHandler) SyncAllPendingCustomCR(defHandler *plugin.NetAttachDefHand
 				excludes := compute.SortAddress(cidr.Spec.Config.ExcludeCIDRs)
 				for _, entry := range cidr.Spec.CIDRs {
 					for _, host := range entry.Hosts {
-						ippoolName := h.GetIPPoolName(name, host.PodCIDR)
-						if _, found := ippoolSnapshot[ippoolName]; !found {
+						if _, found := ippoolSnapshot[host.IPPool]; !found {
 							h.UpdateIPPool(name, host.PodCIDR, entry.VlanCIDR, host.HostName, host.InterfaceName, excludes)
 						}
 					}
@@ -613,8 +612,7 @@ func (h *CIDRHandler) SyncIPPoolWithActivePods(cidrMap map[string]multinicv1.CID
 		crAllocationMap[defName] = make(map[string]multinicv1.Allocation)
 		for _, entry := range cidr.Spec.CIDRs {
 			for _, host := range entry.Hosts {
-				ippoolName := h.IPPoolHandler.GetIPPoolName(defName, host.PodCIDR)
-				if ippool, exist := ippoolSnapshot[ippoolName]; exist {
+				if ippool, exist := ippoolSnapshot[host.IPPool]; exist {
 					for _, allocation := range ippool.Allocations {
 						crAllocationMap[defName][allocation.Address] = allocation
 					}
@@ -788,6 +786,7 @@ func (h *CIDRHandler) tryAddNewHost(existingHosts []multinicv1.HostInterfaceInfo
 	h.Log.Info(fmt.Sprintf("TryAddNewHost %s:, LastIndex:%d, InterfaceName: %s, HostIP: %s", hostName, maxHostIndex, interfaceName, hostIP))
 	podCIDR, hostIndex, err := h.addNewHost(existingHosts, maxHostIndex, entry.VlanCIDR, def.HostBlock, def.ExcludeCIDRs)
 	if err == nil {
+		ippoolName := h.IPPoolHandler.GetIPPoolName(def.Name, podCIDR)
 		// successfully compute pod VLAN, create and append new entry of HostInterfaceInfo orderly
 		newHost := multinicv1.HostInterfaceInfo{
 			HostIndex:     hostIndex,
@@ -795,6 +794,7 @@ func (h *CIDRHandler) tryAddNewHost(existingHosts []multinicv1.HostInterfaceInfo
 			InterfaceName: interfaceName,
 			HostIP:        hostIP,
 			PodCIDR:       podCIDR,
+			IPPool:        ippoolName,
 		}
 		hosts := append(existingHosts, newHost)
 		sort.SliceStable(hosts, func(i, j int) bool {
