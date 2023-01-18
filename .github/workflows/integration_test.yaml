@@ -1,0 +1,90 @@
+name: e2e test
+
+on:
+  pull_request:
+    branches:    
+      - controller
+      - main
+  push:
+    branches:
+      - main
+      - controller
+      - e2e-test
+    paths:
+      - controllers/**
+      - compute/**
+      - plugin/**
+      - ./main.go
+      - ./go.mod
+      - config/**
+      - ./Dockerfile
+      - ./bundle.Dockerfile
+      - ./Makefile
+      - e2e-test/**
+
+jobs:
+  scale-test:
+    runs-on: ubuntu-latest
+    env:
+      DAEMON_IMAGE_NAME: e2e-test/daemon-stub
+      CNI_IMAGE_NAME: e2e-test/cni-stub
+      CONTROLLER_IMAGE_NAME: e2e-test/multi-nic-cni-controller
+      CLUSTER_NAME: kind-500
+    steps:
+      - uses: actions/checkout@v2
+      - name: Prepare tools
+        run: | 
+          sudo chmod +x ./e2e-test/script.sh
+      - name: Tidy
+        run: |
+          go mod tidy
+      - name: Build controller
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          push: false
+          tags: |
+            ${{ env.CONTROLLER_IMAGE_NAME }}:latest
+          file: ./Dockerfile
+      - name: Build daemon-stub
+        uses: docker/build-push-action@v2
+        with:
+          context: e2e-test/daemon-stub
+          push: false
+          tags: |
+            ${{ env.DAEMON_IMAGE_NAME }}:latest
+          file: ./e2e-test/daemon-stub/Dockerfile
+      - name: Build cni-stub
+        uses: docker/build-push-action@v2
+        with:
+          context: e2e-test/cni-stub
+          push: false
+          tags: |
+            ${{ env.CNI_IMAGE_NAME }}:latest
+          file: ./e2e-test/cni-stub/Dockerfile
+      - uses: engineerd/setup-kind@v0.5.0
+        with:
+          wait: 300s
+          version: v0.11.1
+          image: kindest/node:v1.20.7
+          config: ./e2e-test/deploy/kind/kind-1000.yaml
+          name: ${{ env.CLUSTER_NAME }}
+      - name: Load images to kind
+        working-directory: ./e2e-test
+        run: make load-images
+      - name: Prepare controller
+        working-directory: ./e2e-test
+        run: make prepare-controller
+        shell: bash
+      - name: Test add/delete scale=200
+        working-directory: ./e2e-test
+        run: ./script.sh test_step_scale
+        shell: bash
+      - name: Test allocate/deallocate
+        working-directory: ./e2e-test
+        run: ./script.sh test_taint
+        shell: bash
+      - name: Test taint/untaint
+        working-directory: ./e2e-test
+        run: ./script.sh test_taint
+        shell: bash

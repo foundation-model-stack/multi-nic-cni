@@ -1,0 +1,32 @@
+apiVersion: multinic.fms.io/v1
+kind: Config
+metadata:
+  name: multi-nicd
+spec:
+  addRoutePath: /addl3
+  cniType: multi-nic
+  daemon:
+    env:
+    - name: DAEMON_PORT
+      value: "11000"
+    - name: RT_TABLE_PATH
+      value: /opt/rt_tables
+    image: fake-image
+    mounts: []
+    port: 11000
+    resources:
+      requests:
+        cpu: 100m
+        memory: 50Mi
+    securityContext:
+      privileged: true
+    nodeSelector:
+      type: kwok
+    tolerations:
+    - effect: NoSchedule
+      key: kwok.x-k8s.io/node
+      operator: Exists
+  deleteRoutePath: /deletel3
+  getInterfacePath: /interface
+  ipamType: multi-nic-ipam
+  joinPath: /join
