@@ -133,9 +133,11 @@ func (h *CIDRHandler) SyncAllPendingCustomCR(defHandler *plugin.NetAttachDefHand
 	cidrMap, err := h.ListCIDR()
 	ippoolSnapshot := h.IPPoolHandler.ListCache()
 	if err == nil {
+		daemonSize := h.DaemonCacheHandler.SafeCache.GetSize()
+		infoAvailableSize := h.HostInterfaceHandler.GetInfoAvailableSize()
 		h.Log.Info(fmt.Sprintf("Checking %d cidrs", len(cidrMap)))
 		for name, cidr := range cidrMap {
-			_, err = h.MultiNicNetworkHandler.GetNetwork(name)
+			multinicnetwork, err := h.MultiNicNetworkHandler.GetNetwork(name)
 			if err != nil && k8serrors.IsNotFound(err) {
 				// not found
 				h.Log.Info(fmt.Sprintf("%v, delete pending resources (CIDR)", err))
@@ -153,6 +155,7 @@ func (h *CIDRHandler) SyncAllPendingCustomCR(defHandler *plugin.NetAttachDefHand
 					}
 				}
 			}
+			h.MultiNicNetworkHandler.SyncAllStatus(name, cidr.Spec, multinicnetwork.Status.RouteStatus, daemonSize, infoAvailableSize, true)
 		}
 		h.SyncIPPoolWithActivePods(cidrMap, ippoolSnapshot)
 	} else {
@@ -475,7 +478,9 @@ func (h *CIDRHandler) UpdateCIDR(cidrSpec multinicv1.CIDRSpec, new bool) (bool, 
 
 		if h.IsL3Mode(def) {
 			// initialize the MultiNicNetwork status
-			h.MultiNicNetworkHandler.UpdateStatus(*mapObj, multinicv1.ApplyingRoute)
+			daemonSize := h.DaemonCacheHandler.GetSize()
+			infoAvailableSize := h.GetInfoAvailableSize()
+			h.MultiNicNetworkHandler.SyncAllStatus(def.Name, mapObj.Spec, multinicv1.ApplyingRoute, daemonSize, infoAvailableSize, true)
 		}
 
 		// update IPPools
@@ -506,31 +511,6 @@ func (h *CIDRHandler) SyncCIDRRoute(cidrSpec multinicv1.CIDRSpec, forceDelete bo
 		return multinicv1.AllRouteApplied
 	} else {
 		return multinicv1.RouteNoApplied
-	}
-}
-
-func (h *CIDRHandler) SyncCIDRRouteToHost(daemon DaemonPod) {
-	snapshot := h.ListCache()
-	for name, cidrSpec := range snapshot {
-		def := cidrSpec.Config
-		if h.IsL3Mode(def) {
-			h.Mutex.Lock()
-			entries := cidrSpec.CIDRs
-			hostInterfaceInfoMap := h.GetHostInterfaceIndexMap(entries)
-			hostName := daemon.NodeName
-			if _, ok := hostInterfaceInfoMap[hostName]; ok {
-				change, connectFail := h.AddRoutesToHost(cidrSpec, hostName, daemon, entries, hostInterfaceInfoMap, false)
-				h.Log.Info(fmt.Sprintf("Add route to host %s change:%v, connectionFail: %v)", hostName, change, connectFail))
-				if connectFail {
-					routeStatus := multinicv1.RouteUnknown
-					err := h.MultiNicNetworkHandler.SyncStatus(name, cidrSpec, routeStatus)
-					if err != nil {
-						h.Log.Info(fmt.Sprintf("failed to update route status of %s: %v", name, err))
-					}
-				}
-			}
-			h.Mutex.Unlock()
-		}
 	}
 }
 

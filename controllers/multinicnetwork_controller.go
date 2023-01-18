@@ -107,8 +107,9 @@ func (r *MultiNicNetworkReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	is_deleted := instance.GetDeletionTimestamp() != nil
 	if is_deleted {
+		r.Log.Info(fmt.Sprintf("Network %s deletion set: %v ", instance.GetName(), instance.GetDeletionTimestamp()))
 		if controllerutil.ContainsFinalizer(instance, multinicnetworkFinalizer) {
-			if err := r.CallFinalizer(r.Log, instance); err != nil {
+			if err := r.callFinalizer(r.Log, instance); err != nil {
 				return ctrl.Result{}, err
 			}
 
@@ -124,47 +125,57 @@ func (r *MultiNicNetworkReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	if len(instance.Spec.MasterNetAddrs) == 0 {
 		instance.Spec.MasterNetAddrs = r.CIDRHandler.GetAllNetAddrs()
 	}
+	// set latest discovery information
+	daemonSize := r.CIDRHandler.DaemonCacheHandler.SafeCache.GetSize()
+	infoAvailableSize := r.CIDRHandler.HostInterfaceHandler.GetInfoAvailableSize()
+	instance.Status.DiscoverStatus.ExistDaemon = daemonSize
+	instance.Status.InterfaceInfoAvailable = infoAvailableSize
 
 	// Get main plugin
 	mainPlugin, annotations, err := r.GetMainPluginConf(instance)
-
+	multinicnetworkName := instance.GetName()
 	if err != nil {
-		r.Log.Info(fmt.Sprintf("Failed to get main config %s: %v", instance.GetName(), err))
+		message := fmt.Sprintf("Failed to get main config %s: %v", multinicnetworkName, err)
+		r.CIDRHandler.MultiNicNetworkHandler.UpdateNetConfigStatus(instance, multinicv1.ConfigFailed, message)
+		r.Log.Info(message)
 	} else {
 		mainPlugin = plugin.RemoveEmpty(instance.Spec.MainPlugin.CNIArgs, mainPlugin)
 		r.Log.Info(fmt.Sprintf("main plugin: %s", mainPlugin))
 		// Create net attach def
 		err = r.NetAttachDefHandler.CreateOrUpdate(instance, mainPlugin, annotations)
 		if err != nil {
-			r.Log.Info(fmt.Sprintf("Failed to create %s: %v", instance.GetName(), err))
+			message := fmt.Sprintf("Failed to create %s: %v", multinicnetworkName, err)
+			r.CIDRHandler.MultiNicNetworkHandler.UpdateNetConfigStatus(instance, multinicv1.ConfigFailed, message)
+			r.Log.Info(message)
+			// Reconcile if fail to update or create some of net-attach-def
+			return ctrl.Result{RequeueAfter: ReconcileTime}, nil
 		}
 		// Handle multi-nic IPAM
 		r.HandleMultiNicIPAM(instance)
-
-		// Reconcile if fail to update or create some of net-attach-def
-		if err != nil {
-			return ctrl.Result{RequeueAfter: ReconcileTime}, nil
-		}
 	}
-
-	routeStatus := instance.Status.Status
+	routeStatus := instance.Status.RouteStatus
 	if routeStatus == multinicv1.RouteUnknown || (instance.Spec.IsMultiNICIPAM && routeStatus == multinicv1.RouteNoApplied) {
 		// some route is failed or route not applied yet
-		cidr, err := r.CIDRHandler.GetCache(instance.Name)
+		cidr, err := r.CIDRHandler.GetCache(multinicnetworkName)
 		if err == nil {
 			routeStatus = r.CIDRHandler.SyncCIDRRoute(cidr, false)
-			err := r.CIDRHandler.MultiNicNetworkHandler.SyncStatus(instance.Name, cidr, routeStatus)
+			err := r.CIDRHandler.MultiNicNetworkHandler.SyncAllStatus(multinicnetworkName, cidr, routeStatus, daemonSize, infoAvailableSize, false)
 			if err != nil {
-				r.Log.Info(fmt.Sprintf("failed to update route status of %s: %v", instance.Name, err))
+				r.Log.Info(fmt.Sprintf("failed to update route status of %s: %v", multinicnetworkName, err))
 			}
 			if routeStatus == multinicv1.RouteUnknown {
 				return ctrl.Result{RequeueAfter: ReconcileTime}, nil
 			} else if routeStatus == multinicv1.AllRouteApplied {
 				//success
-				r.Log.Info(fmt.Sprintf("CIDR %s successfully applied", instance.Name))
-				r.CIDRHandler.SetCache(instance.Name, cidr)
+				r.Log.Info(fmt.Sprintf("CIDR %s successfully applied", multinicnetworkName))
 			}
 		}
+	} else if !instance.Spec.IsMultiNICIPAM && routeStatus == multinicv1.RouteNoApplied {
+		// not related to L3
+		r.CIDRHandler.MultiNicNetworkHandler.UpdateNetConfigStatus(instance, multinicv1.ConfigComplete, "")
+	} else if routeStatus != multinicv1.AllRouteApplied {
+		// some route still fails
+		r.CIDRHandler.MultiNicNetworkHandler.UpdateNetConfigStatus(instance, multinicv1.WaitForConfig, "")
 	}
 	return ctrl.Result{}, nil
 }
@@ -234,8 +245,8 @@ func (r *MultiNicNetworkReconciler) isExistConfig(instance *multinicv1.MultiNicN
 	return false
 }
 
-// CallFinalizer deletes NetworkAttachmentDefinition, CIDR and its dependencies
-func (r *MultiNicNetworkReconciler) CallFinalizer(reqLogger logr.Logger, instance *multinicv1.MultiNicNetwork) error {
+// callFinalizer deletes NetworkAttachmentDefinition, CIDR and its dependencies
+func (r *MultiNicNetworkReconciler) callFinalizer(reqLogger logr.Logger, instance *multinicv1.MultiNicNetwork) error {
 	isMultiNicIPAM, err := IsMultiNICIPAM(instance)
 	if err == nil && isMultiNicIPAM {
 		cidrName := instance.GetName()
