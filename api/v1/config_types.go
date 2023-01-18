@@ -24,6 +24,7 @@ type DaemonSpec struct {
 	HostPathMounts  []HostPathMount             `json:"mounts,omitempty"`
 	DaemonPort      int                         `json:"port"`
 	Resources       corev1.ResourceRequirements `json:"resources,omitempty"`
+	Tolerations     []corev1.Toleration         `json:"tolerations,omitempty" protobuf:"bytes,22,opt,name=tolerations"`
 }
 
 type HostPathMount struct {
