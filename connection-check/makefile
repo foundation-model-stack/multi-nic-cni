@@ -6,8 +6,8 @@
 export IMAGE_REGISTRY ?= ghcr.io/foundation-model-stack
 
 IMAGE_TAG_BASE = $(IMAGE_REGISTRY)/multi-nic-cni
-VERSION ?= 1.0.2
-CONCHECK_IMG ?= $(IMAGE_TAG_BASE)-concheck:v$(VERSION)
+IMAGE_VERSION ?= 1.0.0
+CONCHECK_IMG ?= $(IMAGE_TAG_BASE)-concheck:v$(IMAGE_VERSION)
 
 
 docker-build:
