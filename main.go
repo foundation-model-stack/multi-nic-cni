@@ -6,6 +6,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -29,6 +30,7 @@ import (
 	netv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
 	"github.com/foundation-model-stack/multi-nic-cni/controllers"
 	"github.com/foundation-model-stack/multi-nic-cni/plugin"
+	"github.com/operator-framework/operator-lib/leader"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -66,6 +68,18 @@ func main() {
 
 	config := ctrl.GetConfigOrDie()
 
+	leaseDuration := 30 * time.Second
+	renewDeadline := 20 * time.Second
+
+	if !enableLeaderElection {
+		// Become the leader before proceeding
+		err := leader.Become(context.TODO(), "5aaf67fd.fms.io")
+		if err != nil {
+			setupLog.Error(err, "cannot become leader")
+			os.Exit(1)
+		}
+	}
+
 	mgr, err := ctrl.NewManager(config, ctrl.Options{
 		Scheme:                 scheme,
 		MetricsBindAddress:     metricsAddr,
@@ -73,7 +87,10 @@ func main() {
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "5aaf67fd.fms.io",
+		LeaseDuration:          &leaseDuration,
+		RenewDeadline:          &renewDeadline,
 	})
+
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
@@ -104,7 +121,8 @@ func main() {
 	defHandler.DaemonPort = controllers.DEFAULT_DAEMON_PORT
 
 	clientset, err := kubernetes.NewForConfig(config)
-	cidrHandler := controllers.NewCIDRHandler(mgr.GetClient(), config, cidrLog, ippoolLog, networkLog, hostInterfaceHandler, daemonCacheHandler)
+	cidrHandler := controllers.NewCIDRHandler(mgr.GetClient(), config, cidrLog, ippoolLog, networkLog, hostInterfaceHandler, daemonCacheHandler, quit)
+	go cidrHandler.Run()
 
 	pluginMap := controllers.GetPluginMap(config, networkLog)
 	setupLog.Info(fmt.Sprintf("Plugin Map: %v", pluginMap))
@@ -116,10 +134,11 @@ func main() {
 	go daemonWatcher.Run()
 	setupLog.Info("New Reconcilers")
 	if err = (&controllers.CIDRReconciler{
-		Client:      mgr.GetClient(),
-		Log:         cidrLog,
-		Scheme:      mgr.GetScheme(),
-		CIDRHandler: cidrHandler,
+		Client:        mgr.GetClient(),
+		Log:           cidrLog,
+		Scheme:        mgr.GetScheme(),
+		CIDRHandler:   cidrHandler,
+		DaemonWatcher: daemonWatcher,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "CIDR")
 		os.Exit(1)

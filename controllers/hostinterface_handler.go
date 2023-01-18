@@ -108,7 +108,6 @@ func (h *HostInterfaceHandler) DeleteHostInterface(name string) error {
 	if err == nil {
 		err = h.Client.Delete(context.TODO(), instance)
 	}
-	h.SafeCache.UnsetCache(name)
 	return err
 }
 
@@ -193,4 +192,15 @@ func (h *HostInterfaceHandler) addLabel(daemon DaemonPod, labelName string, labe
 
 	_, err := h.Clientset.CoreV1().Pods(namespace).Patch(context.TODO(), podName, types.JSONPatchType, payloadBytes, metav1.PatchOptions{})
 	return err
+}
+
+func (h *HostInterfaceHandler) GetInfoAvailableSize() int {
+	hostInterfaceSnapshot := h.ListCache()
+	infoAvailableSize := 0
+	for _, instance := range hostInterfaceSnapshot {
+		if len(instance.Spec.Interfaces) > 0 {
+			infoAvailableSize += 1
+		}
+	}
+	return infoAvailableSize
 }
