@@ -263,6 +263,7 @@ func (r *ConfigReconciler) newCNIDaemonSet(client *kubernetes.Clientset, name st
 					HostNetwork:        true,
 					ServiceAccountName: SERVICE_ACCOUNT_NAME,
 					NodeSelector:       daemonSpec.NodeSelector,
+					Tolerations:        daemonSpec.Tolerations,
 					Containers: []corev1.Container{
 						container,
 					},

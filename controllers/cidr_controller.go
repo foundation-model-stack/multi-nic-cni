@@ -26,6 +26,7 @@ import (
 type CIDRReconciler struct {
 	client.Client
 	*CIDRHandler
+	*DaemonWatcher
 	Log    logr.Logger
 	Scheme *runtime.Scheme
 }
@@ -83,15 +84,18 @@ func (r *CIDRReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, nil
 	}
 
-	r.CIDRHandler.UpdateCIDR(instance.Spec, false)
-	// sync route from CIDR
+	// sync status
 	routeStatus := r.CIDRHandler.SyncCIDRRoute(instance.Spec, true)
-	r.CIDRHandler.MultiNicNetworkHandler.UpdateStatus(*instance, routeStatus)
-	if routeStatus == multinicv1.AllRouteApplied {
-		//success
-		r.Log.Info(fmt.Sprintf("CIDR %s successfully applied", cidrName))
-		r.CIDRHandler.SetCache(cidrName, *instance.Spec.DeepCopy())
+	daemonSize := r.CIDRHandler.DaemonCacheHandler.SafeCache.GetSize()
+	infoAvailableSize := r.CIDRHandler.HostInterfaceHandler.GetInfoAvailableSize()
+	r.CIDRHandler.MultiNicNetworkHandler.SyncAllStatus(cidrName, instance.Spec, routeStatus, daemonSize, infoAvailableSize, false)
+
+	// call greeting
+	daemonSnapshot := r.CIDRHandler.DaemonCacheHandler.ListCache()
+	for _, daemon := range daemonSnapshot {
+		r.DaemonWatcher.IpamJoin(daemon)
 	}
+
 	return ctrl.Result{}, nil
 }
 

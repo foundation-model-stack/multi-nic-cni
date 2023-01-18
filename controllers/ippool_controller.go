@@ -32,7 +32,7 @@ type IPPoolReconciler struct {
 //+kubebuilder:rbac:groups=multinic.fms.io,resources=ippools/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=multinic.fms.io,resources=ippools/finalizers,verbs=update
 
-const ippoolFinalizer = "finalizers.cidr.multinic.fms.io"
+const ippoolFinalizer = "finalizers.ippool.multinic.fms.io"
 
 func InitIppoolCache(ippoolHandler *IPPoolHandler) error {
 	listObjects, err := ippoolHandler.ListIPPool()

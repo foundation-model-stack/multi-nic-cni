@@ -16,6 +16,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	multinicv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
 
@@ -34,7 +35,7 @@ type HostInterfaceReconciler struct {
 }
 
 const HostInterfaceReconcileTime = time.Second
-
+const hifFinalizer = "finalizers.hostinterface.multinic.fms.io"
 const TestModelLabel = "test-mode"
 
 func InitHostInterfaceCache(clientset *kubernetes.Clientset, hostInterfaceHandler *HostInterfaceHandler, daemonCacheHandler *DaemonCacheHandler) error {
@@ -67,12 +68,41 @@ func (r *HostInterfaceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
 			// Return and don't requeue
-			r.CIDRHandler.UpdateCIDRs()
 			return ctrl.Result{}, nil
 		}
 		// error by other reasons, requeue
 		r.Log.Info(fmt.Sprintf("Requeue HostInterface %s: %v", req.Name, err))
 		return ctrl.Result{RequeueAfter: HostInterfaceReconcileTime}, nil
+	}
+
+	// Add finalizer to instance
+	if !controllerutil.ContainsFinalizer(instance, hifFinalizer) {
+		controllerutil.AddFinalizer(instance, hifFinalizer)
+		err = r.Update(ctx, instance)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
+	is_deleted := instance.GetDeletionTimestamp() != nil
+	if is_deleted {
+		if controllerutil.ContainsFinalizer(instance, hifFinalizer) {
+			if err := r.CallFinalizer(r.Log, instance); err != nil {
+				return ctrl.Result{}, err
+			}
+
+			controllerutil.RemoveFinalizer(instance, hifFinalizer)
+			err := r.Client.Update(ctx, instance)
+			if err != nil {
+				return ctrl.Result{}, err
+			}
+		}
+		return ctrl.Result{}, nil
+	}
+
+	hifName := instance.GetName()
+	if !r.HostInterfaceHandler.SafeCache.Contains(hifName) {
+		r.HostInterfaceHandler.SetCache(hifName, *instance.DeepCopy())
 	}
 
 	if !ConfigReady || !r.DaemonWatcher.IsDaemonSetReady() {
@@ -106,10 +136,7 @@ func (r *HostInterfaceReconciler) UpdateInterfaces(instance multinicv1.HostInter
 		if err != nil {
 			return err
 		}
-		if !r.HostInterfaceHandler.SafeCache.Contains(hifName) {
-			r.HostInterfaceHandler.SetCache(hifName, *instance.DeepCopy())
-			r.handleUpdatedHostInterface(true)
-		} else if r.interfaceChanged(instance.Spec.Interfaces, interfaces) {
+		if r.interfaceChanged(instance.Spec.Interfaces, interfaces) {
 			r.DaemonWatcher.IpamJoin(pod)
 			updatedHif, err := r.HostInterfaceHandler.UpdateHostInterface(instance, interfaces)
 			if err != nil {
@@ -117,7 +144,7 @@ func (r *HostInterfaceReconciler) UpdateInterfaces(instance multinicv1.HostInter
 			}
 			r.Log.Info(fmt.Sprintf("%s's interfaces updated", nodeName))
 			r.HostInterfaceHandler.SetCache(hifName, *updatedHif.DeepCopy())
-			r.handleUpdatedHostInterface(true)
+			r.CIDRHandler.UpdateCIDRs()
 		}
 		return nil
 	}
@@ -126,27 +153,16 @@ func (r *HostInterfaceReconciler) UpdateInterfaces(instance multinicv1.HostInter
 		return nil
 	}
 	_, err = r.DaemonWatcher.Clientset.CoreV1().Nodes().Get(context.TODO(), nodeName, metav1.GetOptions{})
+	r.DaemonCacheHandler.UnsetCache(nodeName)
+	r.HostInterfaceHandler.DeleteHostInterface(nodeName)
 	if err != nil && errors.IsNotFound(err) {
 		// not found node
-		r.HostInterfaceHandler.DeleteHostInterface(nodeName)
 		r.Log.Info(fmt.Sprintf("Delete Hostinterface %s: node no more exists", nodeName))
 		return nil
 	} else {
 		// not found pod even DaemonSet is already ready, node was tainted
-		r.HostInterfaceHandler.DeleteHostInterface(nodeName)
 		r.Log.Info(fmt.Sprintf("Hostinterface %s: no daemon pod found", nodeName))
 		return nil
-	}
-}
-
-func (r *HostInterfaceReconciler) handleUpdatedHostInterface(added bool) {
-	routeChange := r.CIDRHandler.UpdateCIDRs()
-	// call greeting if route changed
-	daemonSnapshot := r.DaemonWatcher.DaemonCacheHandler.ListCache()
-	if added && routeChange {
-		for _, daemon := range daemonSnapshot {
-			r.DaemonWatcher.IpamJoin(daemon)
-		}
 	}
 }
 
@@ -166,4 +182,12 @@ func (r *HostInterfaceReconciler) interfaceChanged(olds []multinicv1.InterfaceIn
 		}
 	}
 	return true
+}
+
+// CallFinalizer updates CIDRs
+func (r *HostInterfaceReconciler) CallFinalizer(reqLogger logr.Logger, instance *multinicv1.HostInterface) error {
+	r.HostInterfaceHandler.SafeCache.UnsetCache(instance.Name)
+	r.CIDRHandler.UpdateCIDRs()
+	reqLogger.Info(fmt.Sprintf("Finalized %s", instance.Name))
+	return nil
 }

@@ -106,6 +106,9 @@ var _ = BeforeSuite(func() {
 
 	daemonCacheHandler := &DaemonCacheHandler{SafeCache: InitSafeCache()}
 
+	quit := make(chan struct{})
+	defer close(quit)
+
 	// initial Logs
 	daemonLog := ctrl.Log.WithName("controllers").WithName("Daemon")
 	defLog := ctrl.Log.WithName("controllers").WithName("NetAttachDef")
@@ -122,22 +125,22 @@ var _ = BeforeSuite(func() {
 	defHandler.DaemonPort = DEFAULT_DAEMON_PORT
 
 	clientset, err := kubernetes.NewForConfig(cfg)
-	cidrHandler := NewCIDRHandler(mgr.GetClient(), cfg, cidrLog, ippoolLog, networkLog, hostInterfaceHandler, daemonCacheHandler)
+	cidrHandler := NewCIDRHandler(mgr.GetClient(), cfg, cidrLog, ippoolLog, networkLog, hostInterfaceHandler, daemonCacheHandler, quit)
+	go cidrHandler.Run()
 
 	pluginMap := GetPluginMap(cfg, networkLog)
 
 	// Initialize daemon watcher
-	quit := make(chan struct{})
-	defer close(quit)
 	podQueue := make(chan *v1.Pod, MAX_QSIZE)
 	daemonWatcher := NewDaemonWatcher(mgr.GetClient(), cfg, daemonLog, hostInterfaceHandler, daemonCacheHandler, podQueue, quit)
 	go daemonWatcher.Run()
 
 	err = (&CIDRReconciler{
-		Client:      mgr.GetClient(),
-		Log:         cidrLog,
-		Scheme:      mgr.GetScheme(),
-		CIDRHandler: cidrHandler,
+		Client:        mgr.GetClient(),
+		Log:           cidrLog,
+		Scheme:        mgr.GetScheme(),
+		CIDRHandler:   cidrHandler,
+		DaemonWatcher: daemonWatcher,
 	}).SetupWithManager(mgr)
 	Expect(err).ToNot(HaveOccurred())
 

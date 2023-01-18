@@ -50,6 +50,8 @@ spec:
                             type: string
                           interfaceName:
                             type: string
+                          ippool:
+                            type: string
                           podCIDR:
                             type: string
                         required:
@@ -57,6 +59,7 @@ spec:
                         - hostIndex
                         - hostName
                         - interfaceName
+                        - ippool
                         - podCIDR
                         type: object
                       type: array

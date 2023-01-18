@@ -58,20 +58,34 @@ type AttachmentPolicy struct {
 type RouteStatus string
 
 const (
-	// AllRouteApplied indicates that all routes are applied
-	AllRouteApplied RouteStatus = "Success"
+	// RouteNoApplied indicates that there is no L3 configuration applied
+	RouteNoApplied RouteStatus = "N/A"
 
 	// ApplyingRoute indicates that the new cidr is just recomputed and waiting for route update
 	ApplyingRoute RouteStatus = "WaitForRoutes"
 
-	// SomeRouteFailed indicates that some route cannot be applied, need attention
-	SomeRouteFailed RouteStatus = "Failed"
-
 	// RouteUnknown indicates that some daemon cannot be connected
 	RouteUnknown RouteStatus = "Unknown"
 
-	// RouteNoApplied indicates that there is no L3 configuration applied
-	RouteNoApplied RouteStatus = "N/A"
+	// AllRouteApplied indicates that all routes are applied
+	AllRouteApplied RouteStatus = "Success"
+
+	// SomeRouteFailed indicates that some route cannot be applied, need attention
+	SomeRouteFailed RouteStatus = "Failed"
+)
+
+// +enum
+type NetConfigStatus string
+
+const (
+	// ApplyingRoute indicates that plugin configuration has not completed yet
+	WaitForConfig NetConfigStatus = "WaitForConfig"
+
+	// ConfigComplete indicates that network plugin has been configured
+	ConfigComplete NetConfigStatus = "Success"
+
+	// SomeRouteFailed indicates that failed to configure network plugin
+	ConfigFailed NetConfigStatus = "Failed"
 )
 
 type NicNetworkResult struct {
@@ -79,11 +93,20 @@ type NicNetworkResult struct {
 	NumOfHost  int    `json:"numOfHosts"`
 }
 
+type DiscoverStatus struct {
+	ExistDaemon            int `json:"existDaemon"`
+	InterfaceInfoAvailable int `json:"infoAvailable"`
+	CIDRProcessedHost      int `json:"cidrProcessed"`
+}
+
 // MultiNicNetworkStatus defines the observed state of MultiNicNetwork
 type MultiNicNetworkStatus struct {
-	ComputeResults []NicNetworkResult `json:"computeResults"`
-	Status         RouteStatus        `json:"routeStatus"`
-	LastSyncTime   metav1.Time        `json:"lastSyncTime"`
+	ComputeResults  []NicNetworkResult `json:"computeResults"`
+	DiscoverStatus  `json:"discovery"`
+	NetConfigStatus `json:"configStatus"`
+	RouteStatus     `json:"routeStatus"`
+	Message         string      `json:"message"`
+	LastSyncTime    metav1.Time `json:"lastSyncTime"`
 }
 
 //+kubebuilder:object:root=true

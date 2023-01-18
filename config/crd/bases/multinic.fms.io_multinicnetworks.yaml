@@ -122,14 +122,34 @@ spec:
                   - numOfHosts
                   type: object
                 type: array
+              configStatus:
+                type: string
+              discovery:
+                properties:
+                  cidrProcessed:
+                    type: integer
+                  existDaemon:
+                    type: integer
+                  infoAvailable:
+                    type: integer
+                required:
+                - cidrProcessed
+                - existDaemon
+                - infoAvailable
+                type: object
               lastSyncTime:
                 format: date-time
+                type: string
+              message:
                 type: string
               routeStatus:
                 type: string
             required:
             - computeResults
+            - configStatus
+            - discovery
             - lastSyncTime
+            - message
             - routeStatus
             type: object
         type: object

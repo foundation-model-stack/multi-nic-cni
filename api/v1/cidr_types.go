@@ -29,6 +29,7 @@ type HostInterfaceInfo struct {
 	InterfaceName string `json:"interfaceName"`
 	HostIP        string `json:"hostIP"`
 	PodCIDR       string `json:"podCIDR"`
+	IPPool        string `json:"ippool"`
 }
 
 type CIDREntry struct {
