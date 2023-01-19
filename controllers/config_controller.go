@@ -155,7 +155,7 @@ func (r *ConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 			r.callFinalizer(r.Log, req.NamespacedName.Name)
 			return ctrl.Result{}, nil
 		}
-		r.Log.Info(fmt.Sprintf("Cannot get #%v ", err))
+		r.Log.V(7).Info(fmt.Sprintf("Cannot get #%v ", err))
 		// Error reading the object - requeue the request.
 		return ctrl.Result{RequeueAfter: ReconcileTime}, nil
 	}
@@ -175,7 +175,7 @@ func (r *ConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		if errors.IsNotFound(err) {
 			r.newNetAttachDefWatcher(instance)
 			_, err = r.Clientset.AppsV1().DaemonSets(OPERATOR_NAMESPACE).Create(context.TODO(), daemonset, metav1.CreateOptions{})
-			r.Log.Info(fmt.Sprintf("Create new multi-nic daemonset #%s (cni=%s,ipam=%s), err=%v ", dsName, instance.Spec.CNIType, instance.Spec.IPAMType, err))
+			r.Log.V(7).Info(fmt.Sprintf("Create new multi-nic daemonset #%s (cni=%s,ipam=%s), err=%v ", dsName, instance.Spec.CNIType, instance.Spec.IPAMType, err))
 		} else {
 			r.Log.Info(fmt.Sprintf("Cannot get daemonset #%v ", err))
 		}
@@ -183,7 +183,7 @@ func (r *ConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		// - otherwise, update the existing daemonset and restart NetworkAttachmentDefinition watcher
 		r.newNetAttachDefWatcher(instance)
 		_, err = r.Clientset.AppsV1().DaemonSets(OPERATOR_NAMESPACE).Update(context.TODO(), daemonset, metav1.UpdateOptions{})
-		r.Log.Info(fmt.Sprintf("Update multi-nic daemonset #%s, err=%v ", dsName, err))
+		r.Log.V(7).Info(fmt.Sprintf("Update multi-nic daemonset #%s, err=%v ", dsName, err))
 	}
 	return ctrl.Result{}, nil
 }
@@ -295,7 +295,7 @@ func (r *ConfigReconciler) callFinalizer(reqLogger logr.Logger, dsName string) e
 		if err != nil || r.CIDRHandler.IPPoolHandler.SafeCache.GetSize() == 0 {
 			break
 		}
-		reqLogger.Info(fmt.Sprintf("%d ippools left, wait...", r.CIDRHandler.IPPoolHandler.SafeCache.GetSize()))
+		reqLogger.V(5).Info(fmt.Sprintf("%d ippools left, wait...", r.CIDRHandler.IPPoolHandler.SafeCache.GetSize()))
 		time.Sleep(1 * time.Second)
 	}
 	// delete CNI deamonset

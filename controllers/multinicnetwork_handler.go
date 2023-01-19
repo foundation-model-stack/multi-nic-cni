@@ -100,7 +100,7 @@ func (h *MultiNicNetworkHandler) updateStatus(instance *multinicv1.MultiNicNetwo
 	}
 	err := h.Client.Status().Update(context.Background(), instance)
 	if err != nil {
-		h.Log.Info(fmt.Sprintf("Failed to update %s status: %v", instance.Name, err))
+		h.Log.V(2).Info(fmt.Sprintf("Failed to update %s status: %v", instance.Name, err))
 	}
 	return err
 }
@@ -116,7 +116,7 @@ func (h *MultiNicNetworkHandler) UpdateNetConfigStatus(instance *multinicv1.Mult
 	instance.Status.NetConfigStatus = netConfigStatus
 	err := h.Client.Status().Update(context.Background(), instance)
 	if err != nil {
-		h.Log.Info(fmt.Sprintf("Failed to update %s network status: %v", instance.Name, err))
+		h.Log.V(2).Info(fmt.Sprintf("Failed to update %s network status: %v", instance.Name, err))
 	}
 	return err
 }

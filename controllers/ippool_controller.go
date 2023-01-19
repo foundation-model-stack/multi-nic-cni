@@ -58,7 +58,7 @@ func (r *IPPoolReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 			// Return and don't requeue
 			return ctrl.Result{}, nil
 		}
-		r.Log.Info(fmt.Sprintf("Cannot get #%v ", err))
+		r.Log.V(7).Info(fmt.Sprintf("Cannot get #%v ", err))
 		// Error reading the object - requeue the request.
 		// ReconcileTime is defined in config_controller
 		return ctrl.Result{RequeueAfter: ReconcileTime}, nil
@@ -111,9 +111,9 @@ func (r *IPPoolReconciler) callFinalizer(reqLogger logr.Logger, instance *multin
 		for _, allocation := range allocations {
 			remainPods = append(remainPods, fmt.Sprintf("%s/%s", allocation.Namespace, allocation.Pod))
 		}
-		reqLogger.Info(fmt.Sprintf("IPPool %s remains %v allocated", instance.GetName(), remainPods))
+		reqLogger.V(5).Info(fmt.Sprintf("IPPool %s remains %v allocated", instance.GetName(), remainPods))
 	}
-	reqLogger.Info(fmt.Sprintf("Finalized %s", instance.ObjectMeta.Name))
+	reqLogger.V(5).Info(fmt.Sprintf("Finalized %s", instance.ObjectMeta.Name))
 	r.CIDRHandler.IPPoolHandler.SafeCache.UnsetCache(instance.ObjectMeta.Name)
 	return nil
 }

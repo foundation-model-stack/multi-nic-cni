@@ -136,9 +136,9 @@ func (p *SriovPlugin) getRootDevices(net multinicv1.MultiNicNetwork, hifList map
 				netAddrHash[iface.NetAddress] = nameDeviceMap[iface.InterfaceName]
 			}
 		}
-		p.Log.Info(fmt.Sprintf("host: %s, deviceMap: %v", hostName, nameDeviceMap))
+		p.Log.V(2).Info(fmt.Sprintf("host: %s, deviceMap: %v", hostName, nameDeviceMap))
 	}
-	p.Log.Info(fmt.Sprintf("hif: %d, netAddrHash: %v", len(hifList), netAddrHash))
+	p.Log.V(2).Info(fmt.Sprintf("hif: %d, netAddrHash: %v", len(hifList), netAddrHash))
 	rootDevices := []string{}
 	for _, val := range netAddrHash {
 		if val != "" {
@@ -186,14 +186,14 @@ func (p *SriovPlugin) getResource(name string, args map[string]string, resourceN
 		result := &SriovNetworkNodePolicy{}
 		err = p.SriovNetworkNodePolicyHandler.Create(SRIOV_NAMESPACE, policy, result)
 		if err != nil {
-			p.Log.Info(fmt.Sprintf("Policy: %v", policy.Spec))
-			p.Log.Info(fmt.Sprintf("Failed to create policy %s: %v", name, err))
+			p.Log.V(2).Info(fmt.Sprintf("Policy: %v", policy.Spec))
+			p.Log.V(2).Info(fmt.Sprintf("Failed to create policy %s: %v", name, err))
 		} else {
-			p.Log.Info(fmt.Sprintf("Create new SriovNetworkNodePolicy: %s", name))
+			p.Log.V(2).Info(fmt.Sprintf("Create new SriovNetworkNodePolicy: %s", name))
 		}
 		return resourceName
 	}
-	p.Log.Info(fmt.Sprintf("Use existing resource %s", spec.ResourceName))
+	p.Log.V(2).Info(fmt.Sprintf("Use existing resource %s", spec.ResourceName))
 	return spec.ResourceName
 }
 

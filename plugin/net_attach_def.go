@@ -161,7 +161,7 @@ func (h *NetAttachDefHandler) generate(net *multinicv1.MultiNicNetwork, pluginSt
 	if err != nil {
 		return defs, err
 	}
-	h.Log.Info(fmt.Sprintf("generate net-attach-def config on %d namespaces", len(namespaces)))
+	h.Log.V(2).Info(fmt.Sprintf("generate net-attach-def config on %d namespaces", len(namespaces)))
 	for _, ns := range namespaces {
 		name := net.GetName()
 		namespace := ns
@@ -218,7 +218,7 @@ func (h *NetAttachDefHandler) IsExist(name string, namespace string) bool {
 	_, err := h.Get(name, namespace)
 	if err != nil {
 		if !errors.IsNotFound(err) {
-			h.Log.Info(fmt.Sprintf("Not exist: %v", err))
+			h.Log.V(2).Info(fmt.Sprintf("Not exist: %v", err))
 		}
 		return false
 	}

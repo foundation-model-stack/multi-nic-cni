@@ -16,7 +16,7 @@ func RunPeriodicUpdate(ticker *time.Ticker, daemonWatcher *DaemonWatcher, cidrHa
 			case <-ticker.C:
 				// update interface
 				if ConfigReady && daemonWatcher.IsDaemonSetReady() {
-					logger.Info(fmt.Sprintf("synchronizing state... %d HostInterfaces, %d CIDRs", cidrHandler.HostInterfaceHandler.SafeCache.GetSize(), cidrHandler.SafeCache.GetSize()))
+					logger.V(7).Info(fmt.Sprintf("synchronizing state... %d HostInterfaces, %d CIDRs", cidrHandler.HostInterfaceHandler.SafeCache.GetSize(), cidrHandler.SafeCache.GetSize()))
 					daemonSize := daemonWatcher.DaemonCacheHandler.GetSize()
 					hostInterfaceSnapshot := cidrHandler.HostInterfaceHandler.ListCache()
 					infoAvailableSize := 0
@@ -33,7 +33,7 @@ func RunPeriodicUpdate(ticker *time.Ticker, daemonWatcher *DaemonWatcher, cidrHa
 						cidrHandler.CleanPendingIPPools(ippoolSnapshot, name, instanceSpec)
 						err := cidrHandler.MultiNicNetworkHandler.SyncAllStatus(name, instanceSpec, routeStatus, daemonSize, infoAvailableSize, false)
 						if err != nil {
-							logger.Info(fmt.Sprintf("failed to update route status of %s: %v", name, err))
+							logger.V(2).Info(fmt.Sprintf("failed to update route status of %s: %v", name, err))
 						}
 					}
 				}

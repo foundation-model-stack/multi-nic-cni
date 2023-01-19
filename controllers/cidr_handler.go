@@ -94,11 +94,11 @@ func NewCIDRHandler(client client.Client, config *rest.Config, logger logr.Logge
 func (h *CIDRHandler) InitCustomCRCache() {
 	err := InitIppoolCache(h.IPPoolHandler)
 	if err != nil {
-		h.IPPoolHandler.Log.Info(fmt.Sprintf("Failed to InitIppoolCache: %v", err))
+		h.IPPoolHandler.Log.V(5).Info(fmt.Sprintf("Failed to InitIppoolCache: %v", err))
 	}
 	err = InitHostInterfaceCache(h.Clientset, h.HostInterfaceHandler, h.RouteHandler.DaemonCacheHandler)
 	if err != nil {
-		h.HostInterfaceHandler.Log.Info(fmt.Sprintf("Failed to InitHostInterfaceCache: %v", err))
+		h.HostInterfaceHandler.Log.V(4).Info(fmt.Sprintf("Failed to InitHostInterfaceCache: %v", err))
 	}
 }
 
@@ -142,12 +142,12 @@ func (h *CIDRHandler) SyncAllPendingCustomCR(defHandler *plugin.NetAttachDefHand
 	if err == nil {
 		daemonSize := h.DaemonCacheHandler.SafeCache.GetSize()
 		infoAvailableSize := h.HostInterfaceHandler.GetInfoAvailableSize()
-		h.Log.Info(fmt.Sprintf("Checking %d cidrs", len(cidrMap)))
+		h.Log.V(3).Info(fmt.Sprintf("Checking %d cidrs", len(cidrMap)))
 		for name, cidr := range cidrMap {
 			multinicnetwork, err := h.MultiNicNetworkHandler.GetNetwork(name)
 			if err != nil && k8serrors.IsNotFound(err) {
 				// not found
-				h.Log.Info(fmt.Sprintf("%v, delete pending resources (CIDR)", err))
+				h.Log.V(3).Info(fmt.Sprintf("%v, delete pending resources (CIDR)", err))
 				defHandler.Delete(name, metav1.NamespaceAll)
 				h.DeleteCIDR(cidr)
 			} else {
@@ -166,14 +166,14 @@ func (h *CIDRHandler) SyncAllPendingCustomCR(defHandler *plugin.NetAttachDefHand
 		}
 		h.SyncIPPoolWithActivePods(cidrMap, ippoolSnapshot)
 	} else {
-		h.Log.Info(fmt.Sprintf("Failed to list cidr: %v", err))
+		h.Log.V(3).Info(fmt.Sprintf("Failed to list cidr: %v", err))
 	}
 }
 
 // DeleteCIDR deletes corresponding routes and IPPools, then deletes CIDR
 func (h *CIDRHandler) DeleteCIDR(cidr multinicv1.CIDR) error {
 	name := cidr.GetName()
-	h.Log.Info(fmt.Sprintf("Delete CIDR: %s", name))
+	h.Log.V(3).Info(fmt.Sprintf("Delete CIDR: %s", name))
 	errorMsg := ""
 	// delete corresponding routes
 	h.deleteRoutesFromCIDR(cidr.Spec)
@@ -280,15 +280,15 @@ func (h *CIDRHandler) newCIDR(def multinicv1.PluginConfig, namespace string) (mu
 // run through update queue
 func (h *CIDRHandler) Run() {
 	defer close(h.UpdateRequestQueue)
-	h.Log.Info("start processing CIDR update request queue")
+	h.Log.V(7).Info("start processing CIDR update request queue")
 	wait.Until(h.ProcessUpdateRequest, 0, h.Quit)
-	h.Log.Info("stop processing CIDR update request queue")
+	h.Log.V(3).Info("stop processing CIDR update request queue")
 	h.requestQueueClosed = true
 }
 
 // UpdateCIDR adds ticket to activate ProcessUpdateRequest
 func (h *CIDRHandler) UpdateCIDRs() {
-	h.Log.Info(fmt.Sprintf("Add UpdateRequest (%d waiting)", len(h.UpdateRequestQueue)))
+	h.Log.V(7).Info(fmt.Sprintf("Add UpdateRequest (%d waiting)", len(h.UpdateRequestQueue)))
 	if !h.requestQueueClosed {
 		h.UpdateRequestQueue <- struct{}{}
 	}
@@ -296,24 +296,24 @@ func (h *CIDRHandler) UpdateCIDRs() {
 
 // ProcessUpdateRequest modifies existing CIDR from the new HostInterface information
 func (h *CIDRHandler) ProcessUpdateRequest() {
-	h.Log.Info(fmt.Sprintf("ProcessUpdateRequest listening..."))
+	h.Log.V(7).Info(fmt.Sprintf("ProcessUpdateRequest listening..."))
 	<-h.UpdateRequestQueue
 	for len(h.UpdateRequestQueue) > 0 {
 		<-h.UpdateRequestQueue
 	}
-	h.Log.Info(fmt.Sprintf("Update CIDRs (%d in the queue)", len(h.UpdateRequestQueue)))
+	h.Log.V(7).Info(fmt.Sprintf("Update CIDRs (%d in the queue)", len(h.UpdateRequestQueue)))
 	cidrSnapshot := h.ListCache()
 	for _, cidr := range cidrSnapshot {
 		_, err := h.updateCIDR(cidr, false)
 		if err != nil {
-			h.Log.Info(fmt.Sprintf("Fail to update CIDR: %v", err))
+			h.Log.V(3).Info(fmt.Sprintf("Fail to update CIDR: %v", err))
 		}
 	}
 }
 
 // NewCIDRWithNewConfig creates new CIDR by computing interface indexes from master networks
 func (h *CIDRHandler) NewCIDRWithNewConfig(def multinicv1.PluginConfig, namespace string) (bool, error) {
-	h.Log.Info("NewCIDRWithNewConfig")
+	h.Log.V(7).Info("NewCIDRWithNewConfig")
 	cidrSpec, err := h.newCIDR(def, namespace)
 	if err != nil {
 		return false, err
@@ -323,7 +323,7 @@ func (h *CIDRHandler) NewCIDRWithNewConfig(def multinicv1.PluginConfig, namespac
 
 // updateEntries updates CIDR entry from current HostInterfaceCache
 func (h *CIDRHandler) updateEntries(cidrSpec multinicv1.CIDRSpec, excludes []compute.IPValue, changed bool) (map[string]multinicv1.CIDREntry, bool) {
-	h.Log.Info("updateEntries")
+	h.Log.V(7).Info("updateEntries")
 	hostInterfaceSnapshot := h.HostInterfaceHandler.ListCache()
 	entries := cidrSpec.CIDRs
 	entriesMap := make(map[string]multinicv1.CIDREntry)
@@ -345,7 +345,7 @@ func (h *CIDRHandler) updateEntries(cidrSpec multinicv1.CIDRSpec, excludes []com
 				} else {
 					if node, foundErr := h.Clientset.CoreV1().Nodes().Get(context.TODO(), host.HostName, metav1.GetOptions{}); (foundErr != nil && k8serrors.IsNotFound(foundErr) && k8serrors.IsNotFound(foundErr)) || (foundErr == nil && node.Status.Phase == v1.NodeTerminated) {
 						// host died or terminating
-						h.Log.Info(fmt.Sprintf("Host %s no longer exist, delete from entry of CIDR %s", host.HostName, cidrSpec.Config.Name))
+						h.Log.V(3).Info(fmt.Sprintf("Host %s no longer exist, delete from entry of CIDR %s", host.HostName, cidrSpec.Config.Name))
 						// host not exist anymore
 						diedHost[host.HostName] = nil // applied to other vlan check
 					} else {
@@ -440,7 +440,7 @@ func (h *CIDRHandler) updateEntries(cidrSpec multinicv1.CIDRSpec, excludes []com
 	}
 
 	if len(diedHost) > 0 {
-		h.Log.Info(fmt.Sprintf("Delete died hosts: %v", diedHost))
+		h.Log.V(3).Info(fmt.Sprintf("Delete died hosts: %v", diedHost))
 		// delete died host
 		for interfaceNetAddress, entry := range entriesMap {
 			aliveHosts := []multinicv1.HostInterfaceInfo{}
@@ -453,7 +453,7 @@ func (h *CIDRHandler) updateEntries(cidrSpec multinicv1.CIDRSpec, excludes []com
 			entriesMap[interfaceNetAddress] = entry
 		}
 	}
-	h.Log.Info("updateEntries done")
+	h.Log.V(7).Info("updateEntries done")
 
 	return entriesMap, changed
 }
@@ -461,17 +461,17 @@ func (h *CIDRHandler) updateEntries(cidrSpec multinicv1.CIDRSpec, excludes []com
 // updateCIDR computes host indexes and coresponding pod VLAN from host interface list
 func (h *CIDRHandler) updateCIDR(cidrSpec multinicv1.CIDRSpec, new bool) (bool, error) {
 	if !ConfigReady {
-		h.Log.Info("Config is not ready yet, skip CIDR update")
+		h.Log.V(7).Info("Config is not ready yet, skip CIDR update")
 		return false, nil
 	}
 	h.Mutex.Lock()
 	def := cidrSpec.Config
 	excludes := compute.SortAddress(def.ExcludeCIDRs)
-	h.Log.Info(fmt.Sprintf("Update CIDR %s", def.Name))
+	h.Log.V(7).Info(fmt.Sprintf("Update CIDR %s", def.Name))
 	entriesMap, changed := h.updateEntries(cidrSpec, excludes, new)
 	// if pod CIDR changes, update CIDR and create corresponding IPPools and routes
 	if changed {
-		h.Log.Info(fmt.Sprintf("CIDR %s changed", def.Name))
+		h.Log.V(7).Info(fmt.Sprintf("CIDR %s changed", def.Name))
 		newEntries := []multinicv1.CIDREntry{}
 		for _, entry := range entriesMap {
 			newEntries = append(newEntries, entry)
@@ -507,7 +507,7 @@ func (h *CIDRHandler) updateCIDR(cidrSpec multinicv1.CIDRSpec, new bool) (bool, 
 		}
 
 		if err != nil {
-			h.Log.Info(fmt.Sprintf("Cannot create or update CIDR %s: error=%v", def.Name, err))
+			h.Log.V(3).Info(fmt.Sprintf("Cannot create or update CIDR %s: error=%v", def.Name, err))
 			h.Mutex.Unlock()
 			return false, err
 		}
@@ -521,7 +521,7 @@ func (h *CIDRHandler) updateCIDR(cidrSpec multinicv1.CIDRSpec, new bool) (bool, 
 
 		// update IPPools
 		h.IPPoolHandler.UpdateIPPools(def.Name, newEntries, excludes)
-		h.Log.Info(fmt.Sprintf("CIDR %s's change processed", def.Name))
+		h.Log.V(7).Info(fmt.Sprintf("CIDR %s's change processed", def.Name))
 	}
 	h.Mutex.Unlock()
 	return changed, nil
@@ -536,7 +536,7 @@ func (h *CIDRHandler) SyncCIDRRoute(cidrSpec multinicv1.CIDRSpec, forceDelete bo
 		h.Mutex.Unlock()
 		entries := cidrSpec.CIDRs
 		hostInterfaceInfoMap := h.GetHostInterfaceIndexMap(entries)
-		h.Log.Info(fmt.Sprintf("Sync routes from CIDR (force delete: %v)", forceDelete))
+		h.Log.V(3).Info(fmt.Sprintf("Sync routes from CIDR (force delete: %v)", forceDelete))
 		success, noConnection := h.RouteHandler.AddRoutes(cidrSpec, entries, hostInterfaceInfoMap, forceDelete)
 		if noConnection {
 			return multinicv1.RouteUnknown
@@ -570,7 +570,7 @@ func (h *CIDRHandler) CleanPendingIPPools(snapshot map[string]multinicv1.IPPoolS
 	for ippoolName, ippool := range snapshot {
 		if ippool.NetAttachDefName == defName {
 			if _, exist := newPoolMap[ippool.PodCIDR]; !exist {
-				h.Log.Info(fmt.Sprintf("Delete IPPool: %s", ippoolName))
+				h.Log.V(5).Info(fmt.Sprintf("Delete IPPool: %s", ippoolName))
 				h.DeleteIPPool(ippool.NetAttachDefName, ippool.PodCIDR)
 			}
 		}
@@ -613,13 +613,13 @@ func (h *CIDRHandler) getSyncAllocations(ippool multinicv1.IPPoolSpec, allocatio
 
 // SyncIPPoolWithActivePods adds assigned IP to the IPPool and reported unsync IPs
 func (h *CIDRHandler) SyncIPPoolWithActivePods(cidrMap map[string]multinicv1.CIDR, ippoolSnapshot map[string]multinicv1.IPPoolSpec) {
-	h.Log.Info("SyncIPPoolWithActivePods")
+	h.Log.V(5).Info("SyncIPPoolWithActivePods")
 	crAllocationMap := make(map[string]map[string]multinicv1.Allocation)
 	// delete pending ippool
 	for ippoolName, ippool := range ippoolSnapshot {
 		defName := ippool.NetAttachDefName
 		if _, found := cidrMap[defName]; !found {
-			h.Log.Info(fmt.Sprintf("Delete IPPool: %s (no corresponding CIDR)", ippoolName))
+			h.Log.V(5).Info(fmt.Sprintf("Delete IPPool: %s (no corresponding CIDR)", ippoolName))
 			h.DeleteIPPool(ippool.NetAttachDefName, ippool.PodCIDR)
 		}
 	}
@@ -639,26 +639,26 @@ func (h *CIDRHandler) SyncIPPoolWithActivePods(cidrMap map[string]multinicv1.CID
 
 	allocationMap, err := h.getCurrentAllocationMap(cidrMap)
 	if err != nil {
-		h.Log.Info(fmt.Sprintf("Cannot getCurrentAllocationMap: %v", err))
+		h.Log.V(5).Info(fmt.Sprintf("Cannot getCurrentAllocationMap: %v", err))
 		return
 	}
-	h.Log.Info(fmt.Sprintf("allocationMap: %v", allocationMap))
-	h.Log.Info(fmt.Sprintf("crAllocationMap: %v", crAllocationMap))
+	h.Log.V(5).Info(fmt.Sprintf("allocationMap: %v", allocationMap))
+	h.Log.V(5).Info(fmt.Sprintf("crAllocationMap: %v", crAllocationMap))
 	// check all valid ippool cache
 	for ippoolName, ippool := range ippoolSnapshot {
 		changed, newAllocations := h.getSyncAllocations(ippool, allocationMap, crAllocationMap)
 		if changed {
 			err = h.IPPoolHandler.PatchIPPoolAllocations(ippoolName, newAllocations)
 			if err != nil {
-				h.Log.Info(fmt.Sprintf("Cannot PatchIPPoolAllocations %v to %s: %v", newAllocations, ippoolName, err))
+				h.Log.V(5).Info(fmt.Sprintf("Cannot PatchIPPoolAllocations %v to %s: %v", newAllocations, ippoolName, err))
 			} else {
-				h.Log.Info(fmt.Sprintf("Patch IPPool %s, new allocations: %v", ippoolName, newAllocations))
+				h.Log.V(5).Info(fmt.Sprintf("Patch IPPool %s, new allocations: %v", ippoolName, newAllocations))
 			}
 		}
 	}
 	for defName, ipMap := range allocationMap {
 		if len(ipMap) > 0 {
-			h.Log.Info(fmt.Sprintf("List of IPs still unsync for %s: %v", defName, ipMap))
+			h.Log.V(5).Info(fmt.Sprintf("List of IPs still unsync for %s: %v", defName, ipMap))
 		}
 	}
 }
@@ -677,7 +677,7 @@ func (h *CIDRHandler) getCurrentAllocationMap(cidrMap map[string]multinicv1.CIDR
 			if networkStatusStr, valid := pod.Annotations[plugin.StatusesKey]; valid {
 				err := json.Unmarshal([]byte(networkStatusStr), &networksStatus)
 				if err != nil {
-					h.Log.Info(fmt.Sprintf("Cannot unmarshal NetworkStatus: %s", networkStatusStr))
+					h.Log.V(5).Info(fmt.Sprintf("Cannot unmarshal NetworkStatus: %s", networkStatusStr))
 					continue
 				}
 				for _, status := range networksStatus {
@@ -746,7 +746,7 @@ func (h *CIDRHandler) addNewHost(hosts []multinicv1.HostInterfaceInfo, maxHostIn
 			}
 		} else {
 			// invalid VLAN
-			h.Log.Info(fmt.Sprintf("Cannot assign nodeIndex %d, %v", nodeIndex, err))
+			h.Log.V(3).Info(fmt.Sprintf("Cannot assign nodeIndex %d, %v", nodeIndex, err))
 		}
 		// VLAN in tabu ranges or invalid, try next
 		excludedIndexes = append(excludedIndexes, nodeIndex)
@@ -785,7 +785,7 @@ func (h *CIDRHandler) getInterfaceEntry(def multinicv1.PluginConfig, entriesMap 
 			break
 		}
 		if masterIndex > maxInterfaceIndex {
-			h.Log.Info("cannot add new interface (no available index)")
+			h.Log.V(3).Info("cannot add new interface (no available index)")
 			return false, multinicv1.CIDREntry{}
 		}
 	}
@@ -799,7 +799,7 @@ func (h *CIDRHandler) getInterfaceEntry(def multinicv1.PluginConfig, entriesMap 
 
 // tryAddNewHost creates new entry of HostInterfaceInfo in CIDR and computes corresponding pod VLAN
 func (h *CIDRHandler) tryAddNewHost(existingHosts []multinicv1.HostInterfaceInfo, entry multinicv1.CIDREntry, maxHostIndex int, def multinicv1.PluginConfig, hostName, interfaceName, hostIP string) (multinicv1.CIDREntry, bool) {
-	h.Log.Info(fmt.Sprintf("TryAddNewHost %s:, LastIndex:%d, InterfaceName: %s, HostIP: %s", hostName, maxHostIndex, interfaceName, hostIP))
+	h.Log.V(3).Info(fmt.Sprintf("TryAddNewHost %s:, LastIndex:%d, InterfaceName: %s, HostIP: %s", hostName, maxHostIndex, interfaceName, hostIP))
 	podCIDR, hostIndex, err := h.addNewHost(existingHosts, maxHostIndex, entry.VlanCIDR, def.HostBlock, def.ExcludeCIDRs)
 	if err == nil {
 		ippoolName := h.IPPoolHandler.GetIPPoolName(def.Name, podCIDR)
@@ -819,7 +819,7 @@ func (h *CIDRHandler) tryAddNewHost(existingHosts []multinicv1.HostInterfaceInfo
 		entry.Hosts = hosts
 		return entry, true
 	} else {
-		h.Log.Info(fmt.Sprintf("Cannot add new host %s, %s: %v", hostName, interfaceName, err))
+		h.Log.V(3).Info(fmt.Sprintf("Cannot add new host %s, %s: %v", hostName, interfaceName, err))
 		return entry, false
 	}
 }

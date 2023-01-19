@@ -133,10 +133,10 @@ func (h *IPPoolHandler) UpdateIPPool(netAttachDef string, podCIDR string, vlanCI
 			// report if allocated ip addresses have conflicts with the new IPPool (for example, in exclude list)
 			invalidAllocations := h.checkPoolValidity(excludesInterface, prevSpec.Allocations)
 			if len(invalidAllocations) > 0 {
-				h.Log.Info(fmt.Sprintf("Update IPPool %s - conflict allocation: %v", ippoolName, invalidAllocations))
+				h.Log.V(5).Info(fmt.Sprintf("Update IPPool %s - conflict allocation: %v", ippoolName, invalidAllocations))
 			}
 			if prevSpec.HostName != hostName && len(prevSpec.Allocations) > 0 {
-				h.Log.Info(fmt.Sprintf("Update IPPool %s - changes with exist %d allocations", ippoolName, len(prevSpec.Allocations)))
+				h.Log.V(5).Info(fmt.Sprintf("Update IPPool %s - changes with exist %d allocations", ippoolName, len(prevSpec.Allocations)))
 			}
 		}
 	} else {
@@ -150,7 +150,7 @@ func (h *IPPoolHandler) UpdateIPPool(netAttachDef string, podCIDR string, vlanCI
 			Spec: spec,
 		}
 		err = h.Client.Create(context.Background(), newIPPool)
-		h.Log.Info(fmt.Sprintf("New IPPool %s: %v, %v", ippoolName, newIPPool, err))
+		h.Log.V(5).Info(fmt.Sprintf("New IPPool %s: %v, %v", ippoolName, newIPPool, err))
 	}
 	return err
 }
@@ -195,7 +195,7 @@ func (h *IPPoolHandler) UpdateIPPools(defName string, entries []multinicv1.CIDRE
 		for _, host := range entry.Hosts {
 			err := h.UpdateIPPool(defName, host.PodCIDR, entry.VlanCIDR, host.HostName, host.InterfaceName, excludes)
 			if err != nil {
-				h.Log.Info(fmt.Sprintf("Cannot update IPPools for host %s: error=%v", host.HostName, err))
+				h.Log.V(5).Info(fmt.Sprintf("Cannot update IPPools for host %s: error=%v", host.HostName, err))
 			}
 		}
 	}
