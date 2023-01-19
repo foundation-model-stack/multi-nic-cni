@@ -87,10 +87,9 @@ func (r *MultiNicNetworkReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
 			// Return and don't requeue
-			r.Log.Info(fmt.Sprintf("Network %s deleted ", instance.GetName()))
 			return ctrl.Result{}, nil
 		}
-		r.Log.Info(fmt.Sprintf("Cannot get #%v ", err))
+		r.Log.V(7).Info(fmt.Sprintf("Cannot get #%v ", err))
 		// Error reading the object - requeue the request.
 		// ReconcileTime is defined in config_controller
 		return ctrl.Result{RequeueAfter: ReconcileTime}, nil
@@ -107,7 +106,7 @@ func (r *MultiNicNetworkReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	is_deleted := instance.GetDeletionTimestamp() != nil
 	if is_deleted {
-		r.Log.Info(fmt.Sprintf("Network %s deletion set: %v ", instance.GetName(), instance.GetDeletionTimestamp()))
+		r.Log.V(2).Info(fmt.Sprintf("Network %s deletion set: %v ", instance.GetName(), instance.GetDeletionTimestamp()))
 		if controllerutil.ContainsFinalizer(instance, multinicnetworkFinalizer) {
 			if err := r.callFinalizer(r.Log, instance); err != nil {
 				return ctrl.Result{}, err
@@ -137,16 +136,16 @@ func (r *MultiNicNetworkReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	if err != nil {
 		message := fmt.Sprintf("Failed to get main config %s: %v", multinicnetworkName, err)
 		r.CIDRHandler.MultiNicNetworkHandler.UpdateNetConfigStatus(instance, multinicv1.ConfigFailed, message)
-		r.Log.Info(message)
+		r.Log.V(2).Info(message)
 	} else {
 		mainPlugin = plugin.RemoveEmpty(instance.Spec.MainPlugin.CNIArgs, mainPlugin)
-		r.Log.Info(fmt.Sprintf("main plugin: %s", mainPlugin))
+		r.Log.V(2).Info(fmt.Sprintf("main plugin: %s", mainPlugin))
 		// Create net attach def
 		err = r.NetAttachDefHandler.CreateOrUpdate(instance, mainPlugin, annotations)
 		if err != nil {
 			message := fmt.Sprintf("Failed to create %s: %v", multinicnetworkName, err)
 			r.CIDRHandler.MultiNicNetworkHandler.UpdateNetConfigStatus(instance, multinicv1.ConfigFailed, message)
-			r.Log.Info(message)
+			r.Log.V(2).Info(message)
 			// Reconcile if fail to update or create some of net-attach-def
 			return ctrl.Result{RequeueAfter: ReconcileTime}, nil
 		}
@@ -161,13 +160,13 @@ func (r *MultiNicNetworkReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			routeStatus = r.CIDRHandler.SyncCIDRRoute(cidr, false)
 			err := r.CIDRHandler.MultiNicNetworkHandler.SyncAllStatus(multinicnetworkName, cidr, routeStatus, daemonSize, infoAvailableSize, false)
 			if err != nil {
-				r.Log.Info(fmt.Sprintf("failed to update route status of %s: %v", multinicnetworkName, err))
+				r.Log.V(2).Info(fmt.Sprintf("failed to update route status of %s: %v", multinicnetworkName, err))
 			}
 			if routeStatus == multinicv1.RouteUnknown {
 				return ctrl.Result{RequeueAfter: ReconcileTime}, nil
 			} else if routeStatus == multinicv1.AllRouteApplied {
 				//success
-				r.Log.Info(fmt.Sprintf("CIDR %s successfully applied", multinicnetworkName))
+				r.Log.V(3).Info(fmt.Sprintf("CIDR %s successfully applied", multinicnetworkName))
 			}
 		}
 	} else if !instance.Spec.IsMultiNICIPAM && routeStatus == multinicv1.RouteNoApplied {
@@ -222,11 +221,11 @@ func (r *MultiNicNetworkReconciler) HandleMultiNicIPAM(instance *multinicv1.Mult
 		_, err := r.CIDRHandler.GetCIDR(cidrName)
 		// create new cidr if not created yet. otherwise, let cidr controller update
 		if err == nil {
-			r.Log.Info(fmt.Sprintf("CIDR %s already exists", cidrName))
+			r.Log.V(3).Info(fmt.Sprintf("CIDR %s already exists", cidrName))
 		} else {
 			_, err := r.CIDRHandler.NewCIDRWithNewConfig(*ipamConfig, instance.GetNamespace())
 			if err != nil {
-				r.Log.Info(fmt.Sprintf("Cannot init CIDR %s: %v", cidrName, err))
+				r.Log.V(3).Info(fmt.Sprintf("Cannot init CIDR %s: %v", cidrName, err))
 			}
 			return err
 		}
@@ -258,10 +257,10 @@ func (r *MultiNicNetworkReconciler) callFinalizer(reqLogger logr.Logger, instanc
 	spec := instance.Spec.MainPlugin
 	if p, exist := r.PluginMap[spec.Type]; exist {
 		err = (*p).CleanUp(*instance)
-		reqLogger.Info(fmt.Sprintf("Clean up error: %v", err))
+		reqLogger.V(2).Info(fmt.Sprintf("Clean up error: %v", err))
 	}
 	// Delete NetworkAttachmentDefinition
 	err = r.NetAttachDefHandler.DeleteNets(instance)
-	reqLogger.Info(fmt.Sprintf("Finalized %s: %v", instance.ObjectMeta.Name, err))
+	reqLogger.V(2).Info(fmt.Sprintf("Finalized %s: %v", instance.ObjectMeta.Name, err))
 	return nil
 }

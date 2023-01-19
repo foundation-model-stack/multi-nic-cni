@@ -52,7 +52,7 @@ func (r *CIDRReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 			// Return and don't requeue
 			return ctrl.Result{}, nil
 		}
-		r.Log.Info(fmt.Sprintf("Requeue CIDR %s: %v", cidrName, err))
+		r.Log.V(7).Info(fmt.Sprintf("Requeue CIDR %s: %v", cidrName, err))
 		// Error reading the object - requeue the request.
 		// ReconcileTime is defined in config_controller
 		return ctrl.Result{RequeueAfter: CIDRReconcileTime}, nil
@@ -110,6 +110,6 @@ func (r *CIDRReconciler) SetupWithManager(mgr ctrl.Manager) error {
 func (r *CIDRReconciler) callFinalizer(reqLogger logr.Logger, instance *multinicv1.CIDR) error {
 	r.CIDRHandler.DeleteCIDR(*instance)
 	r.CIDRHandler.SafeCache.UnsetCache(instance.ObjectMeta.Name)
-	reqLogger.Info(fmt.Sprintf("Finalized %s", instance.ObjectMeta.Name))
+	reqLogger.V(3).Info(fmt.Sprintf("Finalized %s", instance.ObjectMeta.Name))
 	return nil
 }

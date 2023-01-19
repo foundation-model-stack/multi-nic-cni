@@ -50,7 +50,7 @@ func (h *RouteHandler) AddRoutesToHost(cidrSpec multinicv1.CIDRSpec, hostName st
 			destHostName := host.HostName
 			destDaemon, err := h.DaemonCacheHandler.GetCache(destHostName)
 			if err != nil {
-				h.Log.Info(fmt.Sprintf("AddRoutesToHost %s failed: %v", destHostName, err))
+				h.Log.V(6).Info(fmt.Sprintf("AddRoutesToHost %s failed: %v", destHostName, err))
 				continue
 			}
 			mainDestHostIP := destDaemon.HostIP
@@ -72,9 +72,9 @@ func (h *RouteHandler) AddRoutesToHost(cidrSpec multinicv1.CIDRSpec, hostName st
 	podAddress := GetDaemonAddressByPod(daemon)
 	res, err := h.DaemonConnector.ApplyL3Config(podAddress, cidrSpec.Config.Name, cidrSpec.Config.Subnet, routes, forceDelete)
 	if err != nil {
-		h.Log.Info(fmt.Sprintf("fail to apply L3config %s to %s: %v (%v)", cidrSpec.Config.Name, hostName, res, err))
+		h.Log.V(6).Info(fmt.Sprintf("fail to apply L3config %s to %s: %v (%v)", cidrSpec.Config.Name, hostName, res, err))
 	} else {
-		h.Log.Info(fmt.Sprintf("Apply L3config %s to %s: %v", cidrSpec.Config.Name, hostName, res.Success))
+		h.Log.V(6).Info(fmt.Sprintf("Apply L3config %s to %s: %v", cidrSpec.Config.Name, hostName, res.Success))
 	}
 	if err != nil || !res.Success {
 		change = false
@@ -88,6 +88,6 @@ func (h *RouteHandler) DeleteRoutes(cidrSpec multinicv1.CIDRSpec) {
 	for hostName, daemon := range daemonCache {
 		podAddress := GetDaemonAddressByPod(daemon)
 		res, err := h.DaemonConnector.DeleteL3Config(podAddress, cidrSpec.Config.Name, cidrSpec.Config.Subnet)
-		h.Log.Info(fmt.Sprintf("Delete L3config %s from %s: %v (%v)", cidrSpec.Config.Name, hostName, res, err))
+		h.Log.V(6).Info(fmt.Sprintf("Delete L3config %s from %s: %v (%v)", cidrSpec.Config.Name, hostName, res, err))
 	}
 }

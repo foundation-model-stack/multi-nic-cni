@@ -125,14 +125,14 @@ func main() {
 	go cidrHandler.Run()
 
 	pluginMap := controllers.GetPluginMap(config, networkLog)
-	setupLog.Info(fmt.Sprintf("Plugin Map: %v", pluginMap))
+	setupLog.V(2).Info(fmt.Sprintf("Plugin Map: %v", pluginMap))
 
 	podQueue := make(chan *v1.Pod, MAX_QSIZE)
-	setupLog.Info("New Daemon Watcher")
+	setupLog.V(7).Info("New Daemon Watcher")
 	daemonWatcher := controllers.NewDaemonWatcher(mgr.GetClient(), config, daemonLog, hostInterfaceHandler, daemonCacheHandler, podQueue, quit)
-	setupLog.Info("Run Daemon Watcher")
+	setupLog.V(7).Info("Run Daemon Watcher")
 	go daemonWatcher.Run()
-	setupLog.Info("New Reconcilers")
+	setupLog.V(7).Info("New Reconcilers")
 	if err = (&controllers.CIDRReconciler{
 		Client:        mgr.GetClient(),
 		Log:           cidrLog,
@@ -213,7 +213,7 @@ func main() {
 	syncLog := ctrl.Log.WithName("controllers").WithName("Synchronizer")
 	controllers.RunPeriodicUpdate(ticker, daemonWatcher, cidrHandler, hostInterfaceReconciler, syncLog, quit)
 
-	setupLog.Info("starting manager")
+	setupLog.V(7).Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
