@@ -2,26 +2,26 @@
  * Copyright 2022- IBM Inc. All rights reserved
  * SPDX-License-Identifier: Apache2.0
  */
- 
+
 package router
 
 import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net"
 	"net/http"
-	"log"
 
 	"github.com/vishvananda/netlink"
 )
 
 // For L3 Configuration
 type L3ConfigRequest struct {
-	Name 	string 		`json:"name"`
-	Subnet  string      `json:"subnet"`
-	Routes	[]HostRoute `json:"routes"`
-	Force   bool        `json:"force"`
+	Name   string      `json:"name"`
+	Subnet string      `json:"subnet"`
+	Routes []HostRoute `json:"routes"`
+	Force  bool        `json:"force"`
 }
 
 type HostRoute struct {
@@ -41,7 +41,7 @@ func ApplyL3Config(r *http.Request) RouteUpdateResponse {
 	if err == nil {
 		for dev, routes := range devRoutesMap {
 			for _, route := range routes {
-				exists, _ := isRouteExist(route, dev) 
+				exists, _ := isRouteExist(route, dev)
 				log.Printf("Add route %s; (%v)", route.String(), exists)
 				if !exists {
 					err = netlink.RouteAdd(&route)
@@ -67,7 +67,6 @@ func ApplyL3Config(r *http.Request) RouteUpdateResponse {
 	return response
 }
 
-
 func DeleteL3Config(r *http.Request) RouteUpdateResponse {
 	tableName, tableID, _, _ := getRoutesFromRequest(r, false)
 	success, res_msg := deleteL3Config(tableName, tableID)
@@ -78,7 +77,7 @@ func DeleteL3Config(r *http.Request) RouteUpdateResponse {
 func deleteL3Config(tableName string, tableID int) (bool, string) {
 	res_msg := ""
 	success := true
-	
+
 	if tableID == -1 {
 		success = false
 		res_msg += "Failed to get tableID"
@@ -98,13 +97,13 @@ func AddRoute(r *http.Request) RouteUpdateResponse {
 	var success bool
 	route, dev, err := getRouteFromRequest(r)
 	if err == nil {
-		exists, _ := isRouteExist(route, dev) 
+		exists, _ := isRouteExist(route, dev)
 		log.Printf("Add route %s; (%v)", route.String(), exists)
 		if !exists {
 			// delete unequal existing route first
 			err = netlink.RouteDel(&netlink.Route{
-				Scope:     netlink.SCOPE_UNIVERSE,
-				Dst:       route.Dst,
+				Scope: netlink.SCOPE_UNIVERSE,
+				Dst:   route.Dst,
 			})
 
 			err = netlink.RouteAdd(&route)
@@ -112,7 +111,7 @@ func AddRoute(r *http.Request) RouteUpdateResponse {
 				res_msg += fmt.Sprintf("AddRouteError %v;", err)
 				success = false
 			} else {
-				res_msg += fmt.Sprintf("Add route %s;", route.String())
+				log.Printf("Successfully add route %s", route.String())
 				success = true
 			}
 		} else {
@@ -133,8 +132,8 @@ func DeleteRoute(r *http.Request) RouteUpdateResponse {
 	route, _, err := getRouteFromRequest(r)
 	if err == nil {
 		err = netlink.RouteDel(&netlink.Route{
-			Scope:     netlink.SCOPE_UNIVERSE,
-			Dst:       route.Dst,
+			Scope: netlink.SCOPE_UNIVERSE,
+			Dst:   route.Dst,
 		})
 		if err != nil {
 			res_msg += fmt.Sprintf("DeleteRouteError %v;", err)
@@ -160,14 +159,13 @@ func GetRoutes(tableID int) ([]netlink.Route, error) {
 	return netlink.RouteListFiltered(family, findTable, routeFilter)
 }
 
-
 func isRouteExist(cmpRoute netlink.Route, dev netlink.Link) (bool, error) {
 	routes, err := netlink.RouteList(dev, netlink.FAMILY_V4)
 	if err != nil {
 		return false, err
 	}
 	for _, route := range routes {
-		if route.Gw != nil && cmpRoute.Gw != nil {
+		if route.Gw != nil && cmpRoute.Gw != nil && route.Dst != nil && cmpRoute.Dst != nil {
 			if route.Dst.String() == cmpRoute.Dst.String() && route.Gw.String() == cmpRoute.Gw.String() {
 				return true, nil
 			}
@@ -200,7 +198,7 @@ func getRoutesFromRequest(r *http.Request, addIfNotExists bool) (string, int, ma
 	}
 
 	tableID, err := GetTableID(req.Name, req.Subnet, addIfNotExists)
-	if tableID == -1 || err != nil{
+	if tableID == -1 || err != nil {
 		return req.Name, tableID, devRoutesMap, err
 	}
 

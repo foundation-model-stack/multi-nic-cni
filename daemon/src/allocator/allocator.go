@@ -8,10 +8,6 @@ package allocator
 import (
 	"context"
 	"fmt"
-	"github.com/foundation-model-stack/multi-nic-cni/daemon/backend"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 	"log"
 	"math"
 	"sort"
@@ -19,6 +15,11 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/foundation-model-stack/multi-nic-cni/daemon/backend"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 )
 
 const (
@@ -193,7 +194,7 @@ func AllocateIP(req IPRequest) []IPResponse {
 			break
 		}
 		spec := ippoolSpecMap[ippoolName]
-		if spec.NetAttachDefName == defName && spec.HostName == hostName {
+		if spec.NetAttachDefName == defName && strings.Contains(spec.HostName, hostName) {
 			deleteIndex := -1
 			for deleteIndex = 0; deleteIndex < len(interfaceNames); deleteIndex++ {
 				interfaceName := interfaceNames[deleteIndex]
@@ -293,7 +294,7 @@ func CleanHangingAllocation(hostName string) error {
 	}
 	for ippoolName, _ := range ippoolSpecMap {
 		spec := ippoolSpecMap[ippoolName]
-		if spec.HostName == hostName {
+		if strings.Contains(spec.HostName, hostName) {
 			allocations := spec.Allocations
 			remains := []backend.Allocation{}
 			for _, allocation := range allocations {
@@ -335,7 +336,7 @@ func DeallocateIP(req IPRequest) []IPResponse {
 	}
 	for ippoolName, _ := range ippoolSpecMap {
 		spec := ippoolSpecMap[ippoolName]
-		if spec.NetAttachDefName == defName && spec.HostName == hostName {
+		if spec.NetAttachDefName == defName && strings.Contains(spec.HostName, hostName) {
 			allocations := spec.Allocations
 
 			for index, allocation := range allocations {
