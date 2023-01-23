@@ -1,21 +1,22 @@
 package router
 
 import (
-	"os"
-	"io/ioutil"
-	"github.com/vishvananda/netlink"
-	"log"
 	"bufio"
-	"strings"
-	"sort"
-	"strconv"
-	"net"
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"log"
+	"net"
+	"os"
+	"sort"
+	"strconv"
+	"strings"
+
+	"github.com/vishvananda/netlink"
 )
 
 const (
-	MIX_TABLE_INDEX = 100
+	MIX_TABLE_INDEX       = 100
 	DEFAULT_RT_TABLE_PATH = "/etc/iproute2/rt_tables"
 )
 
@@ -33,7 +34,7 @@ func SetRTTablePath() {
 func GetTableID(tableName string, subnet string, addIfNotExists bool) (int, error) {
 	foundID, reservedIDs, err := getTableIDAndReservedIDs(tableName)
 	if err != nil {
-		log.Printf("failed to read %s: %v", RT_TABLE_PATH, err)
+		log.Printf("failed to get table ID %s: %v (%d)", tableName, err, foundID)
 		return foundID, err
 	}
 	if addIfNotExists && foundID == -1 {
@@ -42,7 +43,7 @@ func GetTableID(tableName string, subnet string, addIfNotExists bool) (int, erro
 			// delete existing rule
 			deleteRule(foundID)
 			err = addRule(subnet, foundID)
-		} 
+		}
 	}
 	if foundID != -1 && !isRuleExist(foundID) {
 		err = addRule(subnet, foundID)
@@ -71,9 +72,12 @@ func DeleteTable(tableName string, tableID int) error {
 }
 
 func addRule(subnet string, tableID int) error {
+	if tableID == -1 {
+		return errors.New("add rule tableID = -1")
+	}
 	_, src, _ := net.ParseCIDR(subnet)
 	rule := netlink.NewRule()
-	rule.Src =  src
+	rule.Src = src
 	rule.Table = tableID
 	err := netlink.RuleAdd(rule)
 	log.Printf("add rule %v:%v", rule, err)
@@ -94,36 +98,13 @@ func isRuleExist(tableID int) bool {
 	return false
 }
 
-func getTableID(tableName string) int {
-	file, err := os.Open(RT_TABLE_PATH)
-	if err != nil {
-		return -1
-	}
-	defer file.Close()
-	scanner := bufio.NewScanner(file)
-
-	for scanner.Scan() {
-		line := scanner.Text()
-		splited := strings.Fields(line)
-		if len(splited) > 1 {
-			if splited[1] == tableName {
-				tableID, err := strconv.ParseInt(splited[0], 10, 64)
-				if err != nil {
-					return int(tableID)
-				}
-				return -1
-			} 
-		}
-	}
-	return -1
-}
-
 func getTableIDAndReservedIDs(tableName string) (int, []int, error) {
 	foundID := -1
 	reservedIDs := []int{}
 
 	file, err := os.Open(RT_TABLE_PATH)
 	if err != nil {
+		log.Printf("Cannot open rt_tables file %s: %v", RT_TABLE_PATH, err)
 		return foundID, reservedIDs, err
 	}
 	defer file.Close()
@@ -135,6 +116,7 @@ func getTableIDAndReservedIDs(tableName string) (int, []int, error) {
 		if len(splited) > 1 {
 			tableID, err := strconv.ParseInt(splited[0], 10, 64)
 			if err != nil {
+				log.Printf("Cannot parse table ID %s: %v", splited[0], err)
 				continue
 			}
 			if splited[1] == tableName {
@@ -156,7 +138,7 @@ func addTable(tableName string, reservedIDs []int) (int, error) {
 	sort.Ints(reservedIDs)
 	// 2. find available ID
 	for index, tableID := range reservedIDs {
-		if index + MIX_TABLE_INDEX != tableID {
+		if index+MIX_TABLE_INDEX != tableID {
 			foundID = index + MIX_TABLE_INDEX
 			break
 		}
@@ -167,19 +149,21 @@ func addTable(tableName string, reservedIDs []int) (int, error) {
 			defer file.Close()
 			_, err = file.WriteString(getTableLine(foundID, tableName))
 		}
-		return foundID, err
+		return foundID, fmt.Errorf("failed to add table: %v (%s)", err, RT_TABLE_PATH)
 	}
 	return foundID, errors.New("No available ID")
 }
 
 func deleteRule(tableID int) error {
+	if tableID == -1 {
+		return errors.New("delete rule tableID = -1")
+	}
 	rule := netlink.NewRule()
 	rule.Table = tableID
 	err := netlink.RuleDel(rule)
 	log.Printf("delete rule %v:%v", rule, err)
 	return err
 }
-
 
 func deleteRoutes(tableID int) error {
 	routes, err := GetRoutes(tableID)
@@ -192,13 +176,12 @@ func deleteRoutes(tableID int) error {
 			err = netlink.RouteDel(&route)
 			if err == nil {
 				deletedNRoute += 1
-			} 
+			}
 		}
 	}
 	log.Printf("delete %d of %d routes from table %d", deletedNRoute, len(routes), tableID)
 	return nil
 }
-
 
 func getTableLine(tableID int, tableName string) string {
 	return fmt.Sprintf("%d\t%s\n", tableID, tableName)
