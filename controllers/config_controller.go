@@ -230,8 +230,12 @@ func (r *ConfigReconciler) newCNIDaemonSet(client *kubernetes.Clientset, name st
 	}
 
 	// prepare secret
-	secret := corev1.LocalObjectReference{
-		Name: daemonSpec.ImagePullSecret,
+	secrets := []corev1.LocalObjectReference{}
+	if daemonSpec.ImagePullSecret == "" {
+		secret := corev1.LocalObjectReference{
+			Name: daemonSpec.ImagePullSecret,
+		}
+		secrets = append(secrets, secret)
 	}
 	// prepare container
 	container := corev1.Container{
@@ -267,10 +271,8 @@ func (r *ConfigReconciler) newCNIDaemonSet(client *kubernetes.Clientset, name st
 					Containers: []corev1.Container{
 						container,
 					},
-					Volumes: volumes,
-					ImagePullSecrets: []corev1.LocalObjectReference{
-						secret,
-					},
+					Volumes:          volumes,
+					ImagePullSecrets: secrets,
 				},
 			},
 		},
