@@ -2,20 +2,21 @@
  * Copyright 2022- IBM Inc. All rights reserved
  * SPDX-License-Identifier: Apache2.0
  */
- 
+
 package main
 
 import (
 	"encoding/json"
 	"fmt"
 	"net"
-	"strings"
 	"os"
+	"strings"
 
 	"github.com/containernetworking/cni/pkg/skel"
 	"github.com/containernetworking/cni/pkg/types"
 	current "github.com/containernetworking/cni/pkg/types/100"
 	"github.com/containernetworking/cni/pkg/version"
+	"github.com/containernetworking/plugins/pkg/utils"
 	bv "github.com/containernetworking/plugins/pkg/utils/buildversion"
 )
 
@@ -24,8 +25,8 @@ const (
 	DEFAULT_SUBNET          = "172.30.0.0/16"
 	DEFAULT_HOST_BLOCK      = 8
 	DEFAULT_INTERFACE_BLOCK = 2
+	logFilePath             = "/var/log/multi-nic-ipam.log"
 )
-
 
 // The top-level network config - IPAM plugins are passed the full configuration
 // of the calling plugin, not just the IPAM section.
@@ -34,10 +35,9 @@ type Net struct {
 	types.NetConf
 	Subnet         string      `json:"subnet"`
 	MasterNetAddrs []string    `json:"masterNets"`
-	Masters        []string	   `json:"masters"`
+	Masters        []string    `json:"masters"`
 	IPAM           *IPAMConfig `json:"ipam"`
 }
-
 
 type IPAMConfig struct {
 	Name           string
@@ -52,6 +52,7 @@ type IPAMConfig struct {
 }
 
 func main() {
+	utils.InitializeLogger(logFilePath)
 	skel.PluginMain(cmdAdd, cmdCheck, cmdDel, version.All, bv.BuildString("multi-nic-ipam"))
 }
 
@@ -111,7 +112,6 @@ func LoadIPAMConfig(bytes []byte) (*IPAMConfig, string, error) {
 
 }
 
-
 func loadNetConf(bytes []byte) (*Net, string, error) {
 	n := &Net{}
 	if err := json.Unmarshal(bytes, n); err != nil {
@@ -119,7 +119,6 @@ func loadNetConf(bytes []byte) (*Net, string, error) {
 	}
 	return n, n.CNIVersion, nil
 }
-
 
 func cmdCheck(args *skel.CmdArgs) error {
 	// Get PrevResult from stdin... store in RawPrevResult
@@ -153,12 +152,11 @@ func cmdCheck(args *skel.CmdArgs) error {
 		}
 		if !subnetNet.Contains(ips.Address.IP) {
 			return fmt.Errorf("allocated ip %s is not in designated subnet %s", ips.Address.IP, n.Subnet)
-		} 
+		}
 	}
 
 	return nil
 }
-
 
 func cmdAdd(args *skel.CmdArgs) error {
 	n, confVersion, err := loadNetConf(args.StdinData)
@@ -193,14 +191,14 @@ func cmdAdd(args *skel.CmdArgs) error {
 		if len(n.Masters) == 0 {
 			return types.PrintResult(result, confVersion)
 		}
-		
+
 		// multi-nic-cni IPAM
 		hostName, err := os.Hostname()
 		if err != nil {
 			return fmt.Errorf("failed to get host name")
 		}
 		podName, podNamespace := getPodInfo(args.Args)
-
+		utils.Logger.Debug(fmt.Sprintf("RequestIP of %s net to %s:%d for %s/%s with %v", ipamConf.Name, ipamConf.DaemonIP, ipamConf.DaemonPort, podNamespace, podName, n.Masters))
 		ipResponses, err := RequestIP(ipamConf.DaemonIP, ipamConf.DaemonPort, podName, podNamespace, hostName, ipamConf.Name, n.Masters)
 
 		if err != nil {
@@ -210,7 +208,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 		for index, master := range n.Masters {
 			// find match master information and add
 			for _, ipResponse := range ipResponses {
-				if ipResponse.InterfaceName == master{
+				if ipResponse.InterfaceName == master {
 					vlanPodCIDR := fmt.Sprintf("%s/%s", ipResponse.IPAddress, ipResponse.VLANBlockSize)
 					ipVal, reservedIP, err := net.ParseCIDR(vlanPodCIDR)
 					reservedIP.IP = ipVal
@@ -229,12 +227,31 @@ func cmdAdd(args *skel.CmdArgs) error {
 		result.DNS = ipamConf.DNS
 		result.Routes = ipamConf.Routes
 	}
-
+	utils.Logger.Debug(fmt.Sprintf("Result: %v", result))
 	return types.PrintResult(result, confVersion)
 }
 
 func cmdDel(args *skel.CmdArgs) error {
-	
+	n, confVersion, err := loadNetConf(args.StdinData)
+	if err != nil {
+		return err
+	}
+
+	var result *current.Result
+
+	// Parse previous result
+	if n.NetConf.RawPrevResult != nil {
+		if err = version.ParsePrevResult(&n.NetConf); err != nil {
+			return fmt.Errorf("could not parse prevResult: %v", err)
+		}
+		result, err = current.NewResultFromResult(n.NetConf.PrevResult)
+		if err != nil {
+			return fmt.Errorf("could not convert result to current version: %v", err)
+		}
+	} else {
+		result = &current.Result{CNIVersion: current.ImplementedSpecVersion}
+	}
+
 	if args.Netns == "" {
 		return nil
 	}
@@ -248,8 +265,31 @@ func cmdDel(args *skel.CmdArgs) error {
 		return fmt.Errorf("failed to get host name")
 	}
 	podName, podNamespace := getPodInfo(args.Args)
+	utils.Logger.Debug(fmt.Sprintf("RequestDeallocateIP of %s/%s in %s net from %s:%d", podNamespace, podName, ipamConf.Name, ipamConf.DaemonIP, ipamConf.DaemonPort))
+	ipResponses, err := Deallocate(ipamConf.DaemonPort, podName, podNamespace, hostName, ipamConf.Name)
+	utils.Logger.Debug(fmt.Sprintf("ResponseDeallocateIP: %v", ipResponses))
 
-	Deallocate(ipamConf.DaemonPort, podName, podNamespace, hostName, ipamConf.Name)
-
-	return nil
+	for index, master := range n.Masters {
+		// find match master information and add
+		for _, ipResponse := range ipResponses {
+			if ipResponse.InterfaceName == master {
+				vlanPodCIDR := fmt.Sprintf("%s/%s", ipResponse.IPAddress, ipResponse.VLANBlockSize)
+				ipVal, reservedIP, err := net.ParseCIDR(vlanPodCIDR)
+				reservedIP.IP = ipVal
+				if err != nil {
+					return fmt.Errorf("failed to parse IP: %s: %v", ipResponse.IPAddress, err)
+				}
+				ipConf := &current.IPConfig{
+					Address:   *reservedIP,
+					Interface: current.Int(index),
+				}
+				result.IPs = append(result.IPs, ipConf)
+				break
+			}
+		}
+	}
+	result.DNS = ipamConf.DNS
+	result.Routes = ipamConf.Routes
+	utils.Logger.Debug(fmt.Sprintf("Result: %v", result))
+	return types.PrintResult(result, confVersion)
 }

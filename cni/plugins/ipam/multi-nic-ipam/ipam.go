@@ -2,7 +2,7 @@
  * Copyright 2022- IBM Inc. All rights reserved
  * SPDX-License-Identifier: Apache2.0
  */
- 
+
 package main
 
 import (
@@ -16,8 +16,8 @@ import (
 )
 
 const (
-	ALLOCATE_PATH       = "allocate"
-	DEALLOCATE_PATH     = "deallocate"
+	ALLOCATE_PATH   = "allocate"
+	DEALLOCATE_PATH = "deallocate"
 
 	DEFAULT_DAEMON_PORT = 11000
 
@@ -80,9 +80,8 @@ func RequestIP(daemonIP string, daemonPort int, podName string, podNamespace str
 	}
 }
 
-
-
-func Deallocate(daemonPort int, podName string, podNamespace string, hostName string, defName string) (error) {
+func Deallocate(daemonPort int, podName string, podNamespace string, hostName string, defName string) ([]IPResponse, error) {
+	var response []IPResponse
 	if daemonPort == 0 {
 		daemonPort = DEFAULT_DAEMON_PORT
 	}
@@ -98,17 +97,24 @@ func Deallocate(daemonPort int, podName string, podNamespace string, hostName st
 	jsonReq, err := json.Marshal(request)
 
 	if err != nil {
-		return errors.New(fmt.Sprintf("Marshal fail: %v", err))
+		return response, errors.New(fmt.Sprintf("Marshal fail: %v", err))
 	} else {
 		res, err := http.Post(address, "application/json; charset=utf-8", bytes.NewBuffer(jsonReq))
 		if err != nil {
-			return errors.New(fmt.Sprintf("Post fail: %v", err))
+			return response, errors.New(fmt.Sprintf("Post fail: %v", err))
 		}
 		if res.StatusCode != http.StatusOK {
-			return errors.New(res.Status)
+			return response, errors.New(res.Status)
 		}
 
-		ioutil.ReadAll(res.Body)
-		return err
+		body, err := ioutil.ReadAll(res.Body)
+		if err != nil {
+			return response, errors.New(fmt.Sprintf("Read body: %v", err))
+		}
+		err = json.Unmarshal(body, &response)
+		if err == nil && len(response) == 0 {
+			return response, fmt.Errorf("Response nothing")
+		}
+		return response, err
 	}
 }
