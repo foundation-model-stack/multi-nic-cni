@@ -2,14 +2,14 @@
  * Copyright 2022- IBM Inc. All rights reserved
  * SPDX-License-Identifier: Apache2.0
  */
- 
+
 package main
 
 import (
-	"os"
-	"net"
 	"encoding/json"
 	"fmt"
+	"net"
+	"os"
 
 	"github.com/containernetworking/cni/pkg/skel"
 	"github.com/containernetworking/cni/pkg/types"
@@ -18,9 +18,8 @@ import (
 
 	"github.com/containernetworking/plugins/pkg/ipam"
 	"github.com/containernetworking/plugins/pkg/ns"
+	"github.com/containernetworking/plugins/pkg/utils"
 	bv "github.com/containernetworking/plugins/pkg/utils/buildversion"
-
-
 )
 
 const (
@@ -28,37 +27,37 @@ const (
 	DEFAULT_SUBNET          = "172.30.0.0/16"
 	DEFAULT_HOST_BLOCK      = 8
 	DEFAULT_INTERFACE_BLOCK = 2
+	logFilePath             = "/var/log/multi-nic-cni.log"
 )
-
 
 // NetConf defines general config for multi-nic-cni
 type NetConf struct {
 	types.NetConf
-	MainPlugin     map[string]interface{}  `json:"plugin"`
-	Subnet         string                  `json:"subnet"`
-	MasterNetAddrs []string                `json:"masterNets"`
-	DeviceIDs      []string	               `json:"deviceIDs"`
-	Masters        []string	               `json:"masters"`
-	IsMultiNICIPAM bool                    `json:"multiNICIPAM,omitempty"`
-	DaemonIP       string                  `json:"daemonIP"`
-	DaemonPort     int                     `json:"daemonPort"`
-	Args *struct {
+	MainPlugin     map[string]interface{} `json:"plugin"`
+	Subnet         string                 `json:"subnet"`
+	MasterNetAddrs []string               `json:"masterNets"`
+	DeviceIDs      []string               `json:"deviceIDs"`
+	Masters        []string               `json:"masters"`
+	IsMultiNICIPAM bool                   `json:"multiNICIPAM,omitempty"`
+	DaemonIP       string                 `json:"daemonIP"`
+	DaemonPort     int                    `json:"daemonPort"`
+	Args           *struct {
 		NicSet *NicArgs `json:"cni,omitempty"`
 	} `json:"args"`
 }
 
 // NicArgs defines additional specification in pod annotation
 type NicArgs struct {
-	NumOfInterfaces int `json:"nics,omitempty"`
+	NumOfInterfaces int      `json:"nics,omitempty"`
 	InterfaceNames  []string `json:"masters,omitempty"`
-	Target          string `json:"target,omitempty"`
-	DevClass        string `json:"class,omitempty"`
+	Target          string   `json:"target,omitempty"`
+	DevClass        string   `json:"class,omitempty"`
 }
 
 func main() {
+	utils.InitializeLogger(logFilePath)
 	skel.PluginMain(cmdAdd, cmdCheck, cmdDel, version.All, bv.BuildString("multi-nic"))
 }
-
 
 func cmdAdd(args *skel.CmdArgs) error {
 	// load general NetConf and get deviceType
@@ -66,6 +65,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 	if err != nil {
 		return fmt.Errorf("failed to load netconf: %v", err)
 	}
+	utils.Logger.Debug(fmt.Sprintf("Received an ADD request for: conf=%v", n))
 
 	// open specified network namespace
 	netns, err := ns.GetNS(args.Netns)
@@ -101,7 +101,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 		injectedStdIn := injectMaster(args.StdinData, n.MasterNetAddrs, n.Masters, n.DeviceIDs)
 		r, err := ipam.ExecAdd(n.IPAM.Type, injectedStdIn)
 		if err != nil {
-			return fmt.Errorf("IPAM ExecAdd: %v, %s",err, string(injectedStdIn))
+			return fmt.Errorf("IPAM ExecAdd: %v, %s", err, string(injectedStdIn))
 		}
 
 		// Invoke ipam del if err to avoid ip leak
@@ -122,45 +122,39 @@ func cmdAdd(args *skel.CmdArgs) error {
 		}
 	}
 
-
 	// get device config and apply
 	confBytesArray := [][]byte{}
 	switch deviceType {
 	case "ipvlan":
 		confBytesArray, err = loadIPVANConf(args.StdinData, args.IfName, n, result.IPs)
-
-		if err != nil {
-			return err
-		}
-
-		if len(confBytesArray) == 0 {
-			return fmt.Errorf("zero config %v", n)
-		}
 	case "sriov":
 		confBytesArray, err = loadSRIOVConf(args.StdinData, args.IfName, n, result.IPs)
-
-		if err != nil {
-			return err
-		}
-
-		if len(confBytesArray) == 0 {
-			return fmt.Errorf("zero config %v", n)
-		}
+	case "aws-ipvlan":
+		confBytesArray, err = loadAWSCNIConf(args.StdinData, args.IfName, n, result.IPs)
 	default:
-		return fmt.Errorf("unsupported device type: %s", deviceType)
+		err = fmt.Errorf("unsupported device type: %s", deviceType)
+	}
+	if err != nil {
+		utils.Logger.Debug(fmt.Sprintf("Fail loading %v: %v", string(args.StdinData), err))
+		return err
+	}
+	if len(confBytesArray) == 0 {
+		utils.Logger.Debug(fmt.Sprintf("zero config: %v (%d)", string(args.StdinData), len(n.Masters)))
+		return fmt.Errorf("zero config %v", n)
 	}
 
 	ips := []*current.IPConfig{}
 	for index, confBytes := range confBytesArray {
 		command := "ADD"
 		ifName := fmt.Sprintf("%s-%d", args.IfName, index)
+		utils.Logger.Debug(fmt.Sprintf("Exec %s %s: %s", command, ifName, string(confBytes)))
 		executeResult, err := execPlugin(deviceType, command, confBytes, args, ifName, true)
 		if err != nil {
 			return err
 		}
 		interfaceItem := &current.Interface{}
 		interfaceItem.Name = ifName
-		
+
 		err = netns.Do(func(_ ns.NetNS) error {
 			link, err := net.InterfaceByName(ifName)
 			if err != nil {
@@ -178,6 +172,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 		}
 	}
 	result.IPs = ips
+	utils.Logger.Debug(fmt.Sprintf("Result: %v", result))
 	return types.PrintResult(result, n.CNIVersion)
 }
 
@@ -185,58 +180,64 @@ func cmdDel(args *skel.CmdArgs) error {
 	if args.Netns == "" {
 		return nil
 	}
-
+	ips := []*current.IPConfig{}
 	n, deviceType, err := loadConf(args, false)
 	if err != nil {
 		return fmt.Errorf("fail to load conf: %v", err)
 	}
-	
+	utils.Logger.Debug(fmt.Sprintf("Received an DEL request for: conf=%v", n))
 	// On chained invocation, IPAM block can be empty
 	if n.IPAM.Type != "" {
 		injectedStdIn := injectMaster(args.StdinData, n.MasterNetAddrs, n.Masters, n.DeviceIDs)
-		err = ipam.ExecDel(n.IPAM.Type, injectedStdIn)
-		if err != nil {
-			return err
+		if n.IPAM.Type != "multi-nic-ipam" {
+			err = ipam.ExecDel(n.IPAM.Type, injectedStdIn)
+			utils.Logger.Debug(fmt.Sprintf("Failed ipam.ExecDel %s: %v", err, string(injectedStdIn)))
+		} else {
+			r, err := ipam.ExecDelWithResult(n.IPAM.Type, injectedStdIn)
+			if err != nil {
+				utils.Logger.Debug(fmt.Sprintf("Failed ipam.ExecDel %s: %v", err, string(injectedStdIn)))
+				return err
+			}
+			if r != nil {
+				executeResult, err := current.NewResultFromResult(r)
+				if err != nil {
+					utils.Logger.Debug(fmt.Sprintf("Failed to parse result %v: %v", r, err))
+				}
+				ips = executeResult.IPs
+			} else {
+				utils.Logger.Debug(fmt.Sprintf("No previous result: %v", r))
+			}
 		}
-	}
-
-	var result *current.Result
-	// parse previous result
-	if n.NetConf.RawPrevResult != nil {
-		if err = version.ParsePrevResult(&n.NetConf); err != nil {
-			return fmt.Errorf("could not parse prevResult: %v", err)
-		}
-
-		result, err = current.NewResultFromResult(n.NetConf.PrevResult)
-		if err != nil {
-			return fmt.Errorf("could not convert result to current version: %v", err)
-		}
-	} else {
-		result = &current.Result{CNIVersion: current.ImplementedSpecVersion}
 	}
 
 	// get device config and apply
 	confBytesArray := [][]byte{}
-	switch(deviceType) {
+	switch deviceType {
 	case "ipvlan":
-		confBytesArray, err = loadIPVANConf(args.StdinData, args.IfName, n, result.IPs)
-		if err != nil {
-			return err
-		}
+		confBytesArray, err = loadIPVANConf(args.StdinData, args.IfName, n, ips)
 	case "sriov":
-		confBytesArray, err = loadSRIOVConf(args.StdinData, args.IfName, n, result.IPs)
-		if err != nil {
-			return err
-		}
+		confBytesArray, err = loadSRIOVConf(args.StdinData, args.IfName, n, ips)
+	case "aws-ipvlan":
+		confBytesArray, err = loadAWSCNIConf(args.StdinData, args.IfName, n, ips)
 	default:
-		return fmt.Errorf("unsupported device type: %s", deviceType)
+		err = fmt.Errorf("unsupported device type: %s", deviceType)
+	}
+	if err != nil {
+		utils.Logger.Debug(fmt.Sprintf("Fail loading %v: %v", string(args.StdinData), err))
+		return err
+	}
+	if len(confBytesArray) == 0 {
+		utils.Logger.Debug(fmt.Sprintf("zero config: %v (%d)", string(args.StdinData), len(n.Masters)))
+		return fmt.Errorf("zero config %v (%d)", n, len(n.Masters))
 	}
 
 	for index, confBytes := range confBytesArray {
 		command := "DEL"
 		ifName := fmt.Sprintf("%s-%d", args.IfName, index)
+		utils.Logger.Debug(fmt.Sprintf("Exec %s %s: %s", command, ifName, string(confBytes)))
 		_, err := execPlugin(deviceType, command, confBytes, args, ifName, false)
 		if err != nil {
+			utils.Logger.Debug(fmt.Sprintf("Fail execPlugin %v: %v", string(confBytes), err))
 			return fmt.Errorf("%s, %v", string(confBytes), err)
 		}
 	}
@@ -253,14 +254,13 @@ func cmdCheck(args *skel.CmdArgs) error {
 	if err != nil {
 		return fmt.Errorf("fail to load conf")
 	}
-	
+
 	var result *current.Result
 	// parse previous result
 	if n.NetConf.RawPrevResult != nil {
 		if err = version.ParsePrevResult(&n.NetConf); err != nil {
 			return fmt.Errorf("could not parse prevResult: %v", err)
 		}
-
 		result, err = current.NewResultFromResult(n.NetConf.PrevResult)
 		if err != nil {
 			return fmt.Errorf("could not convert result to current version: %v", err)
@@ -269,29 +269,31 @@ func cmdCheck(args *skel.CmdArgs) error {
 		result = &current.Result{CNIVersion: current.ImplementedSpecVersion}
 	}
 
-
 	// get device config and apply
 	confBytesArray := [][]byte{}
-	switch(deviceType) {
+	switch deviceType {
 	case "ipvlan":
 		confBytesArray, err = loadIPVANConf(args.StdinData, args.IfName, n, result.IPs)
-		if err != nil {
-			return err
-		}
-
 	case "sriov":
 		confBytesArray, err = loadSRIOVConf(args.StdinData, args.IfName, n, result.IPs)
-		if err != nil {
-			return err
-		}
+	case "aws-ipvlan":
+		confBytesArray, err = loadAWSCNIConf(args.StdinData, args.IfName, n, result.IPs)
 	default:
-		return fmt.Errorf("unsupported device type: %s", deviceType)
+		err = fmt.Errorf("unsupported device type: %s", deviceType)
 	}
-
+	if err != nil {
+		utils.Logger.Debug(fmt.Sprintf("Fail loading %v: %v", string(args.StdinData), err))
+		return err
+	}
+	if len(confBytesArray) == 0 {
+		utils.Logger.Debug(fmt.Sprintf("zero config: %v (%d)", string(args.StdinData), len(n.Masters)))
+		return fmt.Errorf("zero config %v", n)
+	}
 
 	for index, confBytes := range confBytesArray {
 		command := "CHECK"
 		ifName := fmt.Sprintf("%s-%d", args.IfName, index)
+		utils.Logger.Debug(fmt.Sprintf("Exec %s %s: %s", command, ifName, string(confBytes)))
 		_, err := execPlugin(deviceType, command, confBytes, args, ifName, false)
 		if err != nil {
 			return err
@@ -300,7 +302,6 @@ func cmdCheck(args *skel.CmdArgs) error {
 
 	return nil
 }
-
 
 // loadConf unmarshal NetConf and return with dev type
 func loadConf(args *skel.CmdArgs, check bool) (*NetConf, string, error) {
@@ -319,7 +320,7 @@ func loadConf(args *skel.CmdArgs, check bool) (*NetConf, string, error) {
 			return n, deviceType, err
 		}
 		podName, podNamespace := getPodInfo(args.Args)
-		
+
 		nicSet := NicArgs{}
 		// check if user defined number of interfaces or specific set of interface names in the annotation
 		if n.Args != nil && n.Args.NicSet != nil {
@@ -334,4 +335,3 @@ func loadConf(args *skel.CmdArgs, check bool) (*NetConf, string, error) {
 	}
 	return n, deviceType, nil
 }
-

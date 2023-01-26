@@ -27,6 +27,8 @@ COPY cni/plugins/main/multi-nic cni/plugins/main/multi-nic
 RUN cd cni && go mod tidy && go build -o /usr/local/app/multi-nic ./plugins/main/multi-nic
 COPY cni/plugins/ipam cni/plugins/ipam
 RUN cd cni && go mod tidy && go build -o /usr/local/app/multi-nic-ipam ./plugins/ipam/multi-nic-ipam
+COPY cni/plugins/main/aws-ipvlan cni/plugins/main/aws-ipvlan
+RUN cd cni && go mod tidy && go build -o /usr/local/app/aws-ipvlan ./plugins/main/aws-ipvlan
 RUN cd cni && make ginkgo-set
 RUN cd daemon/src && go build -o /usr/local/app/daemon
 RUN cp /usr/local/app/multi-nic /usr/local/bin \ 
