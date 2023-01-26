@@ -6,11 +6,12 @@
 package iface
 
 import (
+	"fmt"
+	"log"
 	"net"
 	"strings"
+
 	"github.com/vishvananda/netlink"
-	"log"
-	"fmt"
 )
 
 type InterfaceInfoType struct {
@@ -114,7 +115,7 @@ func GetInterfaces() []InterfaceInfoType {
 		if err != nil || len(addrs) == 0 {
 			log.Printf("cannot list address on %s: %v", devName, err)
 			continue
-		} 
+		}
 		addr := addrs[0].IPNet
 		if addr == nil {
 			log.Printf("no address set on %s", devName)
@@ -123,13 +124,13 @@ func GetInterfaces() []InterfaceInfoType {
 		if devLink.Attrs().Flags&net.FlagUp == 0 {
 			// interface down
 			log.Printf("%s down", devName)
-			continue 
+			continue
 		}
 		netAddress := getNetAddress(addr)
 		if netAddress == defaultSubnet {
-			// omit default 
+			// omit default
 			log.Printf("omit %s (default subnet %s)", devName, netAddress)
-			continue 
+			continue
 		}
 
 		if addr.IP.To4() != nil {

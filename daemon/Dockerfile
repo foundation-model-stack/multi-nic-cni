@@ -15,6 +15,7 @@ COPY cni cni
 COPY run.sh run.sh
 RUN cd cni && go mod tidy && go build -o /usr/local/app/multi-nic ./plugins/main/multi-nic
 RUN cd cni && go mod tidy && go build -o /usr/local/app/multi-nic-ipam ./plugins/ipam/multi-nic-ipam
+RUN cd cni && go mod tidy && go build -o /usr/local/app/aws-ipvlan ./plugins/main/aws-ipvlan
 RUN cd src && go mod tidy && go build -o /usr/local/app/daemon
 RUN rm -r /usr/local/app/src && rm -r /usr/local/app/cni
 CMD ["/bin/bash", "run.sh"]
