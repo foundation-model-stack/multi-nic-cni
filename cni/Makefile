@@ -42,7 +42,7 @@ tidy:
 test: ginkgo-set plugins-set
 	@cd ./plugins/main/multi-nic && ginkgo
 
-build: plugins-set tidy
+build: tidy
 	@mkdir -p bin
 	@go build -o bin/multi-nic ./plugins/main/multi-nic
 	@go build -o bin/multi-nic-ipam ./plugins/ipam/multi-nic-ipam
