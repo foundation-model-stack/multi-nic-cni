@@ -239,4 +239,7 @@ catalog-build: opm ## Build a catalog image.
 catalog-push: ## Push a catalog image.
 	$(MAKE) docker-push IMG=$(CATALOG_IMG)
 
-
+test-daemon:
+	docker build -t daemon-test:latest -f Dockerfile.multinicd-test .
+	docker run -it --privileged daemon-test /bin/bash -c "cd /usr/local/build/cni&&make test"
+	docker run -it --privileged daemon-test /bin/bash -c "cd /usr/local/build/daemon/src&&make test-verbose"
