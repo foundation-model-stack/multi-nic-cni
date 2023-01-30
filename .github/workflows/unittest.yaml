@@ -2,12 +2,23 @@ name: Perform unittest for controller
 
 on:
   pull_request:
-    branches:    
-    - controller
-    - main
+    paths:
+      - controllers/**
+      - compute/**
+      - plugin/**
+      - ./main.go
+      - ./go.mod
+      - ./bundle.Dockerfile
+      - ./Makefile
   push:
-    branches:
-    - controller
+    paths:
+      - controllers/**
+      - compute/**
+      - plugin/**
+      - ./main.go
+      - ./go.mod
+      - ./bundle.Dockerfile
+      - ./Makefile
 
 jobs:
 
