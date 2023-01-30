@@ -25,6 +25,7 @@ func updateCIDR(multinicnetwork *multinicv1.MultiNicNetwork, cidr multinicv1.CID
 	expectedPodCIDR := 0
 	if changed {
 		snapshot := multinicnetworkReconciler.CIDRHandler.HostInterfaceHandler.ListCache()
+		Expect(len(snapshot)).Should(BeNumerically(">", 0))
 		for _, hif := range snapshot {
 			for _, iface := range hif.Spec.Interfaces {
 				for _, masterAddresses := range networkAddresses {

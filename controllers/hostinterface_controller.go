@@ -42,6 +42,10 @@ func InitHostInterfaceCache(clientset *kubernetes.Clientset, hostInterfaceHandle
 	listObjects, err := hostInterfaceHandler.ListHostInterface()
 	if err == nil {
 		for name, instance := range listObjects {
+			if _, ok := instance.Labels[TestModelLabel]; ok {
+				// on test mode, no need to init
+				break
+			}
 			if _, foundErr := daemonCacheHandler.GetCache(name); foundErr != nil {
 				// not found, check whether node is still there.
 				if _, foundErr = clientset.CoreV1().Nodes().Get(context.TODO(), name, metav1.GetOptions{}); foundErr != nil {
