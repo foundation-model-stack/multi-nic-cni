@@ -2,14 +2,18 @@ name: e2e test
 
 on:
   pull_request:
-    branches:    
-      - controller
-      - main
+    paths:
+      - controllers/**
+      - compute/**
+      - plugin/**
+      - ./main.go
+      - ./go.mod
+      - config/**
+      - ./Dockerfile
+      - ./bundle.Dockerfile
+      - ./Makefile
+      - e2e-test/**
   push:
-    branches:
-      - main
-      - controller
-      - e2e-test
     paths:
       - controllers/**
       - compute/**
