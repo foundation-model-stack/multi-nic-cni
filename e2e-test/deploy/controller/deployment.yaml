@@ -1502,6 +1502,8 @@ spec:
         - --health-probe-bind-address=:8083
         - --metrics-bind-address=127.0.0.1:8080
         - --leader-elect=false
+        - --zap-log-level=10
+        - --zap-stacktrace-level=error
         command:
         - /manager
         env:

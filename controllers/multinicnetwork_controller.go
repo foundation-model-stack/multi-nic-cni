@@ -158,9 +158,11 @@ func (r *MultiNicNetworkReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		cidr, err := r.CIDRHandler.GetCache(multinicnetworkName)
 		if err == nil {
 			routeStatus = r.CIDRHandler.SyncCIDRRoute(cidr, false)
-			err := r.CIDRHandler.MultiNicNetworkHandler.SyncAllStatus(multinicnetworkName, cidr, routeStatus, daemonSize, infoAvailableSize, false)
+			netStatus, err := r.CIDRHandler.MultiNicNetworkHandler.SyncAllStatus(multinicnetworkName, cidr, routeStatus, daemonSize, infoAvailableSize, false)
 			if err != nil {
 				r.Log.V(2).Info(fmt.Sprintf("failed to update route status of %s: %v", multinicnetworkName, err))
+			} else if netStatus.CIDRProcessedHost != netStatus.InterfaceInfoAvailable {
+				r.CIDRHandler.UpdateCIDRs()
 			}
 			if routeStatus == multinicv1.RouteUnknown {
 				return ctrl.Result{RequeueAfter: ReconcileTime}, nil

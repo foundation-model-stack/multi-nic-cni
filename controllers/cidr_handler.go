@@ -471,7 +471,7 @@ func (h *CIDRHandler) updateCIDR(cidrSpec multinicv1.CIDRSpec, new bool) (bool, 
 	entriesMap, changed := h.updateEntries(cidrSpec, excludes, new)
 	// if pod CIDR changes, update CIDR and create corresponding IPPools and routes
 	if changed {
-		h.Log.V(7).Info(fmt.Sprintf("CIDR %s changed", def.Name))
+		h.Log.V(7).Info(fmt.Sprintf("changeCIDR %s", def.Name))
 		newEntries := []multinicv1.CIDREntry{}
 		for _, entry := range entriesMap {
 			newEntries = append(newEntries, entry)
@@ -516,12 +516,17 @@ func (h *CIDRHandler) updateCIDR(cidrSpec multinicv1.CIDRSpec, new bool) (bool, 
 			// initialize the MultiNicNetwork status
 			daemonSize := h.DaemonCacheHandler.GetSize()
 			infoAvailableSize := h.GetInfoAvailableSize()
-			h.MultiNicNetworkHandler.SyncAllStatus(def.Name, mapObj.Spec, multinicv1.ApplyingRoute, daemonSize, infoAvailableSize, true)
+			netStatus, err := h.MultiNicNetworkHandler.SyncAllStatus(def.Name, spec, multinicv1.ApplyingRoute, daemonSize, infoAvailableSize, true)
+			if err != nil {
+				h.Log.V(2).Info(fmt.Sprintf("failed to update route status of %s: %v", def.Name, err))
+			} else if netStatus.CIDRProcessedHost != netStatus.InterfaceInfoAvailable {
+				h.UpdateCIDRs()
+			}
 		}
 
 		// update IPPools
 		h.IPPoolHandler.UpdateIPPools(def.Name, newEntries, excludes)
-		h.Log.V(7).Info(fmt.Sprintf("CIDR %s's change processed", def.Name))
+		h.Log.V(7).Info(fmt.Sprintf("changeCIDR %s Done", def.Name))
 	}
 	h.Mutex.Unlock()
 	return changed, nil

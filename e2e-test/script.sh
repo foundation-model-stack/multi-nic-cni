@@ -121,9 +121,77 @@ delete_n_node() {
     wait $pids   
 }
 
+_reset_node() {
+    i=$1
+    echo "reset fake node $i"
+    _delete_node $i
+    _deploy_node $i
+}
+
+_check_sync() {
+    i=$1
+    export podname=multi-nicd-stub-$i
+    export nodename=kwok-node-$i
+    nodeIP=$(kubectl get node ${nodename} -ojson|jq ".status.addresses[0].address")
+    if [ "$nodeIP" == "" ]; then
+        _reset_node $i
+    else
+        stubIP=$(kubectl get po ${podname} -n ${OPERATOR_NAMESPACE} -ojson|jq .status.podIP)
+        if [ "$stubIP" != "$nodeIP" ]; then
+            _reset_node $i
+        fi
+    fi
+}
+
+check_ip_sync() {
+    from=$1
+    to=$2
+    pids=""
+    i=$from
+    while [ "$i" -le $to ]; do
+        _check_sync $i&
+        pids="$pids $!"
+        i=$(( i + 1 ))
+    done 
+    wait $pids  
+}
+
+_check_update_done() {
+    expr $(get_controller_log|grep "changeCIDR"|wc -l) % 2
+}
+
+log_failure() {
+    get_controller_log|grep "Failed"
+    get_controller_log|tail
+}
+
 wait_n() {
     n=$1
-    while [[ $(kubectl get multinicnetwork -o 'jsonpath={..status.discovery.cidrProcessed}') != $n ]]; do print_discovery_status && sleep 5; done
+    cidrCount=$(kubectl get multinicnetwork -o 'jsonpath={..status.discovery.cidrProcessed}')
+    while [[ "$cidrCount" != "$n" ]]; do 
+        prevCount=$cidrCount
+        sleep 10
+        waitingInQueue=$(get_controller_log|grep "Add UpdateRequest"|tail -1|awk '{ print substr($6,2) }')
+        cidrCount=$(kubectl get multinicnetwork -o 'jsonpath={..status.discovery.cidrProcessed}')
+        existDaemon=$(kubectl get multinicnetwork -o 'jsonpath={..status.discovery.existDaemon}')
+        infoAvailable=$(kubectl get multinicnetwork -o 'jsonpath={..status.discovery.infoAvailable}')
+        print_discovery_status
+        if [ "$existDaemon" == "$infoAvailable" ];then
+            updateDone=$(_check_update_done)
+            if [ "$updateDone" == "0" ]; then
+                if [ "$cidrCount" == "$prevCount" ]; then
+                    log_failure
+                    if [ "$waitingInQueue" == "0" ]; then
+                        echo "No update trigger in Queue, potentially hang $existDaemon/$infoAvailable/$cidrCount"
+                        check_cidr 1 $n
+                    fi
+                    echo "${waitingInQueue} trigger in queue"
+                fi
+            fi
+        else
+            check_ip_sync 1 $n
+        fi
+    done
 }
 
 wait_n_old_way() {
@@ -363,6 +431,21 @@ test_step_clean() {
 	time delete_n_node 1 10
 	time wait_n 0
     check_cidr 1 0
+}
+
+test_small_scale() {
+    deploy_network 8
+	echo $(date -u +"%Y-%m-%dT%H:%M:%SZ")
+	START=$(date +%s)
+	time deploy_n_node 1 10
+	time wait_n 10
+	check_cidr 1 10
+	time deploy_n_node 11 20
+	time wait_n 20
+	check_cidr 1 20
+	time delete_n_node 1 20
+	time wait_n 0
+	check_cidr 1 0
 }
 
 test_allocate() {
