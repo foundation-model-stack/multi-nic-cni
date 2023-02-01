@@ -6,16 +6,20 @@ all: build copy-to-daemon
 
 ENVTEST_ASSETS_DIR=$(PWD)/test-bin
 export PATH := $(PATH):$(PWD)/test-bin
-export GOPATH := $(HOME)/go
 
-get-ginkgo:
-	@go get -u github.com/onsi/ginkgo/ginkgo && go install github.com/onsi/ginkgo/ginkgo && \
-	 go get -u github.com/onsi/gomega/... && go install github.com/onsi/gomega/... && \
-	 mkdir -p ${ENVTEST_ASSETS_DIR} && \
-	 cp $(GOPATH)/bin/ginkgo $(ENVTEST_ASSETS_DIR)/ginkgo
+ifndef GOPATH
+  GOPATH := $(HOME)/go
+  GOBIN := $(GOPATH)/bin
+endif
 
-ginkgo-set:
-	@test -f $(ENVTEST_ASSETS_DIR)/ginkgo || ($(MAKE) get-ginkgo)
+
+ginkgo-set: tidy
+	mkdir -p $(GOBIN)
+	mkdir -p ${ENVTEST_ASSETS_DIR}
+	@test -f $(ENVTEST_ASSETS_DIR)/ginkgo || \
+	 (go install -mod=mod github.com/onsi/ginkgo/ginkgo@v1.16.5 && \
+	  cp $(GOBIN)/ginkgo $(ENVTEST_ASSETS_DIR)/ginkgo)
+	
 
 get-plugins:
 	@cd /tmp && \
@@ -38,7 +42,7 @@ tidy:
 test: ginkgo-set plugins-set
 	@cd ./plugins/main/multi-nic && ginkgo
 
-build: plugins-set tidy
+build: tidy
 	@mkdir -p bin
 	@go build -o bin/multi-nic ./plugins/main/multi-nic
 	@go build -o bin/multi-nic-ipam ./plugins/ipam/multi-nic-ipam

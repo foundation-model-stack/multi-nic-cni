@@ -1,0 +1,27 @@
+FROM ubuntu:20.04
+
+RUN  apt-get update \
+  && apt-get install -y wget tar build-essential net-tools iproute2 git curl \
+  && rm -rf /var/lib/apt/lists/*
+
+# install go
+RUN wget https://golang.org/dl/go1.17.linux-amd64.tar.gz && rm -rf /usr/local/go && tar -C /usr/local -xzf go1.17.linux-amd64.tar.gz
+
+ENV PATH "/usr/local/go/bin:${PATH}"
+
+RUN mkdir -p /usr/local/build
+RUN mkdir -p /usr/local/build/cni/test-bin
+
+WORKDIR /usr/local/build
+RUN curl -sSLo kubebuilder_2.0.0-alpha.1_linux_amd64.tar.gz https://github.com/kubernetes-sigs/kubebuilder/releases/download/v2.0.0-alpha.1/kubebuilder_2.0.0-alpha.1_linux_amd64.tar.gz \
+  && tar -zxvf kubebuilder_2.0.0-alpha.1_linux_amd64.tar.gz
+RUN curl -sSLo setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.7.2/hack/setup-envtest.sh
+
+RUN cd /tmp && \ 
+   git clone -b v1.2.0 https://github.com/containernetworking/plugins.git && \
+	 cd plugins && \
+	 ./build_linux.sh && \
+	 ls /tmp/plugins/bin && \
+	 cp /tmp/plugins/bin/ipvlan /usr/local/build/cni/test-bin/ipvlan && \
+	 cp /tmp/plugins/bin/static /usr/local/build/cni/test-bin/static && \
+   rm -r /tmp/plugins
