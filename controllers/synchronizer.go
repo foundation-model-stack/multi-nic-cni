@@ -31,9 +31,11 @@ func RunPeriodicUpdate(ticker *time.Ticker, daemonWatcher *DaemonWatcher, cidrHa
 					for name, instanceSpec := range cidrSnapshot {
 						routeStatus := cidrHandler.SyncCIDRRoute(instanceSpec, false)
 						cidrHandler.CleanPendingIPPools(ippoolSnapshot, name, instanceSpec)
-						err := cidrHandler.MultiNicNetworkHandler.SyncAllStatus(name, instanceSpec, routeStatus, daemonSize, infoAvailableSize, false)
+						netStatus, err := cidrHandler.MultiNicNetworkHandler.SyncAllStatus(name, instanceSpec, routeStatus, daemonSize, infoAvailableSize, false)
 						if err != nil {
 							logger.V(2).Info(fmt.Sprintf("failed to update route status of %s: %v", name, err))
+						} else if netStatus.CIDRProcessedHost != netStatus.InterfaceInfoAvailable {
+							cidrHandler.UpdateCIDRs()
 						}
 					}
 				}

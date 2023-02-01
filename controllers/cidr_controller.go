@@ -88,7 +88,14 @@ func (r *CIDRReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	routeStatus := r.CIDRHandler.SyncCIDRRoute(instance.Spec, true)
 	daemonSize := r.CIDRHandler.DaemonCacheHandler.SafeCache.GetSize()
 	infoAvailableSize := r.CIDRHandler.HostInterfaceHandler.GetInfoAvailableSize()
-	r.CIDRHandler.MultiNicNetworkHandler.SyncAllStatus(cidrName, instance.Spec, routeStatus, daemonSize, infoAvailableSize, false)
+	netStatus, err := r.CIDRHandler.MultiNicNetworkHandler.SyncAllStatus(cidrName, instance.Spec, routeStatus, daemonSize, infoAvailableSize, true)
+	if err != nil {
+		r.Log.V(2).Info(fmt.Sprintf("failed to update route status of %s: %v", cidrName, err))
+		r.Log.V(7).Info(fmt.Sprintf("Requeue CIDR %s: %v", cidrName, err))
+		return ctrl.Result{RequeueAfter: CIDRReconcileTime}, nil
+	} else if netStatus.CIDRProcessedHost != netStatus.InterfaceInfoAvailable {
+		r.UpdateCIDRs()
+	}
 
 	// call greeting
 	daemonSnapshot := r.CIDRHandler.DaemonCacheHandler.ListCache()
