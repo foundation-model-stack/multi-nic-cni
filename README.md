@@ -1,5 +1,7 @@
 > Documents and source codes for the deprecated domain `cogadvisor.io` are moved to [cogadvisor-net branch](https://github.com/foundation-model-stack/multi-nic-cni/tree/cogadvisor-net)
-> 
+
+**official document:** https://foundation-model-stack.github.io/multi-nic-cni.
+
 - [Multi-NIC CNI](#multi-nic-cni)
   - [MultiNicNetwork](#multinicnetwork)
   - [Usage](#usage)
@@ -11,6 +13,7 @@
       - [Deploy MultiNicNetwork resource](#deploy-multinicnetwork-resource)
       - [Check connections](#check-connections)
         - [installed by bundle with operator-sdk](#installed-by-bundle-with-operator-sdk)
+
 # Multi-NIC CNI
 Attaching secondary network interfaces that is linked to different network interfaces on host (NIC) to pod provides benefits of network segmentation and top-up network bandwidth in the containerization system. 
 
@@ -97,7 +100,7 @@ namespaces| (optional) limit network definition application to list of namespace
   ```
 ##### by bundle with operator-sdk
   ```bash
-  operator-sdk run bundle ghcr.io/foundation-model-stack/multi-nic-cni-bundle:v1.0.2
+  operator-sdk run bundle ghcr.io/foundation-model-stack/multi-nic-cni-bundle:v1.0.3
   ```
 #### Deploy MultiNicNetwork resource
 1. Prepare `network.yaml` as shown in the [example](#multinicnetwork)
