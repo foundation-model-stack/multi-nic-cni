@@ -123,8 +123,8 @@ uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified 
 	$(KUSTOMIZE) build config/crd | kubectl delete -f -
 
 predeploy: manifests kustomize
-	rm -f config/samples/multinic.fms.io_v1_config.yaml
-	envsubst < config/samples/multinic.fms.io_v1_config.template > config/samples/multinic.fms.io_v1_config.yaml
+	rm -f config/samples/multinic.fms.io_config.yaml
+	envsubst < config/samples/multinic.fms.io_config.template > config/samples/multinic.fms.io_config.yaml
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	cd config/samples && $(KUSTOMIZE) edit set image multi-nic-cni-daemon=${DAEMON_IMG}
 

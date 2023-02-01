@@ -1,0 +1,50 @@
+apiVersion: multinic.fms.io/v1
+kind: CIDR
+metadata:
+  name: ipvlanl3
+  annotations:
+    note: |
+      This resource will be auto-generated and controlled by multi-nic-cni-operator-controller-manager.
+      Do not create/modify.
+spec:
+  cidr:
+  - hosts:
+    - hostIP: 10.244.0.168
+      hostIndex: 0
+      hostName: node-1
+      interfaceName: eth1
+      ippool: multi-nic-cni-operator-ipvlanl3-192.168.0.0-26
+      podCIDR: 192.168.0.0/26
+    - hostIP: 10.244.0.167
+      hostIndex: 1
+      hostName: node-2
+      interfaceName: eth1
+      ippool: multi-nic-cni-operator-ipvlanl3-192.168.0.64-26
+      podCIDR: 192.168.0.64/26
+    interfaceIndex: 0
+    netAddress: 10.244.0.0/16
+    vlanCIDR: 192.168.0.0/18
+  - hosts:
+    - hostIP: 10.0.0.168
+      hostIndex: 0
+      hostName: node-1
+      interfaceName: eth2
+      ippool: multi-nic-cni-operator-ipvlanl3-192.168.64.0-26
+      podCIDR: 192.168.64.0/26
+    - hostIP: 10.0.0.167
+      hostIndex: 1
+      hostName: node-2
+      interfaceName: eth2
+      ippool: multi-nic-cni-operator-ipvlanl3-192.168.64.64-26
+      podCIDR: 192.168.64.64/26
+    interfaceIndex: 1
+    netAddress: 10.0.0.0/16
+    vlanCIDR: 192.168.64.0/18
+  config:
+    hostBlock: 8
+    interfaceBlock: 2
+    masterNets: []
+    name: multi-nic-cni-operator-ipvlanl3
+    subnet: 192.168.0.0/16
+    type: ipvlan
+    vlanMode: l3

@@ -96,7 +96,7 @@ spec:
 
     ## Instructions
    
-    Please check the [installation](https://github.com/foundation-model-stack/multi-nic-cni#usage) documentation
+    Please check the [User Guide](https://foundation-model-stack.github.io/multi-nic-cni/user_guide/)
 
   displayName: multi-nic-cni-operator
   icon:

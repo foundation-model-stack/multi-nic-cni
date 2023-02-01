@@ -2,6 +2,10 @@ apiVersion: multinic.fms.io/v1
 kind: Config
 metadata:
   name: multi-nicd
+  annotations:
+    note: |
+      The resource with default settings will be auto-created by multi-nic-cni-operator-controller-manager.
+      Please modify if need.
 spec:
   cniType: multi-nic
   ipamType: multi-nic-ipam
@@ -11,7 +15,6 @@ spec:
   deleteRoutePath: /deletel3
   daemon:
     image: multi-nic-cni-daemon
-    imagePullPolicy: Always
     securityContext:
       privileged: true
     env:
@@ -22,7 +25,7 @@ spec:
     mounts:
     - name: cnibin
       podpath: /host/opt/cni/bin
-      hostpath: ${CNI_BIN_HOSTPATH}
+      hostpath: /var/lib/cni/bin
     - name: device-plugin
       podpath: /var/lib/kubelet/device-plugins
       hostpath: /var/lib/kubelet/device-plugins

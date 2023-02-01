@@ -22,6 +22,7 @@ spec:
       labels:
         control-plane: controller-manager
     spec:
+      priorityClassName: system-cluster-critical
       hostNetwork: true
       securityContext:
         runAsNonRoot: true
@@ -29,7 +30,9 @@ spec:
       - command:
         - /manager
         args:
-        - --leader-elect=false
+        - --leader-elect
+        - --logtostderr=true
+        - --v=4
         image: controller:latest
         imagePullPolicy: Always
         name: manager

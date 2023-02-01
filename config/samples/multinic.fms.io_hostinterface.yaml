@@ -1,0 +1,23 @@
+apiVersion: multinic.fms.io/v1
+kind: HostInterface
+metadata:
+  name: node-1
+  annotations:
+    note: |
+      This resource will be auto-generated and controlled by multi-nic-cni-operator-controller-manager.
+      Do not create/modify.
+spec:
+  hostName: node-1
+  interfaces:
+  - hostIP: 10.0.0.168
+    interfaceName: eth1
+    netAddress: 10.0.0.0/16
+    pciAddress: "0000:00:04.0"
+    product: "1000"
+    vendor: 1af4
+  - hostIP: 10.1.0.168
+    interfaceName: eth2
+    netAddress: 10.1.0.0/16
+    pciAddress: "0000:00:05.0"
+    product: "1000"
+    vendor: 1af4

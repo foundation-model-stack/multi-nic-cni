@@ -1,0 +1,39 @@
+apiVersion: multinic.fms.io/v1
+kind: Config
+metadata:
+  name: multi-nicd
+  annotations:
+    note: |
+      The resource with default settings will be auto-created by multi-nic-cni-operator-controller-manager.
+      Please modify if need.
+spec:
+  cniType: multi-nic
+  ipamType: multi-nic-ipam
+  joinPath: /join
+  getInterfacePath: /interface
+  addRoutePath: /addl3
+  deleteRoutePath: /deletel3
+  daemon:
+    image: multi-nic-cni-daemon
+    securityContext:
+      privileged: true
+    env:
+    - name: DAEMON_PORT
+      value: "11000"
+    - name: RT_TABLE_PATH
+      value: /opt/rt_tables
+    mounts:
+    - name: cnibin
+      podpath: /host/opt/cni/bin
+      hostpath: ${CNI_BIN_HOSTPATH}
+    - name: device-plugin
+      podpath: /var/lib/kubelet/device-plugins
+      hostpath: /var/lib/kubelet/device-plugins
+    - name: rt-tables
+      podpath: /opt/rt_tables
+      hostpath: /etc/iproute2/rt_tables
+    port: 11000
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "50Mi"

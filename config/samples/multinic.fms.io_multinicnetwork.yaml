@@ -1,7 +1,7 @@
 apiVersion: multinic.fms.io/v1
 kind: MultiNicNetwork
 metadata:
-  name: multinic-ipvlanl3
+  name: ipvlanl3
 spec:
   subnet: "192.168.0.0/16"
   ipam: |
