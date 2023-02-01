@@ -41,6 +41,12 @@ func (h *RouteHandler) AddRoutes(cidrSpec multinicv1.CIDRSpec, entries []multini
 
 // AddRoutesToHost add route to a specific host
 func (h *RouteHandler) AddRoutesToHost(cidrSpec multinicv1.CIDRSpec, hostName string, daemon DaemonPod, entries []multinicv1.CIDREntry, hostInterfaceInfoMap map[string]map[int]multinicv1.HostInterfaceInfo, forceDelete bool) (bool, bool) {
+	_, err := h.DaemonCacheHandler.GetCache(hostName)
+	if err != nil {
+		h.Log.V(6).Info(fmt.Sprintf("fail to apply L3config %s to %s: %v", cidrSpec.Config.Name, hostName, err))
+		// no change, connecion failed
+		return false, true
+	}
 	change := true
 	mainSrcHostIP := daemon.HostIP
 	routes := []HostRoute{}
