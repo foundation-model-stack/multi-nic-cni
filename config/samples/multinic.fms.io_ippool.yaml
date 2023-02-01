@@ -1,0 +1,16 @@
+apiVersion: multinic.fms.io/v1
+kind: IPPool
+metadata:
+  name: ipvlanl3-192.168.0.0-26
+  annotations:
+    note: |
+      This resource will be auto-generated and controlled by multi-nic-cni-operator-controller-manager.
+      Do not create/modify.
+spec:
+  allocations: []
+  excludes: []
+  hostName: node-1
+  interfaceName: eth1
+  netAttachDef: multi-nic-cni-operator-ipvlanl3
+  podCIDR: 192.168.0.0/26
+  vlanCIDR: 192.168.0.0/18

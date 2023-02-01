@@ -1,8 +1,11 @@
 ## Append samples you want in your CSV to this file as resources ##
 resources:
-- multinic.fms.io_v1_config.yaml
-- net_v1_deviceclass.yaml
-- net_v1_multinicnetwork.yaml
+- multinic.fms.io_multinicnetwork.yaml
+- multinic.fms.io_deviceclass.yaml
+- multinic.fms.io_config.yaml
+- multinic.fms.io_hostinterface.yaml
+- multinic.fms.io_cidr.yaml
+- multinic.fms.io_ippool.yaml
 #+kubebuilder:scaffold:manifestskustomizesamples
 
 configurations:
