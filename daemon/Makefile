@@ -25,7 +25,7 @@ endif
 image-build:
 ifeq ($(shell uname), Linux)
 	@echo "Build deamon component"
-	docker build -t ${DAEMON_IMG} .
+	docker build -t ${DAEMON_IMG} -f ./dockerfiles/Dockerfile .
 else
 	@echo "Cannot build daemon on $(shell uname)"
 	exit 1
