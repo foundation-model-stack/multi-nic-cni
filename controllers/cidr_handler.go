@@ -156,7 +156,11 @@ func (h *CIDRHandler) SyncAllPendingCustomCR(defHandler *plugin.NetAttachDefHand
 				excludes := compute.SortAddress(cidr.Spec.Config.ExcludeCIDRs)
 				for _, entry := range cidr.Spec.CIDRs {
 					for _, host := range entry.Hosts {
-						if _, found := ippoolSnapshot[host.IPPool]; !found {
+						ippoolName := host.IPPool
+						if ippoolName == "" {
+							ippoolName = h.IPPoolHandler.GetIPPoolName(name, host.PodCIDR)
+						}
+						if _, found := ippoolSnapshot[ippoolName]; !found {
 							h.UpdateIPPool(name, host.PodCIDR, entry.VlanCIDR, host.HostName, host.InterfaceName, excludes)
 						}
 					}
@@ -428,6 +432,12 @@ func (h *CIDRHandler) updateEntries(cidrSpec multinicv1.CIDRSpec, excludes []com
 							entry.Hosts[itemIndex].HostIP = hostIP
 							changed = true
 						}
+						if host.IPPool == "" {
+							// ippool not set (snapshot from previous version)
+							ippoolName := h.IPPoolHandler.GetIPPoolName(def.Name, podCIDR)
+							entry.Hosts[itemIndex].IPPool = ippoolName
+							changed = true
+						}
 					} else {
 						// tabu, recompute host index
 						entry.Hosts = append(entry.Hosts[0:itemIndex], entry.Hosts[itemIndex+1:]...)
@@ -633,7 +643,11 @@ func (h *CIDRHandler) SyncIPPoolWithActivePods(cidrMap map[string]multinicv1.CID
 		crAllocationMap[defName] = make(map[string]multinicv1.Allocation)
 		for _, entry := range cidr.Spec.CIDRs {
 			for _, host := range entry.Hosts {
-				if ippool, exist := ippoolSnapshot[host.IPPool]; exist {
+				ippoolName := host.IPPool
+				if ippoolName == "" {
+					ippoolName = h.IPPoolHandler.GetIPPoolName(defName, host.PodCIDR)
+				}
+				if ippool, exist := ippoolSnapshot[ippoolName]; exist {
 					for _, allocation := range ippool.Allocations {
 						crAllocationMap[defName][allocation.Address] = allocation
 					}

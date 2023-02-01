@@ -59,7 +59,6 @@ spec:
                         - hostIndex
                         - hostName
                         - interfaceName
-                        - ippool
                         - podCIDR
                         type: object
                       type: array
