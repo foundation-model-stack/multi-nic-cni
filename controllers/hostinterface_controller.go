@@ -41,6 +41,7 @@ const TestModelLabel = "test-mode"
 func InitHostInterfaceCache(clientset *kubernetes.Clientset, hostInterfaceHandler *HostInterfaceHandler, daemonCacheHandler *DaemonCacheHandler) error {
 	listObjects, err := hostInterfaceHandler.ListHostInterface()
 	if err == nil {
+		// check existing hostinterface
 		for name, instance := range listObjects {
 			if _, ok := instance.Labels[TestModelLabel]; ok {
 				// on test mode, no need to init
@@ -55,6 +56,14 @@ func InitHostInterfaceCache(clientset *kubernetes.Clientset, hostInterfaceHandle
 				}
 			}
 			hostInterfaceHandler.SetCache(name, instance)
+		}
+		// check missing hostinterface
+		daemonSnapshot := daemonCacheHandler.ListCache()
+		for name, daemon := range daemonSnapshot {
+			if _, found := listObjects[name]; !found {
+				// create missing hostinterface
+				hostInterfaceHandler.CreateHostInterface(daemon.NodeName, []multinicv1.InterfaceInfoType{})
+			}
 		}
 	}
 	return err
@@ -135,6 +144,7 @@ func (r *HostInterfaceReconciler) UpdateInterfaces(instance multinicv1.HostInter
 	hifName := instance.GetName()
 	pod, err := r.DaemonWatcher.DaemonCacheHandler.GetCache(nodeName)
 	if err == nil {
+		// daemon exists
 		podAddress := GetDaemonAddressByPod(pod)
 		interfaces, err := r.DaemonWatcher.DaemonConnector.GetInterfaces(podAddress)
 		if err != nil {
@@ -156,17 +166,23 @@ func (r *HostInterfaceReconciler) UpdateInterfaces(instance multinicv1.HostInter
 		r.Log.V(7).Info(fmt.Sprintf("%s on test mode", nodeName))
 		return nil
 	}
+	// daemon pod does not exist
 	_, err = r.DaemonWatcher.Clientset.CoreV1().Nodes().Get(context.TODO(), nodeName, metav1.GetOptions{})
-	r.DaemonCacheHandler.UnsetCache(nodeName)
-	r.HostInterfaceHandler.DeleteHostInterface(nodeName)
-	if err != nil && errors.IsNotFound(err) {
+	if err == nil {
+		// node exists but might be tainted
+		r.Log.V(4).Info(fmt.Sprintf("Hostinterface %s: no daemon pod found (node exists)", nodeName))
+		return nil
+	}
+	if errors.IsNotFound(err) {
 		// not found node
+		r.DaemonCacheHandler.UnsetCache(nodeName)
+		r.HostInterfaceHandler.DeleteHostInterface(nodeName)
 		r.Log.V(4).Info(fmt.Sprintf("Delete Hostinterface %s: node no more exists", nodeName))
 		return nil
 	} else {
-		// not found pod even DaemonSet is already ready, node was tainted
-		r.Log.V(4).Info(fmt.Sprintf("Hostinterface %s: no daemon pod found", nodeName))
-		return nil
+		// err to get node
+		r.Log.V(4).Info(fmt.Sprintf("Hostinterface %s: cannot confirm node status", nodeName))
+		return err
 	}
 }
 
