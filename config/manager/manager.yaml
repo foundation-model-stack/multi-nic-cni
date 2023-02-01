@@ -31,8 +31,8 @@ spec:
         - /manager
         args:
         - --leader-elect
-        - --logtostderr=true
-        - --v=4
+        - --zap-log-level=4
+        - --zap-stacktrace-level=error
         image: controller:latest
         imagePullPolicy: Always
         name: manager

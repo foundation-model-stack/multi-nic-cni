@@ -36,7 +36,7 @@ patchesJson6902:
   patch: |-
       - op: add
         path: /spec/template/spec/containers/1/args/0
-        value: "--logtostderr=true"
+        value: "--zap-stacktrace-level=error"
       - op: add
         path: /spec/template/spec/containers/1/args/1
-        value: "--v=4"
+        value: "--zap-log-level=4"
