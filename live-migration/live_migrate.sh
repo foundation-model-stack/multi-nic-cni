@@ -4,6 +4,10 @@ if [ -z ${OPERATOR_NAMESPACE} ]; then
     OPERATOR_NAMESPACE=openshift-operators
 fi
 
+if [ -z ${CLUSTER_NAME} ]; then
+    CLUSTER_NAME="default"
+fi
+
 _snapshot_resource() {
     dir=$1
     mkdir -p $dir
@@ -11,7 +15,6 @@ _snapshot_resource() {
     item=$3
     kubectl get $kind $item -ojson | jq 'del(.metadata.resourceVersion,.metadata.uid,.metadata.selfLink,.metadata.creationTimestamp,.metadata.generation,.metadata.ownerReferences)' | yq eval - -P > $dir/$kind-$item.yaml
     echo "snapshot $dir/$kind-$item.yaml"
-
 }
 
 _snapshot() {
@@ -21,8 +24,9 @@ _snapshot() {
     echo {"apiVersion": "v1", "items": $itemlist, "kind": "List"}| yq eval - -P > $dir/$cr.yaml
 }
 
-status_cr="cidr.multinic ippool.multinic hostinterface.multinic"
-activate_cr="multinicnetwork"
+status_cr="cidrs.multinic ippools.multinic hostinterfaces.multinic"
+activate_cr="multinicnetworks.multinic"
+config_cr="configs.multinic deviceclasses.multinic"
 
 get_netname() {
     kubectl get multinicnetwork -ojson|jq .items| jq '.[].metadata.name'| tr -d '"'
@@ -45,7 +49,7 @@ snapshot() {
     yq -e -i .metadata.name=\"$netname\" snapshot/multinicnetwork_l2.yaml
     echo "rename multinicnetwork_l2.yaml with $netname"
     # snapshot state
-    snapshot_dir="snapshot/$1"
+    snapshot_dir="snapshot/${CLUSTER_NAME}"
     mkdir -p $snapshot_dir
     for cr in $status_cr $activate_cr
     do
@@ -58,14 +62,38 @@ snapshot() {
 deactivate_route_config() {
     kubectl apply -f snapshot/multinicnetwork_l2.yaml
     sleep 5
-    kubectl get net-attach-def $(get_netname) -ojson|jq '.spec.config'
+    configSTR=$(kubectl get multinicnetwork $(get_netname) -ojson|jq '.spec.multiNICIPAM')
+    if [[ "$configSTR" == "false" ]]; then
+        echo "Deactivate route configuration."
+    fi
+}
+
+clean_resource() {
+    deactivate_route_config
+    for cr in $status_cr $activate_cr $config_cr
+    do
+        kubectl delete $cr --all
+    done
+    wait_daemon_terminated
+}
+
+wait_daemon_terminated() {
+    kubectl wait --for=delete daemonset/multi-nicd -n ${OPERATOR_NAMESPACE} --timeout=60s
 }
 
 uninstall_operator() {
+    version=$1
     # uninstall operator
     kubectl delete subscriptions.operators.coreos.com multi-nic-cni-operator -n $OPERATOR_NAMESPACE
-    kubectl delete clusterserviceversion multi-nic-cni-operator.v1.0.2 -n $OPERATOR_NAMESPACE
+    kubectl delete clusterserviceversion multi-nic-cni-operator.v${version} -n $OPERATOR_NAMESPACE
     kubectl delete ds multi-nicd -n $OPERATOR_NAMESPACE
+}
+
+clean_crd() {
+    for cr in $status_cr $activate_cr $config_cr
+    do
+        kubectl delete crd $cr.fms.io
+    done
 }
 
 # after reinstall operator
@@ -77,12 +105,13 @@ patch_daemon() {
 }
 
 wait_daemon() {
+    sleep 5
     echo "Wait for daemonset to be ready"
     kubectl rollout status daemonset multi-nicd -n ${OPERATOR_NAMESPACE} --timeout 300s
 }
 
 deploy_status_cr() {
-    snapshot_dir="snapshot/$1"
+    snapshot_dir="snapshot/${CLUSTER_NAME}"
     for cr in $status_cr
     do
         kubectl apply -f $snapshot_dir/$cr.yaml
@@ -105,12 +134,18 @@ restart_controller() {
 }
 
 activate_route_config() {
-    snapshot_dir="snapshot/$1"
+    snapshot_dir="snapshot/${CLUSTER_NAME}"
     kubectl apply -f $snapshot_dir/$activate_cr.yaml
     sleep 5
-    kubectl get net-attach-def $(get_netname) -ojson|jq '.spec.config'
+    configSTR=$(kubectl get multinicnetwork $(get_netname) -ojson|jq '.spec.multiNICIPAM')
+    if [[ "$configSTR" == "true" ]]; then
+        echo "Activate route configuration."
+    fi
 }
 
+get_status() {
+    kubectl get multinicnetwork -o custom-columns=NAME:.metadata.name,ConfigStatus:.status.configStatus,RouteStatus:.status.routeStatus,TotalHost:.status.discovery.existDaemon,HostWithSecondaryNIC:.status.discovery.infoAvailable,ProcessedHost:.status.discovery.cidrProcessed,Time:.status.lastSyncTime
+}
 "$@"
 
 

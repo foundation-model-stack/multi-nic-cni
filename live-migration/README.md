@@ -6,76 +6,129 @@ To reinstall/upgrade multi-nic-cni-operator without affecting workloads running 
 - [watch](https://www.2daygeek.com/linux-watch-command-to-monitor-a-command/) - optional
 
 ### Steps
-1. Clone and checkout this branch.
+1. Prepare script and environment
+
+   1.1 Clone and make script be executable
    ```bash
    git clone https://github.com/foundation-model-stack/multi-nic-cni.git
-   cd multi-nic-cni
-   git checkout -b doc origin/doc
-   cd live_migration
+   cd multi-nic-cni/live_migration
    chmod +x ./live_migrate.sh
-
-   ##  If operator is not installed in the openshift-operators namespace, also run
-   # export OPERATOR_NAMESPACE=<deployed namespace>
+   ```
+   1.2 If operator is not installed in the `openshift-operators` namespace, run
+   ```bash
+   export OPERATOR_NAMESPACE=<deployed-namespace>
    ```
 2. Snapshot multi-nic-cni CR on your cluster
     ```bash
-    CLUSTER_NAME=<cluster-name>
-    ./live_migrate.sh snapshot $CLUSTER_NAME
+    export CLUSTER_NAME=<cluster-name> # snapshot is saved to `snapshot/default` folder if not set
+    ./live_migrate.sh snapshot
     ```
-    > rename multinicnetwork_l2.yaml with "multinic-ipvlanl3"<br>cidr.multinic.yaml          hostinterface.multinic.yaml ippool.multinic.yaml        multinicnetwork.yaml<br>saved in snapshot-a100-huge
-
+    ```
+    # expected output
+    rename multinicnetwork_l2.yaml with "<multinicnetwork-name>"
+    cidr.multinic.yaml          hostinterface.multinic.yaml 
+    ippool.multinic.yaml        multinicnetwork.yaml
+    saved in snapshot/<cluster-name>
+    ```
     This will create a folder containing relevant CR and update multinetwork name in `multinicnetwork_l2.yaml`
 3. Deactivate controller from updating route on host
+
+    3.1 Deactivate route configuration
     ```bash
     ./live_migrate.sh deactivate_route_config
     ```
-    > multinicnetwork.multinic.fms.io/multinic-ipvlanl3 configured
-    ...
+    ```
+    # expected output
+    multinicnetwork.multinic.fms.io/<multinicnetwork-name> configured
+    Deactivate route configuration.
+    ```
+    3.2 For migrating to new channel with updated CRDs, clean the old resources first.
+    ```bash
+    ./live_migrate.sh clean_resource
+    ```
+
 4. Uninstall operator
+
+    4.1 Uninstall by CLI
     ```bash
-    ./live_migrate.sh uninstall_operator
+    OLD_VERSION=<version-to-uninstall> # e.g., OLD_VERSION=1.0.2
+    ./live_migrate.sh uninstall_operator $OLD_VERSION 
     ```
-    For OperatorSDK, run `operator-sdk cleanup --delete-all`<br>
-    Wait until all multi-nicd daemon is terminated<br>
+    For OperatorSDK, run `operator-sdk cleanup multi-nic-cni-operator --delete-all`<br>
+    4.2 Wait until all multi-nicd daemon is terminated<br>
     ```bash
-    watch kubectl get po -n openshift-operators
+    ./live_migrate.sh wait_daemon_terminated
     ```
+    4.3 For migrating to new channel with updated CRDs, need to also clean CRD.
+    ```bash
+    ./live_migrate.sh clean_crd
+    ```
+
 5. Reinstall operator
    
     5.1 install operator via GUI (recommended). For other installation, check [Installation Guide](https://foundation-model-stack.github.io/multi-nic-cni/user_guide/#quick-installation).
 
-    If multi-nicd image also need to be updated, run
+    5.2 If multi-nicd image also need to be updated, run
     ```bash
     ./live_migrate.sh patch_daemon
     ```
-    Wait until multi-nicd daemon is all running:
+
+    5.3 Wait until multi-nicd daemon is all running:
     ```bash
     ./live_migrate.sh wait_daemon
     ```
-    Check if CRs are deleted or not (not deleted by default):
+    5.4 Check if CRs are deleted or not (not deleted by default):
     ```bash
     kubectl get cidr
-    # NAME                AGE
-    # multinic-ipvlanl3   
     ```
-    *[if CRs are deleted (for example, by operator-sdk cleanup), do 5.2 - 5.4]* <br>
-    5.2 deploy dump multinicnetwork with l2
+    ```
+    # expected output if CRs are deleted
+    No resources found
+    ```
+    If CRs are deleted (for example, by operator-sdk cleanup or with CRD updates, by updated CDR), do 5.5 - 5.7
+    
+    5.5 deploy dump multinicnetwork
     ```bash
     ./live_migrate.sh deactivate_route_config
     ```
-    > multinicnetwork.multinic.fms.io/multinic-ipvlanl3 configured <br>"{\"cniVersion\":\"0.3.0\",\"name\":\"multinic-ipvlanl3\",\"type\":\"multi-nic\",\"ipam\":null,\"dns\":{},\"plugin\":{\"cniVersion\":\"0.3.0\",\"mode\":\"l2\",\"type\":\"ipvlan\"},\"subnet\":\"192.168.0.0/16\",\"masterNets\":[\"10.241.130.0/24\",\"10.241.131.0/24\"],\"daemonIP\":\"\",\"daemonPort\":11000}"
-
-    5.3 apply snapshot status CR
-    ```bash
-    ./live_migrate.sh deploy_status_cr $CLUSTER_NAME
     ```
-    5.4 restart controller to activate cache initialization
+    # expected output
+    multinicnetwork.multinic.fms.io/<multinicnetwork-name> configured
+    Deactivate route configuration.
+    ```
+    5.6 apply snapshot status CR
+    ```bash
+    ./live_migrate.sh deploy_status_cr
+    ```
+    5.7 restart controller to activate cache initialization
     ```bash
     ./live_migrate.sh restart_controller
     ```
-    > Wait for deployment to be available<br>deployment.apps/multi-nic-cni-operator-controller-manager condition met<br>Wait for config to be ready...<br>Config Ready
-6. activate route config
-    ```bash
-    ./live_migrate.sh activate_route_config $CLUSTER_NAME
     ```
-    > multinicnetwork.multinic.fms.io/multinic-ipvlanl3 configured<br>"{\"cniVersion\":\"0.3.0\",\"name\":\"multinic-ipvlanl3\",\"type\":\"multi-nic\",\"ipam\":{\"hostBlock\":8,\"interfaceBlock\":2,\"type\":\"multi-nic-ipam\",\"vlanMode\":\"l3\"},\"dns\":{},\"plugin\":{\"cniVersion\":\"0.3.0\",\"mode\":\"l3\",\"type\":\"ipvlan\"},\"subnet\":\"192.168.0.0/16\",\"masterNets\":[\"10.241.130.0/24\",\"10.241.131.0/24\"],\"multiNICIPAM\":true,\"daemonIP\":\"\",\"daemonPort\":11000}"
+    # expected output
+    Wait for deployment to be available
+    deployment.apps/multi-nic-cni-operator-controller-manager condition met
+    Wait for config to be ready...
+    ...
+    Config Ready
+    ```
+
+6. Activate route config
+    ```bash
+    ./live_migrate.sh activate_route_config
+    ```
+    ```
+    # expected output
+    multinicnetwork.multinic.fms.io/<multinicnetwork-name> configured
+    Activate route configuration.
+    ```
+    
+7. Check multinicnetwork status (available from v1.0.3)
+   ```bash
+   ./live_migrate.sh get_status
+    ```
+    ```
+   # expected output
+   NAME                ConfigStatus   RouteStatus   TotalHost   HostWithSecondaryNIC   ProcessedHost   Time
+   <multinicnetwork-name>   Success        Success       5           5                      5          2023-02-02T09:31:06Z
+   ```
