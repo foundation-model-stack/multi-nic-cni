@@ -1,0 +1,28 @@
+name: Perform unittest for daemon
+
+on:
+  pull_request:
+    paths:
+      - daemon/**
+      - cni/**
+      - Makefile
+  push:
+    paths:
+      - daemon/**
+      - cni/**
+      - Makefile
+
+jobs:
+  build-push-daemon:
+    runs-on: ubuntu-latest
+    env:
+      IMAGE_NAME: ghcr.io/${{ github.repository }}-daemon
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '1.17.0'
+      - name: Set up Docker
+        uses: docker/setup-buildx-action@v1
+      - name: Test
+        run: make test-daemon
