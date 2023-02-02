@@ -118,7 +118,7 @@ func (r *ConfigReconciler) CreateDefaultDaemonConfig() error {
 		Privileged: &privileged,
 	}
 	daemonSpec := multinicv1.DaemonSpec{
-		Image:           "ghcr.io/foundation-model-stack/multi-nic-cni-daemon:v1.0.2",
+		Image:           "ghcr.io/foundation-model-stack/multi-nic-cni-daemon:v1.0.3",
 		Env:             env,
 		HostPathMounts:  hostPathMounts,
 		Resources:       resources,
