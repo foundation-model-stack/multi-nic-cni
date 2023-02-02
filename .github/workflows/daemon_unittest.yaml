@@ -11,7 +11,7 @@ on:
       - Makefile
 
 jobs:
-  build-push-daemon:
+  daemon-test:
     runs-on: ubuntu-latest
     env:
       IMAGE_NAME: ghcr.io/${{ github.repository }}-daemon
