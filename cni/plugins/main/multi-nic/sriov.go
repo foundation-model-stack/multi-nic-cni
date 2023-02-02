@@ -2,19 +2,19 @@
  * Copyright 2022- IBM Inc. All rights reserved
  * SPDX-License-Identifier: Apache2.0
  */
- 
+
 package main
 
 import (
 	"encoding/json"
 	"fmt"
-	current "github.com/containernetworking/cni/pkg/types/100"
+
 	"github.com/containernetworking/cni/pkg/types"
+	current "github.com/containernetworking/cni/pkg/types/100"
 )
 
-
 // SRIOVNetConfig defines sriov net config
-// references: 
+// references:
 // - https://github.com/openshift/sriov-cni/blob/dfbc68063bb549910a5440d7c80e45a2519d12cc/pkg/config/config.go
 // - https://github.com/k8snetworkplumbingwg/sriov-cni/blob/v2.1.0/cmd/sriov/main.go
 type SRIOVNetConfig struct {
@@ -34,6 +34,7 @@ type SriovNetConf struct {
 	HostIFNames string // VF netdevice name(s)
 	ContIFNames string // VF names after in the container; used during deletion
 }
+
 // loadSRIOVConf unmarshal to SRIOVNetConfig and returns list of SR-IOV configs
 func loadSRIOVConf(bytes []byte, ifName string, n *NetConf, ipConfigs []*current.IPConfig) ([][]byte, error) {
 	confBytesArray := [][]byte{}
@@ -61,14 +62,11 @@ func loadSRIOVConf(bytes []byte, ifName string, n *NetConf, ipConfigs []*current
 		}
 		if n.IsMultiNICIPAM {
 			// multi-NIC IPAM config
-			if index < len(ipConfigs) {
-				confBytes = injectMultiNicIPAM(confBytes, ipConfigs, index)
-				confBytesArray = append(confBytesArray, confBytes)
-			}	
+			confBytes = injectMultiNicIPAM(confBytes, ipConfigs, index)
 		} else {
 			confBytes = injectSingleNicIPAM(confBytes, bytes)
-			confBytesArray = append(confBytesArray, confBytes)
 		}
+		confBytesArray = append(confBytesArray, confBytes)
 	}
 	return confBytesArray, nil
 }
@@ -86,4 +84,3 @@ func copySRIOVconfig(original *SriovNetConf) (*SriovNetConf, error) {
 	}
 	return copiedObject, nil
 }
-

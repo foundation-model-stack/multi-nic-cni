@@ -2,14 +2,15 @@
  * Copyright 2022- IBM Inc. All rights reserved
  * SPDX-License-Identifier: Apache2.0
  */
- 
+
 package main
 
 import (
 	"encoding/json"
 	"fmt"
-	current "github.com/containernetworking/cni/pkg/types/100"
+
 	"github.com/containernetworking/cni/pkg/types"
+	current "github.com/containernetworking/cni/pkg/types/100"
 )
 
 // IPVLANNetConfig defines ipvlan net config
@@ -18,14 +19,14 @@ import (
 // MTU    int    `json:"mtu"`
 type IPVLANNetConfig struct {
 	types.NetConf
-	MainPlugin             IPVLANTypeNetConf `json:"plugin"`
+	MainPlugin IPVLANTypeNetConf `json:"plugin"`
 }
 
 type IPVLANTypeNetConf struct {
 	types.NetConf
 	Master string `json:"master"`
 	Mode   string `json:"mode"`
-	MTU    int    `json:"mtu"`	
+	MTU    int    `json:"mtu"`
 }
 
 // loadIPVANConf unmarshal to IPVLANNetConfig and returns list of IPVLAN configs
@@ -46,7 +47,7 @@ func loadIPVANConf(bytes []byte, ifName string, n *NetConf, ipConfigs []*current
 		}
 		if singleConfig.CNIVersion == "" {
 			singleConfig.CNIVersion = n.CNIVersion
-		} 
+		}
 		singleConfig.Name = fmt.Sprintf("%s-%d", ifName, index)
 		singleConfig.Master = masterName
 		confBytes, err := json.Marshal(singleConfig)
@@ -56,18 +57,14 @@ func loadIPVANConf(bytes []byte, ifName string, n *NetConf, ipConfigs []*current
 
 		if n.IsMultiNICIPAM {
 			// multi-NIC IPAM config
-			if index < len(ipConfigs) {
-				confBytes = injectMultiNicIPAM(confBytes, ipConfigs, index)
-				confBytesArray = append(confBytesArray, confBytes)
-			}	
+			confBytes = injectMultiNicIPAM(confBytes, ipConfigs, index)
 		} else {
 			confBytes = injectSingleNicIPAM(confBytes, bytes)
-			confBytesArray = append(confBytesArray, confBytes)
 		}
+		confBytesArray = append(confBytesArray, confBytes)
 	}
 	return confBytesArray, nil
 }
-
 
 // copyIPVLANConfig makes a copy of base IPVLAN config
 func copyIPVLANConfig(original IPVLANTypeNetConf) (*IPVLANTypeNetConf, error) {
