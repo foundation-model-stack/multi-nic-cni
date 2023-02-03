@@ -2,16 +2,16 @@
  * Copyright 2022- IBM Inc. All rights reserved
  * SPDX-License-Identifier: Apache2.0
  */
- 
+
 package main
 
 import (
-	"strings"
 	"encoding/json"
+	"strings"
 
 	"fmt"
+
 	current "github.com/containernetworking/cni/pkg/types/100"
-	
 )
 
 // getPodInfo extracts pod Name and Namespace from cniArgs
@@ -29,11 +29,14 @@ func getPodInfo(cniArgs string) (string, string) {
 	return podName, podNamespace
 }
 
-
 // injectIPAM injects ipam bytes to config
 
-func injectMultiNicIPAM(singleNicConfBytes []byte, ipConfigs []*current.IPConfig, ipIndex int) []byte{
-	return replaceMultiNicIPAM(singleNicConfBytes, ipConfigs[ipIndex])
+func injectMultiNicIPAM(singleNicConfBytes []byte, ipConfigs []*current.IPConfig, ipIndex int) []byte {
+	var ipConfig *current.IPConfig
+	if ipIndex < len(ipConfigs) {
+		ipConfig = ipConfigs[ipIndex]
+	}
+	return replaceMultiNicIPAM(singleNicConfBytes, ipConfig)
 }
 func injectSingleNicIPAM(singleNicConfBytes []byte, multiNicConfBytes []byte) []byte {
 	return replaceSingleNicIPAM(singleNicConfBytes, multiNicConfBytes)
@@ -48,14 +51,17 @@ func replaceSingleNicIPAM(singleNicConfBytes []byte, multiNicConfBytes []byte) [
 	ipamObject := &IPAMExtract{}
 	json.Unmarshal(multiNicConfBytes, ipamObject)
 	ipamBytes, _ := json.Marshal(ipamObject.IPAM)
-	singleIPAM := fmt.Sprintf("\"ipam\":%s",string(ipamBytes))
+	singleIPAM := fmt.Sprintf("\"ipam\":%s", string(ipamBytes))
 	injectedStr := strings.ReplaceAll(confStr, "\"ipam\":{}", singleIPAM)
 	return []byte(injectedStr)
 }
 
-func replaceMultiNicIPAM(singleNicConfBytes []byte, ipConfig *current.IPConfig) [] byte {
+func replaceMultiNicIPAM(singleNicConfBytes []byte, ipConfig *current.IPConfig) []byte {
 	confStr := string(singleNicConfBytes)
-	singleIPAM := fmt.Sprintf("\"ipam\":{\"type\":\"static\",\"addresses\":[{\"address\":\"%s\"}]}", ipConfig.Address.String())
+	singleIPAM := "\"ipam\":{\"type\":\"static\",\"addresses\":[]}" // empty ipam
+	if ipConfig != nil {
+		singleIPAM = fmt.Sprintf("\"ipam\":{\"type\":\"static\",\"addresses\":[{\"address\":\"%s\"}]}", ipConfig.Address.String())
+	}
 	injectedStr := strings.ReplaceAll(confStr, "\"ipam\":{}", singleIPAM)
 	return []byte(injectedStr)
 }

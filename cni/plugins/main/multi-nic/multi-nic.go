@@ -61,7 +61,7 @@ func main() {
 
 func cmdAdd(args *skel.CmdArgs) error {
 	// load general NetConf and get deviceType
-	n, deviceType, err := loadConf(args, false)
+	n, deviceType, err := loadConf(args)
 	if err != nil {
 		return fmt.Errorf("failed to load netconf: %v", err)
 	}
@@ -180,7 +180,7 @@ func cmdDel(args *skel.CmdArgs) error {
 		return nil
 	}
 
-	n, deviceType, err := loadConf(args, false)
+	n, deviceType, err := loadConf(args)
 	if err != nil {
 		return fmt.Errorf("fail to load conf: %v", err)
 	}
@@ -225,8 +225,7 @@ func cmdDel(args *skel.CmdArgs) error {
 		return err
 	}
 	if len(confBytesArray) == 0 {
-		utils.Logger.Debug(fmt.Sprintf("zero config: %v (%d)", string(args.StdinData), len(n.Masters)))
-		return fmt.Errorf("zero config %v (%d)", n, len(n.Masters))
+		utils.Logger.Debug(fmt.Sprintf("zero config on cmdDel: %v (%d)", string(args.StdinData), len(n.Masters)))
 	}
 
 	for index, confBytes := range confBytesArray {
@@ -248,7 +247,7 @@ func cmdCheck(args *skel.CmdArgs) error {
 		return nil
 	}
 
-	n, deviceType, err := loadConf(args, true)
+	n, deviceType, err := loadConf(args)
 	if err != nil {
 		return fmt.Errorf("fail to load conf")
 	}
@@ -283,8 +282,7 @@ func cmdCheck(args *skel.CmdArgs) error {
 		return err
 	}
 	if len(confBytesArray) == 0 {
-		utils.Logger.Debug(fmt.Sprintf("zero config: %v (%d)", string(args.StdinData), len(n.Masters)))
-		return fmt.Errorf("zero config %v", n)
+		utils.Logger.Debug(fmt.Sprintf("zero config on cmdCheck: %v (%d)", string(args.StdinData), len(n.Masters)))
 	}
 
 	for index, confBytes := range confBytesArray {
@@ -301,7 +299,7 @@ func cmdCheck(args *skel.CmdArgs) error {
 }
 
 // loadConf unmarshal NetConf and return with dev type
-func loadConf(args *skel.CmdArgs, check bool) (*NetConf, string, error) {
+func loadConf(args *skel.CmdArgs) (*NetConf, string, error) {
 	n := &NetConf{}
 	if err := json.Unmarshal(args.StdinData, n); err != nil {
 		return nil, "", err
@@ -310,25 +308,24 @@ func loadConf(args *skel.CmdArgs, check bool) (*NetConf, string, error) {
 	if n.Subnet == "" {
 		n.Subnet = DEFAULT_SUBNET
 	}
-	if !check {
-		// select NICs
-		hostName, err := os.Hostname()
-		if err != nil {
-			return n, deviceType, err
-		}
-		podName, podNamespace := getPodInfo(args.Args)
-
-		nicSet := NicArgs{}
-		// check if user defined number of interfaces or specific set of interface names in the annotation
-		if n.Args != nil && n.Args.NicSet != nil {
-			nicSet = *n.Args.NicSet
-		}
-		selectResponse, err := selectNICs(n.DaemonIP, n.DaemonPort, podName, podNamespace, hostName, n.Name, nicSet, n.MasterNetAddrs)
-		if err != nil {
-			return n, deviceType, err
-		}
-		n.Masters = selectResponse.Masters
-		n.DeviceIDs = selectResponse.DeviceIDs
+	// select NICs
+	hostName, err := os.Hostname()
+	if err != nil {
+		return n, deviceType, err
 	}
+	podName, podNamespace := getPodInfo(args.Args)
+
+	nicSet := NicArgs{}
+	// check if user defined number of interfaces or specific set of interface names in the annotation
+	if n.Args != nil && n.Args.NicSet != nil {
+		nicSet = *n.Args.NicSet
+	}
+	selectResponse, err := selectNICs(n.DaemonIP, n.DaemonPort, podName, podNamespace, hostName, n.Name, nicSet, n.MasterNetAddrs)
+	if err != nil {
+		return n, deviceType, err
+	}
+	n.Masters = selectResponse.Masters
+	n.DeviceIDs = selectResponse.DeviceIDs
+
 	return n, deviceType, nil
 }
