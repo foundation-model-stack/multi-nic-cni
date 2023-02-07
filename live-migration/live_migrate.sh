@@ -8,6 +8,52 @@ if [ -z ${CLUSTER_NAME} ]; then
     CLUSTER_NAME="default"
 fi
 
+#############################################
+# utility functions
+
+get_netname() {
+    kubectl get multinicnetwork -ojson|jq .items| jq '.[].metadata.name'| tr -d '"'
+}
+
+get_controller() {
+    kubectl get po -n ${OPERATOR_NAMESPACE}|grep multi-nic-cni-operator-controller-manager|awk '{print $1}'
+}
+
+get_controller_log() {
+    controller=$(get_controller)
+    kubectl logs $controller -n ${OPERATOR_NAMESPACE} -c manager
+}
+
+get_status() {
+    kubectl get multinicnetwork -o custom-columns=NAME:.metadata.name,ConfigStatus:.status.configStatus,RouteStatus:.status.routeStatus,TotalHost:.status.discovery.existDaemon,HostWithSecondaryNIC:.status.discovery.infoAvailable,ProcessedHost:.status.discovery.cidrProcessed,Time:.status.lastSyncTime
+}
+
+get_secondary_ip() {
+   PODNAME=$1
+   kubectl get po $PODNAME -ojson|jq .metadata.annotations|jq '.["k8s.v1.cni.cncf.io/network-status"]'| jq -r |jq .[1].ips[0]
+}
+
+apply() {
+    export REPLACEMENT=$1
+    export YAMLFILE=$2
+    yq -e ${REPLACEMENT} ${YAMLFILE}.yaml|kubectl apply -f -
+}
+
+create_replacement() {
+    export LOCATION=$1
+    export REPLACE_VALUE=$2
+    echo "(${LOCATION}=${REPLACE_VALUE})"
+}
+
+#############################################
+
+#############################################
+# cr handling
+
+status_cr="cidrs.multinic ippools.multinic hostinterfaces.multinic"
+activate_cr="multinicnetworks.multinic"
+config_cr="configs.multinic deviceclasses.multinic"
+
 _snapshot_resource() {
     dir=$1
     mkdir -p $dir
@@ -22,23 +68,6 @@ _snapshot() {
     cr=$2
     itemlist=$(kubectl get $cr -ojson |jq '.items'| jq 'del(.[].status,.[].metadata.finalizers,.[].metadata.resourceVersion,.[].metadata.uid,.[].metadata.selfLink,.[].metadata.creationTimestamp,.[].metadata.generation,.[].metadata.ownerReferences)') 
     echo {"apiVersion": "v1", "items": $itemlist, "kind": "List"}| yq eval - -P > $dir/$cr.yaml
-}
-
-status_cr="cidrs.multinic ippools.multinic hostinterfaces.multinic"
-activate_cr="multinicnetworks.multinic"
-config_cr="configs.multinic deviceclasses.multinic"
-
-get_netname() {
-    kubectl get multinicnetwork -ojson|jq .items| jq '.[].metadata.name'| tr -d '"'
-}
-
-get_controller() {
-    kubectl get po -n ${OPERATOR_NAMESPACE}|grep multi-nic-cni-operator-controller-manager|awk '{print $1}'
-}
-
-get_controller_log() {
-    controller=$(get_controller)
-    kubectl logs $controller -n ${OPERATOR_NAMESPACE} -c manager
 }
 
 snapshot() {
@@ -59,6 +88,19 @@ snapshot() {
     echo "saved in $snapshot_dir"
 }
 
+deploy_status_cr() {
+    snapshot_dir="snapshot/${CLUSTER_NAME}"
+    for cr in $status_cr
+    do
+        kubectl apply -f $snapshot_dir/$cr.yaml
+    done
+}
+
+#############################################
+
+#############################################
+# route handling
+
 deactivate_route_config() {
     kubectl apply -f snapshot/multinicnetwork_l2.yaml
     sleep 5
@@ -67,6 +109,21 @@ deactivate_route_config() {
         echo "Deactivate route configuration."
     fi
 }
+
+activate_route_config() {
+    snapshot_dir="snapshot/${CLUSTER_NAME}"
+    kubectl apply -f $snapshot_dir/$activate_cr.yaml
+    sleep 5
+    configSTR=$(kubectl get multinicnetwork $(get_netname) -ojson|jq '.spec.multiNICIPAM')
+    if [[ "$configSTR" == "true" ]]; then
+        echo "Activate route configuration."
+    fi
+}
+
+#############################################
+
+#############################################
+# operator resource handling: controller, daemon, crd
 
 clean_resource() {
     deactivate_route_config
@@ -110,14 +167,6 @@ wait_daemon() {
     kubectl rollout status daemonset multi-nicd -n ${OPERATOR_NAMESPACE} --timeout 300s
 }
 
-deploy_status_cr() {
-    snapshot_dir="snapshot/${CLUSTER_NAME}"
-    for cr in $status_cr
-    do
-        kubectl apply -f $snapshot_dir/$cr.yaml
-    done
-}
-
 restart_controller() {
     controller=$(get_controller)
     kubectl delete po $controller -n ${OPERATOR_NAMESPACE}
@@ -133,19 +182,52 @@ restart_controller() {
     echo "Config Ready"
 }
 
-activate_route_config() {
-    snapshot_dir="snapshot/${CLUSTER_NAME}"
-    kubectl apply -f $snapshot_dir/$activate_cr.yaml
-    sleep 5
-    configSTR=$(kubectl get multinicnetwork $(get_netname) -ojson|jq '.spec.multiNICIPAM')
-    if [[ "$configSTR" == "true" ]]; then
-        echo "Activate route configuration."
-    fi
+#############################################
+
+#############################################
+# iperf live
+
+# ./live_migrate.sh live_iperf3 <SERVER_HOST_NAME> <CLIENT_HOST_NAME> <LIVE_TIME>
+live_iperf3() {
+   SERVER_HOST_NAME=$1
+   CLIENT_HOST_NAME=$2
+   LIVE_TIME=$3
+   NETWORK_NAME=$(get_netname)
+   NETWORK_REPLACEMENT=$(create_replacement .metadata.annotations.\"k8s.v1.cni.cncf.io/networks\" \"${NETWORK_NAME}\")
+   SERVER_HOSTNAME_REPLACEMENT=$(create_replacement .spec.nodeName \"${SERVER_HOST_NAME}\")
+   CLIENT_HOSTNAME_REPLACEMENT=$(create_replacement .spec.nodeName \"${CLIENT_HOST_NAME}\")
+
+   SERVER_NAME="multi-nic-iperf3-server"
+   CLIENT_NAME="multi-nic-iperf3-client"
+
+   SERVER_NAME_REPLACEMENT=$(create_replacement .metadata.name \"${SERVER_NAME}\")
+   # deploy server pod
+   apply ${SERVER_NAME_REPLACEMENT},${NETWORK_REPLACEMENT},${SERVER_HOSTNAME_REPLACEMENT} ./test/iperf3/server
+
+   # wait until server available
+   kubectl wait pod ${SERVER_NAME} --for condition=ready --timeout=90s
+
+   SECONDARY_IP=$(get_secondary_ip ${SERVER_NAME}| tr -d '"')
+   CLIENT_NAME_REPLACEMENT=$(create_replacement .metadata.name \"${CLIENT_NAME}\")
+   # deploy client pod
+   apply ${CLIENT_NAME_REPLACEMENT},${NETWORK_REPLACEMENT},${CLIENT_HOSTNAME_REPLACEMENT} ./test/iperf3/client
+
+   if [[ "${SECONDARY_IP}" == "null" ]]; then
+        echo >&2 "cannot get secondary IP of server ${SERVER_NAME}"
+        exit 2
+   fi
+   # wait until client available
+   kubectl wait pod ${CLIENT_NAME} --for condition=ready --timeout=90s
+   # run live client
+   kubectl exec -it ${CLIENT_NAME} -- iperf3 -c ${SECONDARY_IP} -t ${LIVE_TIME}
+
+   # clean up
+   kubectl delete pod ${CLIENT_NAME} ${SERVER_NAME}
 }
 
-get_status() {
-    kubectl get multinicnetwork -o custom-columns=NAME:.metadata.name,ConfigStatus:.status.configStatus,RouteStatus:.status.routeStatus,TotalHost:.status.discovery.existDaemon,HostWithSecondaryNIC:.status.discovery.infoAvailable,ProcessedHost:.status.discovery.cidrProcessed,Time:.status.lastSyncTime
-}
+#############################################
+
+
 "$@"
 
 
