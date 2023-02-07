@@ -317,7 +317,7 @@ func (h *CIDRHandler) ProcessUpdateRequest() {
 
 // NewCIDRWithNewConfig creates new CIDR by computing interface indexes from master networks
 func (h *CIDRHandler) NewCIDRWithNewConfig(def multinicv1.PluginConfig, namespace string) (bool, error) {
-	h.Log.V(7).Info("NewCIDRWithNewConfig")
+	h.Log.V(3).Info("NewCIDRWithNewConfig")
 	cidrSpec, err := h.newCIDR(def, namespace)
 	if err != nil {
 		return false, err
@@ -481,7 +481,7 @@ func (h *CIDRHandler) updateCIDR(cidrSpec multinicv1.CIDRSpec, new bool) (bool, 
 	entriesMap, changed := h.updateEntries(cidrSpec, excludes, new)
 	// if pod CIDR changes, update CIDR and create corresponding IPPools and routes
 	if changed {
-		h.Log.V(7).Info(fmt.Sprintf("changeCIDR %s", def.Name))
+		h.Log.V(3).Info(fmt.Sprintf("changeCIDR %s", def.Name))
 		newEntries := []multinicv1.CIDREntry{}
 		for _, entry := range entriesMap {
 			newEntries = append(newEntries, entry)
@@ -509,11 +509,15 @@ func (h *CIDRHandler) updateCIDR(cidrSpec multinicv1.CIDRSpec, new bool) (bool, 
 			}
 			h.CleanPendingIPPools(ippoolSnapshot, def.Name, updatedCIDR.Spec)
 		} else {
-			err = h.Client.Create(context.TODO(), mapObj)
-			if err == nil {
-				h.SafeCache.SetCache(def.Name, mapObj.Spec)
+			if new {
+				err = h.Client.Create(context.TODO(), mapObj)
+				if err == nil {
+					h.SafeCache.SetCache(def.Name, mapObj.Spec)
+				}
+				h.CleanPendingIPPools(ippoolSnapshot, def.Name, mapObj.Spec)
+			} else {
+				err = fmt.Errorf("TryInitExistingConfig")
 			}
-			h.CleanPendingIPPools(ippoolSnapshot, def.Name, mapObj.Spec)
 		}
 
 		if err != nil {

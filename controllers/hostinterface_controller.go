@@ -114,7 +114,7 @@ func (r *HostInterfaceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 
 	hifName := instance.GetName()
-	if !r.HostInterfaceHandler.SafeCache.Contains(hifName) {
+	if !r.HostInterfaceHandler.SafeCache.Contains(hifName) && len(instance.Spec.Interfaces) > 0 {
 		r.HostInterfaceHandler.SetCache(hifName, *instance.DeepCopy())
 	}
 

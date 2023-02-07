@@ -150,7 +150,12 @@ func (r *MultiNicNetworkReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			return ctrl.Result{RequeueAfter: ReconcileTime}, nil
 		}
 		// Handle multi-nic IPAM
-		r.HandleMultiNicIPAM(instance)
+		err = r.HandleMultiNicIPAM(instance)
+		if err != nil {
+			message := fmt.Sprintf("Failed to manage %s: %v", multinicnetworkName, err)
+			r.Log.V(2).Info(message)
+			return ctrl.Result{RequeueAfter: ReconcileTime}, nil
+		}
 	}
 	routeStatus := instance.Status.RouteStatus
 	if routeStatus == multinicv1.RouteUnknown || (instance.Spec.IsMultiNICIPAM && routeStatus == multinicv1.RouteNoApplied) {
@@ -225,9 +230,11 @@ func (r *MultiNicNetworkReconciler) HandleMultiNicIPAM(instance *multinicv1.Mult
 		if err == nil {
 			r.Log.V(3).Info(fmt.Sprintf("CIDR %s already exists", cidrName))
 		} else {
-			_, err := r.CIDRHandler.NewCIDRWithNewConfig(*ipamConfig, instance.GetNamespace())
+			if errors.IsNotFound(err) {
+				_, err = r.CIDRHandler.NewCIDRWithNewConfig(*ipamConfig, instance.GetNamespace())
+			}
 			if err != nil {
-				r.Log.V(3).Info(fmt.Sprintf("Cannot init CIDR %s: %v", cidrName, err))
+				r.Log.V(3).Info(fmt.Sprintf("Failed to HandleMultiNicIPAM for %s: %v", cidrName, err))
 			}
 			return err
 		}
