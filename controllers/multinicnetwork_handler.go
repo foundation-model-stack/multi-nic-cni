@@ -8,6 +8,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -30,6 +31,8 @@ var (
 // - update MultiNicNetwork status according to CIDR results
 type MultiNicNetworkHandler struct {
 	client.Client
+	syncFlag bool
+	sync.Mutex
 	Log logr.Logger
 }
 
@@ -48,6 +51,11 @@ func (h *MultiNicNetworkHandler) SyncAllStatus(name string, spec multinicv1.CIDR
 	if err != nil {
 		return multinicv1.MultiNicNetworkStatus{}, err
 	}
+	if h.syncFlag {
+		return instance.Status, fmt.Errorf("syncFlag is set (skip SyncAllStatus to avoid congestion).")
+	}
+	h.Mutex.Lock()
+	h.syncFlag = true
 	discoverStatus := instance.Status.DiscoverStatus
 	netConfigStatus := instance.Status.NetConfigStatus
 	message := instance.Status.Message
@@ -67,7 +75,10 @@ func (h *MultiNicNetworkHandler) SyncAllStatus(name string, spec multinicv1.CIDR
 		CIDRProcessedHost:      discoverStatus.CIDRProcessedHost,
 	}
 
-	return h.updateStatus(instance, spec, routeStatus, discoverStatus, netConfigStatus, message, cidrChange)
+	updatedResult, err := h.updateStatus(instance, spec, routeStatus, discoverStatus, netConfigStatus, message, cidrChange)
+	h.syncFlag = false
+	h.Mutex.Unlock()
+	return updatedResult, err
 }
 
 func (h *MultiNicNetworkHandler) updateStatus(instance *multinicv1.MultiNicNetwork, spec multinicv1.CIDRSpec, status multinicv1.RouteStatus, discoverStatus multinicv1.DiscoverStatus, netConfigStatus multinicv1.NetConfigStatus, message string, cidrChange bool) (multinicv1.MultiNicNetworkStatus, error) {
