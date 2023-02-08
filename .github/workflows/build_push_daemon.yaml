@@ -2,6 +2,8 @@ name: Build and push daemon image
 
 on:
   push:
+    branches:
+      - main
     paths:
       - daemon/**
       - cni/**
@@ -33,7 +35,6 @@ jobs:
           username: ${{ secrets.GH_USERNAME }}
           password: ${{ secrets.GH_TOKEN }}
       - name: Build and push daemon
-        if: ${{ github.ref == 'refs/heads/main' }}
         uses: docker/build-push-action@v2
         with:
           context: daemon
@@ -42,13 +43,4 @@ jobs:
             ${{ env.IMAGE_NAME }}:${{ github.sha }}-${{ github.run_number }}
             ${{ env.IMAGE_NAME }}:latest
             ${{ env.IMAGE_NAME }}:v${{ env.IMAGE_VERSION }}
-          file: ./daemon/dockerfiles/Dockerfile
-      - name: Build and push daemon (dirty)
-        if: ${{ github.ref != 'refs/heads/main' }}
-        uses: docker/build-push-action@v2
-        with:
-          context: daemon
-          push: true
-          tags: |
-            ${{ env.IMAGE_NAME }}:v${{ env.IMAGE_VERSION }}-dirty
           file: ./daemon/dockerfiles/Dockerfile
