@@ -123,8 +123,9 @@ delete_n_node() {
 
 _reset_node() {
     i=$1
-    echo "reset fake node $i"
+    echo "reset fake node $i, cool down 10s"
     _delete_node $i
+    sleep 10
     _deploy_node $i
 }
 
@@ -149,11 +150,9 @@ check_ip_sync() {
     pids=""
     i=$from
     while [ "$i" -le $to ]; do
-        _check_sync $i&
-        pids="$pids $!"
+        _check_sync $i
         i=$(( i + 1 ))
-    done 
-    wait $pids  
+    done
 }
 
 _check_update_done() {
@@ -202,6 +201,12 @@ wait_n_old_way() {
         echo $len $(date -u +"%Y-%m-%dT%H:%M:%SZ")
         sleep 5
     done
+}
+
+wait_daemon() {
+    sleep 5
+    echo "Wait for daemonset to be ready"
+    kubectl rollout status daemonset multi-nicd -n ${OPERATOR_NAMESPACE} --timeout 300s
 }
 
 print_discovery_status() {
@@ -361,6 +366,15 @@ check_cidr(){
     fi
 }
 
+check_cidr_change(){
+    cidrChanges=$(get_controller_log|grep "changeCIDR"|wc -l|tr -d ' ')
+    if [ "$cidrChanges" != 0 ] ; then
+        echo >&2 "Fatal error: CIDR changed (${cidrChanges})"
+        exit 2
+    fi
+    echo "CIDR has no change"
+}
+
 watch_network() {
     kubectl get multinicnetwork -o custom-columns=NAME:.metadata.name,Total:.status.discovery.existDaemon,Available:.status.discovery.infoAvailable,Processed:.status.discovery.cidrProcessed,Time:.status.lastSyncTime -w
 }
@@ -493,6 +507,25 @@ test_taint() {
     echo "Cleaning nodes"
 	time delete_n_node 1 5
 	time wait_n 0
+	check_cidr 1 0
+}
+
+test_resilience() {
+    echo "Deploying 5 nodes"
+    deploy_n_node 1 5
+	wait_n 5
+	check_cidr 1 5
+    echo "Restart controller"
+    restart_controller 
+    check_cidr_change
+    echo "Restart multi-nicd"
+    kubectl delete po -l app=multi-nicd -n ${OPERATOR_NAMESPACE}
+    wait_daemon
+    wait_n 5
+    check_cidr_change
+    echo "Cleaning nodes"
+	delete_n_node 1 5
+	wait_n 0
 	check_cidr 1 0
 }
 
