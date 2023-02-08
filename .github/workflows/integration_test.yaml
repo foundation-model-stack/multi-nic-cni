@@ -77,9 +77,13 @@ jobs:
         shell: bash
       - name: Test allocate/deallocate
         working-directory: ./e2e-test
-        run: ./script.sh test_taint
+        run: ./script.sh test_allocate
         shell: bash
       - name: Test taint/untaint
         working-directory: ./e2e-test
         run: ./script.sh test_taint
+        shell: bash
+      - name: Test resilience
+        working-directory: ./e2e-test
+        run: ./script.sh test_resilience
         shell: bash
