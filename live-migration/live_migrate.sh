@@ -135,7 +135,15 @@ clean_resource() {
 }
 
 wait_daemon_terminated() {
-    kubectl wait --for=delete daemonset/multi-nicd -n ${OPERATOR_NAMESPACE} --timeout=60s
+    kubectl wait --for=delete daemonset/multi-nicd -n ${OPERATOR_NAMESPACE} --timeout=300s
+    # wait for all terminated
+    daemonTerminated=$(kubectl get po -n ${OPERATOR_NAMESPACE}|grep multi-nicd|wc -l|tr -d ' ')
+    while [ "$daemonTerminated" != 0 ] ; 
+    do
+        echo "Wait for daemonset to be fully terminated...($daemonTerminated left)"
+        sleep 2
+        daemonTerminated=$(kubectl get po -n ${OPERATOR_NAMESPACE}|grep multi-nicd|wc -l|tr -d ' ')
+    done
 }
 
 uninstall_operator() {
