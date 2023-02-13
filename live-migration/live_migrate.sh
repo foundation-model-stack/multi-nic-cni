@@ -162,7 +162,15 @@ patch_daemon() {
 }
 
 wait_daemon() {
+    # wait for daemon creation
     sleep 5
+    daemonCreate=$(kubectl get ds multi-nicd -n ${OPERATOR_NAMESPACE}|wc -l|tr -d ' ')
+    while [ "$daemonCreate" == 0 ] ; 
+    do
+        echo "Wait for daemonset to be created by controller..."
+        sleep 2
+        daemonCreate=$(kubectl get ds multi-nicd -n ${OPERATOR_NAMESPACE}|wc -l|tr -d ' ')
+    done
     echo "Wait for daemonset to be ready"
     kubectl rollout status daemonset multi-nicd -n ${OPERATOR_NAMESPACE} --timeout 300s
 }
