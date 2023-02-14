@@ -122,6 +122,9 @@ install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~
 uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build config/crd | kubectl delete -f -
 
+clean-resource:
+	@cd ./live-migration && chmod +x live_migrate.sh && ./live_migrate.sh _clean_resource
+
 predeploy: manifests kustomize
 	rm -f config/samples/multinic.fms.io_config.yaml
 	envsubst < config/samples/multinic.fms.io_config.template > config/samples/multinic.fms.io_config.yaml
@@ -150,12 +153,22 @@ daemon-secret: ## Modify kustomization files for image pull secret of daemon
 	cd config/samples;$(KUSTOMIZE) edit add patch --path patches/image_pull_secret.yaml
 
 concheck: 
-	kubectl create -f connection-check/concheck.yaml
+	@kubectl create -f connection-check/concheck.yaml 
+	@echo "Wait for job/multi-nic-concheck to complete"
+	@kubectl wait --for=condition=complete job/multi-nic-concheck --timeout=3000s
+	@kubectl logs job/multi-nic-concheck
 
 clean-concheck:
-	kubectl delete -f connection-check/concheck.yaml
-	kubectl delete pod -n default --selector multi-nic-concheck
-	kubectl delete job -n default --selector multi-nic-concheck
+	@kubectl delete -f connection-check/concheck.yaml
+	@kubectl delete pod -n default --selector multi-nic-concheck
+	@kubectl delete job -n default --selector multi-nic-concheck
+
+
+export SERVER_HOST_NAME ?= $(shell kubectl get nodes|tail -n 2|head -n 1|awk '{ print $1 }')
+export CLIENT_HOST_NAME ?= $(shell kubectl get nodes|tail -n 1|awk '{ print $1 }')
+sample-concheck:
+	@echo "Test connection from ${CLIENT_HOST_NAME} to ${SERVER_HOST_NAME}"
+	@cd ./live-migration && chmod +x live_migrate.sh && ./live_migrate.sh live_iperf3 ${SERVER_HOST_NAME} ${CLIENT_HOST_NAME} 5
 
 CONTROLLER_GEN = $(shell pwd)/bin/controller-gen
 controller-gen: ## Download controller-gen locally if necessary.
@@ -247,3 +260,9 @@ test-daemon:
 build-push-kbuilder-base:
 	docker build -t $(IMAGE_TAG_BASE)-kbuilder -f ./daemon/dockerfiles/Dockerfile.kbuilder .
 	docker push $(IMAGE_TAG_BASE)-kbuilder
+
+daemon-build: test-daemon ## Build docker image with the manager.
+	docker tag daemon-test:latest $(IMAGE_TAG_BASE)-daemon:v$(VERSION)
+
+daemon-push:
+	docker push $(IMAGE_TAG_BASE)-daemon:v$(VERSION)
