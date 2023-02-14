@@ -125,13 +125,17 @@ activate_route_config() {
 #############################################
 # operator resource handling: controller, daemon, crd
 
-clean_resource() {
-    deactivate_route_config
+_clean_resource() {
     for cr in $status_cr $activate_cr $config_cr
     do
         kubectl delete $cr --all
     done
     wait_daemon_terminated
+}
+
+clean_resource() {
+    deactivate_route_config
+    _clean_resource
 }
 
 wait_daemon_terminated() {
@@ -141,9 +145,10 @@ wait_daemon_terminated() {
     while [ "$daemonTerminated" != 0 ] ; 
     do
         echo "Wait for daemonset to be fully terminated...($daemonTerminated left)"
-        sleep 2
+        sleep 10
         daemonTerminated=$(kubectl get po -n ${OPERATOR_NAMESPACE}|grep multi-nicd|wc -l|tr -d ' ')
     done
+    echo "Done"
 }
 
 uninstall_operator() {

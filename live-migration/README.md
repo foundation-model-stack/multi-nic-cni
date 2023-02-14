@@ -139,3 +139,5 @@ To reinstall/upgrade multi-nic-cni-operator without affecting workloads running 
    NAME                ConfigStatus   RouteStatus   TotalHost   HostWithSecondaryNIC   ProcessedHost   Time
    <multinicnetwork-name>   Success        Success       5           5                      5          2023-02-02T09:31:06Z
    ```
+
+7. Try [check connection](../README.md#check-connections).
