@@ -8,7 +8,7 @@ on:
       - connection-check/**
 
 env:
-  IMAGE_VERSION: '1.0.2'
+  IMAGE_VERSION: '1.1.0'
   IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
 
 jobs:
