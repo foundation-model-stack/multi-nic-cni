@@ -10,6 +10,6 @@ spec:
     image: networkstatic/iperf3
     command: ["/bin/bash", "-c"]
     args:
-    - "iperf3 -s"
+    - "iperf3 -s -p 30000"
     imagePullPolicy: IfNotPresent
   nodeName: hostname

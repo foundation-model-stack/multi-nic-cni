@@ -240,7 +240,7 @@ live_iperf3() {
    # wait until client available
    kubectl wait pod ${CLIENT_NAME} --for condition=ready --timeout=90s
    # run live client
-   kubectl exec -it ${CLIENT_NAME} -- iperf3 -c ${SECONDARY_IP} -t ${LIVE_TIME}
+   kubectl exec -it ${CLIENT_NAME} -- iperf3 -c ${SECONDARY_IP} -t ${LIVE_TIME} -p 30000
 
    # clean up
    kubectl delete pod ${CLIENT_NAME} ${SERVER_NAME}
