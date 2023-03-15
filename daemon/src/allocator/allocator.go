@@ -346,6 +346,12 @@ func DeallocateIP(req IPRequest) []IPResponse {
 					if err != nil {
 						log.Println(fmt.Sprintf("Cannot patch IPPool: %v", err))
 					}
+					response := IPResponse{
+						InterfaceName: spec.InterfaceName,
+						IPAddress:     allocation.Address,
+						VLANBlockSize: strings.Split(spec.VlanCIDR, "/")[1],
+					}
+					responses = append(responses, response)
 					break
 				}
 			}

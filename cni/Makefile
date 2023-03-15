@@ -46,6 +46,7 @@ build: tidy
 	@mkdir -p bin
 	@go build -o bin/multi-nic ./plugins/main/multi-nic
 	@go build -o bin/multi-nic-ipam ./plugins/ipam/multi-nic-ipam
+	@go build -o bin/aws-ipvlan ./plugins/main/aws-ipvlan
 
 build-with-test: test build
 

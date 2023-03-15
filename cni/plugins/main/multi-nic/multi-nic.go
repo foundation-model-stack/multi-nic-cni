@@ -129,6 +129,8 @@ func cmdAdd(args *skel.CmdArgs) error {
 		confBytesArray, err = loadIPVANConf(args.StdinData, args.IfName, n, result.IPs)
 	case "sriov":
 		confBytesArray, err = loadSRIOVConf(args.StdinData, args.IfName, n, result.IPs)
+	case "aws-ipvlan":
+		confBytesArray, err = loadAWSCNIConf(args.StdinData, args.IfName, n, result.IPs)
 	default:
 		err = fmt.Errorf("unsupported device type: %s", deviceType)
 	}
@@ -179,7 +181,7 @@ func cmdDel(args *skel.CmdArgs) error {
 	if args.Netns == "" {
 		return nil
 	}
-
+	ips := []*current.IPConfig{}
 	n, deviceType, err := loadConf(args)
 	if err != nil {
 		return fmt.Errorf("fail to load conf: %v", err)
@@ -188,35 +190,36 @@ func cmdDel(args *skel.CmdArgs) error {
 	// On chained invocation, IPAM block can be empty
 	if n.IPAM.Type != "" {
 		injectedStdIn := injectMaster(args.StdinData, n.MasterNetAddrs, n.Masters, n.DeviceIDs)
-		err = ipam.ExecDel(n.IPAM.Type, injectedStdIn)
-		if err != nil {
+		if n.IPAM.Type != "multi-nic-ipam" {
+			err = ipam.ExecDel(n.IPAM.Type, injectedStdIn)
 			utils.Logger.Debug(fmt.Sprintf("Failed ipam.ExecDel %s: %v", err, string(injectedStdIn)))
-			return err
+		} else {
+			r, err := ipam.ExecDelWithResult(n.IPAM.Type, injectedStdIn)
+			if err != nil {
+				utils.Logger.Debug(fmt.Sprintf("Failed ipam.ExecDel %s: %v", err, string(injectedStdIn)))
+				return err
+			}
+			if r != nil {
+				executeResult, err := current.NewResultFromResult(r)
+				if err != nil {
+					utils.Logger.Debug(fmt.Sprintf("Failed to parse result %v: %v", r, err))
+				}
+				ips = executeResult.IPs
+			} else {
+				utils.Logger.Debug(fmt.Sprintf("No previous result: %v", r))
+			}
 		}
-	}
-
-	var result *current.Result
-	// parse previous result
-	if n.NetConf.RawPrevResult != nil {
-		if err = version.ParsePrevResult(&n.NetConf); err != nil {
-			return fmt.Errorf("could not parse prevResult: %v", err)
-		}
-
-		result, err = current.NewResultFromResult(n.NetConf.PrevResult)
-		if err != nil {
-			return fmt.Errorf("could not convert result to current version: %v", err)
-		}
-	} else {
-		result = &current.Result{CNIVersion: current.ImplementedSpecVersion}
 	}
 
 	// get device config and apply
 	confBytesArray := [][]byte{}
 	switch deviceType {
 	case "ipvlan":
-		confBytesArray, err = loadIPVANConf(args.StdinData, args.IfName, n, result.IPs)
+		confBytesArray, err = loadIPVANConf(args.StdinData, args.IfName, n, ips)
 	case "sriov":
-		confBytesArray, err = loadSRIOVConf(args.StdinData, args.IfName, n, result.IPs)
+		confBytesArray, err = loadSRIOVConf(args.StdinData, args.IfName, n, ips)
+	case "aws-ipvlan":
+		confBytesArray, err = loadAWSCNIConf(args.StdinData, args.IfName, n, ips)
 	default:
 		err = fmt.Errorf("unsupported device type: %s", deviceType)
 	}
@@ -258,7 +261,6 @@ func cmdCheck(args *skel.CmdArgs) error {
 		if err = version.ParsePrevResult(&n.NetConf); err != nil {
 			return fmt.Errorf("could not parse prevResult: %v", err)
 		}
-
 		result, err = current.NewResultFromResult(n.NetConf.PrevResult)
 		if err != nil {
 			return fmt.Errorf("could not convert result to current version: %v", err)
@@ -274,6 +276,8 @@ func cmdCheck(args *skel.CmdArgs) error {
 		confBytesArray, err = loadIPVANConf(args.StdinData, args.IfName, n, result.IPs)
 	case "sriov":
 		confBytesArray, err = loadSRIOVConf(args.StdinData, args.IfName, n, result.IPs)
+	case "aws-ipvlan":
+		confBytesArray, err = loadAWSCNIConf(args.StdinData, args.IfName, n, result.IPs)
 	default:
 		err = fmt.Errorf("unsupported device type: %s", deviceType)
 	}

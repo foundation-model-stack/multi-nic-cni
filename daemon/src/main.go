@@ -2,7 +2,7 @@
  * Copyright 2022- IBM Inc. All rights reserved
  * SPDX-License-Identifier: Apache2.0
  */
- 
+
 package main
 
 import (
@@ -13,8 +13,8 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"time"
 	"strconv"
+	"time"
 
 	"github.com/gorilla/mux"
 
@@ -23,10 +23,9 @@ import (
 	di "github.com/foundation-model-stack/multi-nic-cni/daemon/iface"
 	dr "github.com/foundation-model-stack/multi-nic-cni/daemon/router"
 	ds "github.com/foundation-model-stack/multi-nic-cni/daemon/selector"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/client-go/kubernetes"
-
 )
 
 type IPAMInfo struct {
@@ -42,7 +41,7 @@ const (
 	ADD_ROUTE_PATH    = "/addroute"
 	DELETE_ROUTE_PATH = "/deleteroute"
 
-	ADD_L3CONFIG_PATH = "/addl3"
+	ADD_L3CONFIG_PATH    = "/addl3"
 	DELETE_L3CONFIG_PATH = "/deletel3"
 
 	ALLOCATE_PATH   = "/allocate"
@@ -201,11 +200,12 @@ func Allocate(w http.ResponseWriter, r *http.Request) {
 func Deallocate(w http.ResponseWriter, r *http.Request) {
 	reqBody, _ := ioutil.ReadAll(r.Body)
 	var req da.IPRequest
+	var ipResponses []da.IPResponse
 	err := json.Unmarshal(reqBody, &req)
 	if err == nil {
-		da.DeallocateIP(req)
+		ipResponses = da.DeallocateIP(req)
 	}
-	json.NewEncoder(w).Encode("")
+	json.NewEncoder(w).Encode(ipResponses)
 }
 
 func InitClient() *rest.Config {
@@ -222,7 +222,6 @@ func InitClient() *rest.Config {
 	if err != nil {
 		log.Printf("Config Error: %v", err)
 	}
-
 
 	da.IppoolHandler = backend.NewIPPoolHandler(config)
 	ds.MultinicnetHandler = backend.NewMultiNicNetworkHandler(config)
@@ -248,7 +247,7 @@ func main() {
 		}
 	}
 	dr.SetRTTablePath()
-	
+
 	da.CleanHangingAllocation(hostName)
 	router := handleRequests()
 	daemonAddress := fmt.Sprintf("0.0.0.0:%d", DAEMON_PORT)

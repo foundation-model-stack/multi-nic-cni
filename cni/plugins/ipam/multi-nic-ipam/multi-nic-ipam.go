@@ -232,6 +232,25 @@ func cmdAdd(args *skel.CmdArgs) error {
 }
 
 func cmdDel(args *skel.CmdArgs) error {
+	n, confVersion, err := loadNetConf(args.StdinData)
+	if err != nil {
+		return err
+	}
+
+	var result *current.Result
+
+	// Parse previous result
+	if n.NetConf.RawPrevResult != nil {
+		if err = version.ParsePrevResult(&n.NetConf); err != nil {
+			return fmt.Errorf("could not parse prevResult: %v", err)
+		}
+		result, err = current.NewResultFromResult(n.NetConf.PrevResult)
+		if err != nil {
+			return fmt.Errorf("could not convert result to current version: %v", err)
+		}
+	} else {
+		result = &current.Result{CNIVersion: current.ImplementedSpecVersion}
+	}
 
 	if args.Netns == "" {
 		return nil
@@ -247,7 +266,30 @@ func cmdDel(args *skel.CmdArgs) error {
 	}
 	podName, podNamespace := getPodInfo(args.Args)
 	utils.Logger.Debug(fmt.Sprintf("RequestDeallocateIP of %s/%s in %s net from %s:%d", podNamespace, podName, ipamConf.Name, ipamConf.DaemonIP, ipamConf.DaemonPort))
-	Deallocate(ipamConf.DaemonPort, podName, podNamespace, hostName, ipamConf.Name)
+	ipResponses, err := Deallocate(ipamConf.DaemonPort, podName, podNamespace, hostName, ipamConf.Name)
+	utils.Logger.Debug(fmt.Sprintf("ResponseDeallocateIP: %v", ipResponses))
 
-	return nil
+	for index, master := range n.Masters {
+		// find match master information and add
+		for _, ipResponse := range ipResponses {
+			if ipResponse.InterfaceName == master {
+				vlanPodCIDR := fmt.Sprintf("%s/%s", ipResponse.IPAddress, ipResponse.VLANBlockSize)
+				ipVal, reservedIP, err := net.ParseCIDR(vlanPodCIDR)
+				reservedIP.IP = ipVal
+				if err != nil {
+					return fmt.Errorf("failed to parse IP: %s: %v", ipResponse.IPAddress, err)
+				}
+				ipConf := &current.IPConfig{
+					Address:   *reservedIP,
+					Interface: current.Int(index),
+				}
+				result.IPs = append(result.IPs, ipConf)
+				break
+			}
+		}
+	}
+	result.DNS = ipamConf.DNS
+	result.Routes = ipamConf.Routes
+	utils.Logger.Debug(fmt.Sprintf("Result: %v", result))
+	return types.PrintResult(result, confVersion)
 }
