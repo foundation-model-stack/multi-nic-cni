@@ -60,20 +60,20 @@ func main() {
 		log.Printf("%d/%d servers successfully created", totalCount, len(podCIDRsMap))
 		// wait for server ready
 		var ipMaps map[string][]string
+		var primaryIPMap map[string]string
 		var serversReady bool
 		for {
-			ipMaps, serversReady = iperfHanlder.CheckServers(DEFAULT_NAMESPACE, cidrName, totalCount)
+			primaryIPMap, ipMaps, serversReady = iperfHanlder.CheckServers(DEFAULT_NAMESPACE, cidrName, totalCount)
 			time.Sleep(5 * time.Second)
 			if serversReady {
 				break
 			}
-
 		}
 
 		// create iperf client job for listed related hosts with cidr multi-nic-network
 		totalCount = 0
 		for host, _ := range podCIDRsMap {
-			job, err := iperfHanlder.CreateClientJob(DEFAULT_NAMESPACE, cidrName, host, ipMaps)
+			job, err := iperfHanlder.CreateClientJob(DEFAULT_NAMESPACE, cidrName, host, primaryIPMap, ipMaps)
 
 			if err != nil {
 				log.Printf("Cannot create client job for %s, %s: %v", cidrName, host, err)

@@ -32,7 +32,7 @@ const (
 
 	IPERF_IMAGE             = "networkstatic/iperf3"
 	MAX_NAME_LENGTH         = 60
-	START_MULTI_STREAM_PORT = 5010
+	START_MULTI_STREAM_PORT = 30000
 )
 
 const (
@@ -41,8 +41,9 @@ const (
 )
 
 type NetworkStatus struct {
-	Name string   `json:"name"`
-	IPs  []string `json:"ips"`
+	Name      string   `json:"name"`
+	Interface string   `json:"interface"`
+	IPs       []string `json:"ips"`
 }
 
 type IperfHandler struct {
@@ -106,8 +107,9 @@ func (h *IperfHandler) CreateServerPod(namespace string, cidrName string, hostNa
 	return h.Clientset.CoreV1().Pods(namespace).Create(context.TODO(), pod, metav1.CreateOptions{})
 }
 
-func (h *IperfHandler) CheckServers(namespace string, cidrName string, totalCount int) (map[string][]string, bool) {
+func (h *IperfHandler) CheckServers(namespace string, cidrName string, totalCount int) (map[string]string, map[string][]string, bool) {
 	serverIPsMap := make(map[string][]string)
+	primaryIPMap := make(map[string]string)
 	labels := fmt.Sprintf("%s=%s", DEFAULT_LABEL_NAME, h.getLabelValue(cidrName, DEFAULT_SERVER_LABEL_VALUE))
 	listOptions := metav1.ListOptions{
 		LabelSelector: labels,
@@ -115,18 +117,18 @@ func (h *IperfHandler) CheckServers(namespace string, cidrName string, totalCoun
 	podList, err := h.Clientset.CoreV1().Pods(namespace).List(context.TODO(), listOptions)
 	if err != nil || len(podList.Items) < totalCount {
 		log.Printf("some server is not available %d/%d or error %v", len(podList.Items), totalCount, err)
-		return serverIPsMap, false
+		return primaryIPMap, serverIPsMap, false
 	}
 	for _, pod := range podList.Items {
 		// pod is running
 		if pod.Status.Phase != v1.PodRunning {
 			log.Printf("%s: %s", pod.GetName(), pod.Status.Phase)
-			return serverIPsMap, false
+			return primaryIPMap, serverIPsMap, false
 		}
 		lines, err := h.getLog(pod)
 		if err != nil || len(lines) == 0 {
 			log.Printf("%s wait for server to run (%v): %v", pod.GetName(), lines, err)
-			return serverIPsMap, false
+			return primaryIPMap, serverIPsMap, false
 		}
 		// annotation exists
 		annotations := pod.ObjectMeta.Annotations
@@ -135,28 +137,46 @@ func (h *IperfHandler) CheckServers(namespace string, cidrName string, totalCoun
 			err := json.Unmarshal([]byte(netstatus), &statusObj)
 			if err != nil {
 				log.Printf("cannot unmarshal %s: %v", netstatus, err)
-				return serverIPsMap, false
+				return primaryIPMap, serverIPsMap, false
 			}
 			for _, status := range statusObj {
 				if status.Name == fmt.Sprintf("%s/%s", namespace, cidrName) {
 					serverIPsMap[pod.Spec.NodeName] = status.IPs
+				} else if status.Interface == "eth0" {
+					primaryIPMap[pod.Spec.NodeName] = status.IPs[0]
 				}
 			}
 		} else {
 			log.Printf("%s is not annotated", pod.GetName())
-			return serverIPsMap, false
+			return primaryIPMap, serverIPsMap, false
 		}
 	}
-	return serverIPsMap, true
+	return primaryIPMap, serverIPsMap, true
 }
 
 func (h *IperfHandler) generateMultiStreamServerCommand(numberOfInterface int) string {
 	cmd := ""
 	for i := 0; i < numberOfInterface; i++ {
 		prefix_port := int((START_MULTI_STREAM_PORT + i*10) / 10)
-		cmd = fmt.Sprintf("%s (for i in {1..%d}; do iperf3 -s -p %d$i & done) & ", cmd, STREAMS_PER_IP, prefix_port)
+		streams := ""
+		for j := 1; j <= STREAMS_PER_IP; j++ {
+			streams = fmt.Sprintf("%s %d", streams, j)
+		}
+		cmd = fmt.Sprintf("%s (for i in %s; do iperf3 -s -p %d$i & done) & ", cmd, streams, prefix_port)
 	}
 	cmd += "(tail -f /dev/null)"
+	return cmd
+}
+
+func (h *IperfHandler) generatePrimaryCheckClientCommand(hostName string, ipMap map[string]string) string {
+	cmd := ""
+	for targetHost, ip := range ipMap {
+		if targetHost == hostName {
+			continue
+		}
+		prefix_port := int(START_MULTI_STREAM_PORT / 10)
+		cmd = fmt.Sprintf("%s until iperf3 -c %s -p %d%d -n 1; do sleep 1; done;", cmd, ip, prefix_port, STREAMS_PER_IP)
+	}
 	return cmd
 }
 
@@ -168,16 +188,27 @@ func (h *IperfHandler) generateMultiStreamClientCommand(hostName string, ipMap m
 		}
 		for i := 0; i < len(ips); i++ {
 			prefix_port := int((START_MULTI_STREAM_PORT + i*10) / 10)
-			cmd = fmt.Sprintf("%s (for i in {1..%d}; do iperf3 -Z -t 10s -c %s -p %d$i --connect-timeout 10s & done  | grep 'receiver' | awk '{s+=$7} END{print \"%s,\"s$8}') &", cmd, STREAMS_PER_IP, ips[i], prefix_port, ips[i])
+			streams := ""
+			for j := 1; j <= STREAMS_PER_IP; j++ {
+				streams = fmt.Sprintf("%s %d", streams, j)
+			}
+			cmd = fmt.Sprintf("%s (for i in %s; do iperf3 -Z -t 10s -c %s -p %d$i --connect-timeout 10s & done | grep 'receiver' | awk '{s+=$7} END{print \"%s,\"s$8}') &", cmd, streams, ips[i], prefix_port, ips[i])
 		}
 		cmd += "wait; sleep 1;echo '';"
 	}
 	return cmd
 }
 
-func (h *IperfHandler) CreateClientJob(namespace string, cidrName string, hostName string, ipMap map[string][]string) (*batchv1.Job, error) {
+func (h *IperfHandler) CreateClientJob(namespace string, cidrName string, hostName string, primaryIpMap map[string]string, ipMap map[string][]string) (*batchv1.Job, error) {
+	initContainer := v1.Container{
+		Name:            "inti" + DEFAULT_CLIENT_LABEL_VALUE,
+		Image:           IPERF_IMAGE,
+		ImagePullPolicy: v1.PullIfNotPresent,
+		Command:         []string{"timeout", "30s", "/bin/sh", "-c"},
+		Args:            []string{h.generatePrimaryCheckClientCommand(hostName, primaryIpMap)},
+	}
 	container := v1.Container{
-		Name:            DEFAULT_SERVER_LABEL_VALUE,
+		Name:            DEFAULT_CLIENT_LABEL_VALUE,
 		Image:           IPERF_IMAGE,
 		ImagePullPolicy: v1.PullIfNotPresent,
 		Command:         []string{"/bin/sh", "-c"},
@@ -191,6 +222,9 @@ func (h *IperfHandler) CreateClientJob(namespace string, cidrName string, hostNa
 			Template: v1.PodTemplateSpec{
 				ObjectMeta: h.getMetaObject(namespace, cidrName, hostName, DEFAULT_CLIENT_LABEL_VALUE),
 				Spec: v1.PodSpec{
+					InitContainers: []v1.Container{
+						initContainer,
+					},
 					Containers: []v1.Container{
 						container,
 					},
