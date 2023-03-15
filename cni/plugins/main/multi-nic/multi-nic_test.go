@@ -406,9 +406,29 @@ var _ = Describe("Operations", func() {
 			conf := getConfig(ver, multiNICIPAM, masterNets)
 			multinicAddCheckDelTest(conf, "", originalNS, targetNS)
 		})
+
 		It(fmt.Sprintf("[%s] configures and deconfigures link with ADD/DEL (single-nic IPAM)", ver), func() {
 			conf := getConfig(ver, singleNICIPAM, masterNets)
 			multinicAddCheckDelTest(conf, "", originalNS, targetNS)
+		})
+
+		It(fmt.Sprintf("[%s] check config load", ver), func() {
+			conf, n := getAwsIpvlanConfig(ver, masterNets)
+			podIP := "192.168.0.1/24"
+			ipVal, ipnet, err := net.ParseCIDR(podIP)
+			ipnet.IP = ipVal
+			Expect(err).NotTo(HaveOccurred())
+			nodeIP := getHostIP("eth0")
+			log.Printf("Host IP: %s", nodeIP.String())
+			podIPConfig := &types100.IPConfig{Address: *ipnet}
+			confBytesArray, err := loadAWSCNIConf(conf, "net1", n, []*types100.IPConfig{podIPConfig})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(len(confBytesArray)).NotTo(Equal(0))
+			log.Printf("%s", string(confBytesArray[0]))
+			confObj := &AWSIPVLANNetConf{}
+			err = json.Unmarshal(confBytesArray[0], confObj)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(confObj.PodIP).To(Equal(ipVal.String()))
 		})
 	}
 })
@@ -430,6 +450,34 @@ func getConfig(ver, ipamValue, masterNets string) string {
 		"subnet": "192.168.0.0/16",
 		"masterNets": %s
 		}`, ipamValue, BRIDGE_HOST_IP, daemonPort, masterNets)
+}
+
+func getAwsIpvlanConfig(ver, masterNets string) ([]byte, *NetConf) {
+	confStr := fmt.Sprintf(`{ 
+		"cniVersion": "%s", 
+		"name": "multi-nic-sample",
+		"type": "multi-nic",
+		"plugin": {
+			"cniVersion": "0.3.0",
+			"type": "aws-ipvlan",
+			"mode": "l3"
+		},
+		"vlanMode": "l3",
+		"ipam": {},
+		"multiNICIPAM": true,
+		"daemonIP": "%s",
+		"daemonPort": %d,
+		"subnet": "192.168.0.0/16",
+		"masterNets": %s
+		}`, ver, BRIDGE_HOST_IP, daemonPort, masterNets)
+	log.Printf("%s", confStr)
+	conf := []byte(confStr)
+	n := &NetConf{}
+	err := json.Unmarshal(conf, n)
+	Expect(err).NotTo(HaveOccurred())
+	n.DeviceIDs = POOL_MASTER_NAMES[0:1]
+	n.Masters = POOL_MASTER_NAMES[0:1]
+	return conf, n
 }
 
 func closeServer(srv *http.Server, httpServerExitDone *sync.WaitGroup) {
