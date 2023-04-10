@@ -78,9 +78,20 @@ func NewDaemonWatcher(client client.Client, config *rest.Config, logger logr.Log
 			if !ok {
 				return
 			}
-			if isDaemonPod(pod) && !isContainerReady(*prevPod) && isContainerReady(*pod) {
-				// newly-created daemon pod, put to the process queue
-				watcher.PodQueue <- pod
+			if isDaemonPod(pod) {
+				if isContainerReady(*pod) {
+					if !isContainerReady(*prevPod) {
+						// newly-created daemon pod, put to the process queue
+						watcher.PodQueue <- pod
+					} else {
+						nodeName := pod.Spec.NodeName
+						_, err = watcher.DaemonCacheHandler.GetCache(nodeName)
+						if err != nil {
+							// already running but no entry in cache
+							watcher.PodQueue <- pod
+						}
+					}
+				}
 			}
 		},
 	})
