@@ -57,8 +57,20 @@
     curl localhost:8080/status
     ```
     
-    Expected response (4 nodes, 2 secondary interfaces):
-   > {"Status":{"hostA":{"HostName":"hostA","IPs":[],"Connectivity":{"192.168.0.0/18":true,"192.168.64.0/18":true},"Allocability":2,"StatusCode":200,"Status":"Success","Message":""},"hostB":{"HostName":"hostB","IPs":[],"Connectivity":{"192.168.0.0/18":true,"192.168.64.0/18":true},"Allocability":2,"StatusCode":200,"Status":"Success","Message":""},"hostC":{"HostName":"hostC","IPs":[],"Connectivity":{"192.168.0.0/18":true,"192.168.64.0/18":true},"Allocability":2,"StatusCode":200,"Status":"Success","Message":""},"hostD":{"HostName":"hostD","IPs":[],"Connectivity":{"192.168.0.0/18":true,"192.168.64.0/18":true},"Allocability":2,"StatusCode":200,"Status":"Success","Message":""}},"LastUpdate":"xxxx"}%
+    Example response:
+    > {"HealthyHosts":["hostA", "hostB", "hostC"],"FailedInfo":[{"HostName":"hostD","Connectivity":{"192.168.0.0/18":false,"192.168.64.0/18":false},"Allocability":0,"StatusCode":...,"Status":...,"Message":...}],"CheckTime":"...","Checker":"checkerX"}
+
+    - To get status of specific host:
+
+        ```bash
+        # Example of healthy host
+        > curl "localhost:8080/status?host=hostA"
+        > {"Info":{"HostName":"hostA","Connectivity":{"192.168.0.0/18":true,"192.168.64.0/18":true},"Allocability":2,"StatusCode":200,"Status":"Success","Message":""},"CheckTime":"...","Checker":"checkerX"}
+
+        # Example of unhealthy host
+        > curl "localhost:8080/status?host=hostD"
+        > {"Info":{"HostName":"hostD","Connectivity":{"192.168.0.0/18":false,"192.168.64.0/18":false},"Allocability":0,"StatusCode":...,"Status":...,"Message":...},"CheckTime":"...","Checker":"checkerX"}
+        ```
 
 6. Reload prometheus configuration
 
