@@ -123,3 +123,17 @@ For example, routes configured regarding the above example,
 
 ![](../img/ip_allocate.png)
 The CNI will send a request to daemon running on the deployed host to get a set of IP addresses regarding a set of the interface names. This is a locked operation within the daemon function to prevent allocating the same IP address to different pods at the same time.
+
+**Host/Interface Block Definition**
+
+Since the current supported IP is v4 with 32 bits, size of allocatable pods in a single host is limited the subnet block,interface block, and host block as example below.
+
+Subnet CIDR (Addresss/Block)|Interface Block (Max #Interface)|Host Block (Max #Host)|Pod/host Size|Use case
+---|---|---|---|---
+192.168.0.0/16|2 (4)|6 (64)|256|Small-size application
+192.168.0.0/16|2 (4)|8 (256)|64|Medium-size application
+192.168.0.0/16|2 (4)|9 (512)|32|Large-size application
+192.168.0.0/16|2 (4)|10 (1024)|16|Large-size application
+
+- The common number of interface is 4 (block=2). The default limitation by hypervisor is 8 (block=3). The current limitation on bare metal is 32 (block=5).
+- A network attachment definition can be defined per application group . However, Each cannot connect to across different application group. 
