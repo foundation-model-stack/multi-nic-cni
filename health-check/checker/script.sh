@@ -29,7 +29,6 @@ deploy() {
     echo "Set network name ${NETWORK_NAME}"
     NETWORK_REPLACEMENT=$(create_replacement .spec.template.metadata.annotations.\"k8s.v1.cni.cncf.io/networks\" \"${NETWORK_NAME}\")
     apply ${NETWORK_REPLACEMENT} ./checker/deployment
-
 }
 
 "$@"

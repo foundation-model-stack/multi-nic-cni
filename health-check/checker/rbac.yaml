@@ -152,3 +152,48 @@ subjects:
 - kind: ServiceAccount
   name: prometheus-k8s
   namespace: openshift-monitoring
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  labels:
+    multi-nic-cni-component: health-checker
+    app: multi-nic-cni
+  name: multi-nic-cni-health-checker-rules
+  namespace: openshift-monitoring
+spec:
+  groups:
+  - name: MultiNICFailure
+    rules:
+    - alert: MultiNICFunctionalityCheckFailed
+      expr: multi_nic_cni_allocability{host!~".*master.*"} != 2
+      for: 30m
+      labels:
+        severity: warning
+      annotations:
+        summary: "Multi-NIC CNI {{ $labels.network }} may fail to create/delete pods on host {{ $labels.host }}"
+        description: "Checker {{ $labels.checker }} has failed to confirm functionality of Multi-NIC CNI on host {{ $labels.host }} from last 30min due to {{ $labels.message }} reason.\n Functional network is {{ $value }} of 2. Check /status for more information."
+    - alert: MultiNICConnectivityCheckFailed
+      expr: multi_nic_cni_connectivity{host!~".*master.*"} != 1
+      for: 30m
+      labels:
+        severity: warning
+      annotations:
+        summary: "Pods on host {{ $labels.host }} may have a connection failure in the secondary network {{ $labels.networkaddress }} of {{ $labels.network }}"
+        description: "Checker {{ $labels.checker }} has failed to confirm Multi-NIC connectivity of the secondary network {{ $labels.networkaddress }} of {{ $labels.network }} for pods on host {{ $labels.host }} from last 30min.\n Check /status for more information."
+    - alert: MultiNICAllFunctionalityCheckFailed
+      expr: (count(multi_nic_cni_allocability{host!~".*master.*"}) by (checker) > 0) and (sum(multi_nic_cni_allocability) by (checker) == 0)
+      for: 30m
+      labels:
+        severity: warning
+      annotations:
+        summary: "Checker {{ $labels.checker }} cannot check functionality on any host"
+        description: "Checker {{ $labels.checker }} has failed to confirm functionality of Multi-NIC CNI on any host. \n Checker can be itself non-functional on primary networks.\n If there is secondary network enabled, confirm that the checker port (default: 11001) is allowed."
+    - alert: MultiNICAllConnectivityCheckFailed
+      expr: (count(multi_nic_cni_allocability{host!~".*master.*"}) by (checker) > 0) and (sum(multi_nic_cni_allocability) by (checker) > 0) and (sum(multi_nic_cni_connectivity) by (checker) == 0)
+      for: 30m
+      labels:
+        severity: warning
+      annotations:
+        summary: "Checker {{ $labels.checker }} cannot check connectivity on any host"
+        description: "Checker {{ $labels.checker }} has failed to confirm connectivity of Multi-NIC CNI on any host. \n Checker can be itself unconnected on secondary networks.\n Try redeploying the checker on the different host or increasing the number of checker replicas."

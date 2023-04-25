@@ -45,6 +45,6 @@ deploy: deploy-agent
 	@./checker/script.sh deploy
 
 clean:
-	@kubectl delete -f ./checker/deployment.yaml
-	@kubectl delete -f ./checker/rbac.yaml
-	@kubectl delete -f ./sidecar/manifest.yaml
+	@kubectl delete -f ./checker/deployment.yaml  && echo "Completely delete checkers" || echo "Failed to clean checkers"  
+	@kubectl delete -f ./checker/rbac.yaml && echo "Completely delete RBAC resource of checkers" || echo "Failed to clean RBAC resource of checkers"  
+	@kubectl delete -f ./sidecar/manifest.yaml && echo "Completely delete agents" || echo "Failed to clean agents"  
