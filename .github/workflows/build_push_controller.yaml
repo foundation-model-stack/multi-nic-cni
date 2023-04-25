@@ -3,7 +3,7 @@ name: Build and push controller and its bundle image
 on:
   push:
     branches:
-      - v1.0.3
+      - v1.0.4
     paths:
       - controllers/**
       - compute/**
@@ -17,7 +17,7 @@ on:
       - .github/workflows/**
 
 env:
-  VERSION: '1.0.3'
+  VERSION: '1.0.4'
   IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
   DAEMON_REGISTRY: ghcr.io/${{ github.repository_owner }}
 
@@ -61,7 +61,6 @@ jobs:
           context: .
           push: true
           tags: |
-            ${{ env.IMAGE_NAME }}:latest
             ${{ env.IMAGE_NAME }}:v${{ env.VERSION }}
           file: ./bundle.Dockerfile
          
@@ -93,6 +92,5 @@ jobs:
           push: true
           tags: |
             ${{ env.IMAGE_NAME }}:${{ github.sha }}-${{ github.run_number }}
-            ${{ env.IMAGE_NAME }}:latest
             ${{ env.IMAGE_NAME }}:v${{ env.VERSION }}
           file: ./Dockerfile

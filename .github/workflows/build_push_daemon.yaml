@@ -3,7 +3,7 @@ name: Build and push daemon image
 on:
   push:
     branches:
-      - v1.0.3
+      - v1.0.4
     paths:
       - daemon/**
       - cni/**
@@ -11,7 +11,7 @@ on:
       - .github/workflows/**
       
 env:
-  IMAGE_VERSION: '1.0.3'
+  IMAGE_VERSION: '1.0.4'
   DAEMON_REGISTRY: ghcr.io/${{ github.repository_owner }}
 
 jobs:
@@ -42,6 +42,5 @@ jobs:
           push: true
           tags: |
             ${{ env.IMAGE_NAME }}:${{ github.sha }}-${{ github.run_number }}
-            ${{ env.IMAGE_NAME }}:latest
             ${{ env.IMAGE_NAME }}:v${{ env.IMAGE_VERSION }}
           file: ./daemon/dockerfiles/Dockerfile

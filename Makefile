@@ -17,7 +17,7 @@ endif
 # - use the VERSION as arg of the bundle target (e.g make bundle VERSION=0.0.2)
 # - use environment variables to overwrite this value (e.g export VERSION=0.0.2)
 # VERSION ?= 0.0.1
-VERSION ?= 1.0.3
+VERSION ?= 1.0.4
 
 # CHANNELS define the bundle channels used in the bundle.
 # Add a new line here if you would like to change its default config. (E.g CHANNELS = "preview,fast,stable")
@@ -93,14 +93,22 @@ fmt: ## Run go fmt against code.
 vet: ## Run go vet against code.
 	go vet ./...
 
-ENVTEST_ASSETS_DIR=$(shell pwd)/testbin
+tidy:
+	go mod tidy
+
+BASE_DIR=$(shell pwd)
+ENVTEST_ASSETS_DIR=$(BASE_DIR)/testbin
 test: SHELL := /bin/bash
-test: manifests generate fmt vet ## Run tests.
+test: tidy manifests generate fmt vet ## Run tests.
 	mkdir -p ${ENVTEST_ASSETS_DIR}
 	test -f ${ENVTEST_ASSETS_DIR}/setup-envtest.sh || curl -sSLo ${ENVTEST_ASSETS_DIR}/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.7.2/hack/setup-envtest.sh
 	source ${ENVTEST_ASSETS_DIR}/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); go test ./... -coverprofile cover.out
 
 ##@ Build
+
+ifeq (,$(CTR_CMD))
+CTR_CMD=$(shell (which podman >/dev/null && echo podman)||(which docker 2 >/dev/null && echo docker))
+endif
 
 build: generate fmt vet ## Build manager binary.
 	go build -o bin/manager main.go
@@ -108,11 +116,19 @@ build: generate fmt vet ## Build manager binary.
 run: manifests generate fmt vet ## Run a controller from your host.
 	go run ./main.go
 
-docker-build: test ## Build docker image with the manager.
-	docker build -t ${IMG} .
+golint:
+	$(CTR_CMD) pull golangci/golangci-lint:latest
+	$(CTR_CMD) run --tty --rm \
+		--volume '$(BASE_DIR):/app' \
+		--workdir /app \
+		golangci/golangci-lint \
+		golangci-lint run --verbose
 
-docker-push: ## Push docker image with the manager.
-	docker push ${IMG}
+docker-build: test ## Build image with the manager.
+	$(CTR_CMD) build -t ${IMG} .
+
+docker-push: ## Push image with the manager.
+	$(CTR_CMD) push ${IMG}
 
 ##@ Deployment
 
@@ -192,7 +208,7 @@ bundle: manifests kustomize predeploy ## Generate bundle manifests and metadata,
 
 .PHONY: bundle-build
 bundle-build: ## Build the bundle image.
-	docker build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
+	$(CTR_CMD) build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
 
 .PHONY: bundle-push
 bundle-push: ## Push the bundle image.
@@ -232,7 +248,7 @@ endif
 # https://github.com/operator-framework/community-operators/blob/7f1438c/docs/packaging-operator.md#updating-your-existing-operator
 .PHONY: catalog-build
 catalog-build: opm ## Build a catalog image.
-	$(OPM) index add --container-tool docker --mode semver --tag $(CATALOG_IMG) --bundles $(BUNDLE_IMGS) $(FROM_INDEX_OPT)
+	$(OPM) index add --container-tool $(CTR_CMD) --mode semver --tag $(CATALOG_IMG) --bundles $(BUNDLE_IMGS) $(FROM_INDEX_OPT)
 
 # Push the catalog image.
 .PHONY: catalog-push
@@ -240,10 +256,12 @@ catalog-push: ## Push a catalog image.
 	$(MAKE) docker-push IMG=$(CATALOG_IMG)
 
 test-daemon:
-	docker build -t daemon-test:latest -f ./daemon/dockerfiles/Dockerfile.multi-nicd-test .
-	docker run -i --privileged daemon-test /bin/bash -c "cd /usr/local/build/cni&&make test"
-	docker run -i --privileged daemon-test /bin/bash -c "cd /usr/local/build/daemon/src&&make test-verbose"
+	$(CTR_CMD) build -t daemon-test:latest -f ./daemon/dockerfiles/Dockerfile.multi-nicd-test .
+	$(CTR_CMD) run -i --privileged daemon-test /bin/bash -c "cd /usr/local/build/cni&&make test"
+	$(CTR_CMD) run -i --privileged daemon-test /bin/bash -c "cd /usr/local/build/daemon/src&&make test-verbose"
 
-build-push-kbuilder-base:
-	docker build -t $(IMAGE_TAG_BASE)-kbuilder -f ./daemon/dockerfiles/Dockerfile.kbuilder .
-	docker push $(IMAGE_TAG_BASE)-kbuilder
+build-kbuilder-base:
+	$(CTR_CMD) build -t $(IMAGE_TAG_BASE)-kbuilder -f ./daemon/dockerfiles/Dockerfile.kbuilder .
+
+build-push-kbuilder-base: build-kbuilder-base
+	$(CTR_CMD) push $(IMAGE_TAG_BASE)-kbuilder

@@ -3,13 +3,13 @@ name: Build and push connection check image
 on:
   push:
     branches:
-      - v1.0.3
+      - v1.0.4
     paths:
       - connection-check/**
       - .github/workflows/**
       
 env:
-  IMAGE_VERSION: '1.0.2'
+  IMAGE_VERSION: '1.0.4'
   IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
 
 jobs:
@@ -36,6 +36,5 @@ jobs:
           context: connection-check
           push: true
           tags: |
-            ${{ env.IMAGE_NAME }}:latest
             ${{ env.IMAGE_NAME }}:v${{ env.IMAGE_VERSION }}
           file: ./connection-check/Dockerfile
