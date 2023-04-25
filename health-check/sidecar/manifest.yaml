@@ -7,7 +7,7 @@ metadata:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: privileged-cr
+  name: multi-nic-privileged-cr
 rules:
 - apiGroups:
   - security.openshift.io
@@ -28,7 +28,7 @@ subjects:
   namespace: openshift-operators
 roleRef:
   kind: ClusterRole
-  name: privileged-cr
+  name: multi-nic-privileged-cr
   apiGroup: rbac.authorization.k8s.io
 ---
 apiVersion: apps/v1
