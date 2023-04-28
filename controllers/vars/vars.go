@@ -26,6 +26,8 @@ const (
 	PodStatusField    = "status.phase"
 	PodStatusRunning  = "Running"
 	JoinLabelName     = "multi-nicd-join"
+	HostNameLabel     = "hostname"
+	DefNameLabel      = "netname"
 	TestModeLabel     = "test-mode"
 	DefaultDaemonPort = 11000
 

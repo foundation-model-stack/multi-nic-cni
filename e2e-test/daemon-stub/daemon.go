@@ -71,6 +71,7 @@ const (
 	DEALLOCATE_PATH = "/deallocate"
 
 	NIC_SELECT_PATH = "/select"
+	NODENAME_ENV    = "K8S_NODENAME"
 )
 
 var (
@@ -80,8 +81,9 @@ var (
 	vendor                  = "1af4"
 	product                 = "1000"
 
-	DAEMON_PORT = 11000
-	HostIP      string
+	daemonPort = 11000
+	hostIP     string
+	hostName   string
 )
 
 func handleRequests() *mux.Router {
@@ -103,7 +105,7 @@ func getSecondaryHostIPFromMainIP() []string {
 	hostIPs := []string{}
 	for _, netAddress := range netAddresses {
 		netSplits := strings.Split(netAddress, ".")
-		ipSplits := strings.Split(HostIP, ".")
+		ipSplits := strings.Split(hostIP, ".")
 		ip := fmt.Sprintf("%s.%s.%s.%s", netSplits[0], netSplits[1], ipSplits[2], ipSplits[3])
 		hostIPs = append(hostIPs, ip)
 	}
@@ -148,7 +150,7 @@ func Greet(targetHost string, myIP string) {
 	if targetHost == myIP {
 		return
 	}
-	address := fmt.Sprintf("http://%s:%d", targetHost, DAEMON_PORT) + GREET_PATH
+	address := fmt.Sprintf("http://%s:%d", targetHost, daemonPort) + GREET_PATH
 	jsonReq, err := json.Marshal(myIP)
 
 	if err != nil {
@@ -223,6 +225,11 @@ func Allocate(w http.ResponseWriter, r *http.Request) {
 	reqBody, _ := ioutil.ReadAll(r.Body)
 	var req da.IPRequest
 	err := json.Unmarshal(reqBody, &req)
+	if strings.Contains(hostName, req.HostName) {
+		// hostName has prefix-suffix
+		req.HostName = hostName
+	}
+
 	var ipResponses []da.IPResponse
 	if err == nil {
 		log.Println(fmt.Sprintf("request: %v", req))
@@ -238,7 +245,13 @@ func Deallocate(w http.ResponseWriter, r *http.Request) {
 	reqBody, _ := ioutil.ReadAll(r.Body)
 	var req da.IPRequest
 	err := json.Unmarshal(reqBody, &req)
+	if strings.Contains(hostName, req.HostName) {
+		// hostName has prefix-suffix
+		req.HostName = hostName
+	}
+
 	if err == nil {
+		log.Println(fmt.Sprintf("request: %v", req))
 		da.DeallocateIP(req)
 	}
 	json.NewEncoder(w).Encode("")
@@ -262,14 +275,26 @@ func InitClient() *rest.Config {
 	da.IppoolHandler = backend.NewIPPoolHandler(config)
 	da.K8sClientset, _ = kubernetes.NewForConfig(config)
 	return config
+}
 
-	return config
+func initHostName() {
+	var err error
+	var found bool
+	hostName, found = os.LookupEnv(NODENAME_ENV)
+	if !found {
+		hostName, err = os.Hostname()
+		if err != nil {
+			log.Println("failed to get host name")
+		}
+	}
+	log.Printf("hostName=%s\n", hostName)
 }
 
 func main() {
 	InitClient()
+	initHostName()
 	var found bool
-	HostIP, found = os.LookupEnv("HOST_IP")
+	hostIP, found = os.LookupEnv("HOST_IP")
 	if !found {
 		log.Fatal("No HOST_IP set")
 	}
@@ -277,13 +302,13 @@ func main() {
 	if found && setDaemonPort != "" {
 		setDaemonPortInt, err := strconv.Atoi(setDaemonPort)
 		if err == nil {
-			DAEMON_PORT = setDaemonPortInt
+			daemonPort = setDaemonPortInt
 		}
 	}
-	ipSplits := strings.Split(HostIP, ".")
+	ipSplits := strings.Split(hostIP, ".")
 	netAddresses[0] = fmt.Sprintf("%s.%s.0.0/16", ipSplits[0], ipSplits[1])
 	router := handleRequests()
-	daemonAddress := fmt.Sprintf("0.0.0.0:%d", DAEMON_PORT)
+	daemonAddress := fmt.Sprintf("0.0.0.0:%d", daemonPort)
 	log.Printf("Listening @%s", daemonAddress)
 	log.Fatal(http.ListenAndServe(daemonAddress, router))
 }
