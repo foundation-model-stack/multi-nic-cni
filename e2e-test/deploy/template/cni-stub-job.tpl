@@ -2,7 +2,6 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: cni-{{ .host_name }}
-  namespace: multi-nic-cni-operator-system
   labels:
     app: cni-stub
 spec:
@@ -13,7 +12,7 @@ spec:
     spec:
       containers:
       - env:
-        image: e2e-test/cni-stub:latest
+        image: {{ .image }}
         imagePullPolicy: IfNotPresent
         name: cni
         command: ["/bin/bash", "-c"]
