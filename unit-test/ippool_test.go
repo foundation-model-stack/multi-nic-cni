@@ -26,7 +26,6 @@ var (
 	deletedPodName = "pod0"
 	namespace      = "default"
 )
-var expectedIPPools = genExpectedIPPools()
 
 func genIP(interfaceIndex, ipIndex int) string {
 	return fmt.Sprintf("%s%d", ipPrefixes[interfaceIndex], ipIndex)
@@ -44,15 +43,6 @@ func genAllocations(ipIndexes map[int]int, podName string) []multinicv1.Allocati
 		})
 	}
 	return allocations
-}
-
-func genExpectedIPPools() []multinicv1.IPPoolSpec {
-	ippools := []multinicv1.IPPoolSpec{}
-	for interfaceIndex, _ := range interfaceNames {
-		ippool := genIPPool(interfaceIndex, map[int]int{0: 2, 1: 2}, newPodName)
-		ippools = append(ippools, ippool)
-	}
-	return ippools
 }
 
 func genIPPool(interfaceIndex int, ipIndexes map[int]int, podName string) multinicv1.IPPoolSpec {
@@ -92,7 +82,7 @@ func checkExpectedAllocation(interfaceIndex int, allocations []multinicv1.Alloca
 func checkSyncAllocation(allocationMap map[string]map[string]multinicv1.Allocation, crIndexes map[int]int, crPodName string, expectedChanged map[int]bool) {
 	crAllocationMap := genAllocationMap(crIndexes, crPodName, false)
 	ippools := []multinicv1.IPPoolSpec{}
-	for interfaceIndex, _ := range interfaceNames {
+	for interfaceIndex := range interfaceNames {
 		ippool := genIPPool(interfaceIndex, map[int]int{interfaceIndex: crIndexes[interfaceIndex]}, crPodName)
 		ippools = append(ippools, ippool)
 	}
@@ -101,10 +91,10 @@ func checkSyncAllocation(allocationMap map[string]map[string]multinicv1.Allocati
 
 func checkSyncAllocationWithMap(allocationMap, crAllocationMap map[string]map[string]multinicv1.Allocation, ippools []multinicv1.IPPoolSpec, expectedChanged map[int]bool) {
 	fmt.Printf("crAllocationMap: %v\n", crAllocationMap)
-	for interfaceIndex, _ := range interfaceNames {
+	for interfaceIndex := range interfaceNames {
 		ippool := ippools[interfaceIndex]
 		fmt.Printf("befor %v \n", allocationMap)
-		changed, newAllocations := multinicnetworkReconciler.CIDRHandler.getSyncAllocations(ippool, allocationMap, crAllocationMap)
+		changed, newAllocations := multinicnetworkReconciler.CIDRHandler.GetSyncAllocations(ippool, allocationMap, crAllocationMap)
 		fmt.Printf("after %v - %d\n", allocationMap, len(interfaceNames)-interfaceIndex-1)
 		fmt.Printf("allocations %v\n", newAllocations)
 		// must be updated (deleted)
@@ -160,7 +150,7 @@ var _ = Describe("Unsync IPPool Test", func() {
 			newCrAlllocationMap[defName][ip] = allocation
 		}
 		ippools := []multinicv1.IPPoolSpec{}
-		for interfaceIndex, _ := range interfaceNames {
+		for interfaceIndex := range interfaceNames {
 			newIPPool := genIPPool(interfaceIndex, map[int]int{interfaceIndex: currentAllocations[interfaceIndex]}, newPodName)
 			if _, found := deltedIndexes[interfaceIndex]; found {
 				deletedIppool := genIPPool(interfaceIndex, map[int]int{interfaceIndex: deltedIndexes[interfaceIndex]}, newPodName)
@@ -191,14 +181,14 @@ var _ = Describe("Unsync IPPool Test", func() {
 		pendingIndexes := map[int]int{0: 1, 1: 1}
 		crAllocationMap := genAllocationMap(pendingIndexes, newPodName, false)
 		ippools := []multinicv1.IPPoolSpec{}
-		for interfaceIndex, _ := range interfaceNames {
+		for interfaceIndex := range interfaceNames {
 			ippool := genIPPool(interfaceIndex, pendingIndexes, newPodName)
 			ippools = append(ippools, ippool)
 		}
-		for interfaceIndex, _ := range interfaceNames {
+		for interfaceIndex := range interfaceNames {
 			ippool := ippools[interfaceIndex]
 			fmt.Printf("befor %v \n", allocationMap)
-			changed, newAllocations := multinicnetworkReconciler.CIDRHandler.getSyncAllocations(ippool, allocationMap, crAllocationMap)
+			changed, newAllocations := multinicnetworkReconciler.CIDRHandler.GetSyncAllocations(ippool, allocationMap, crAllocationMap)
 			fmt.Printf("after %v - %d\n", allocationMap, len(interfaceNames)-interfaceIndex-1)
 			fmt.Printf("allocations %v\n", newAllocations)
 			// must be changed

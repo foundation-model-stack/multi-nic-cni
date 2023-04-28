@@ -21,6 +21,7 @@ require (
 	github.com/huandu/xstrings v1.3.2 // indirect
 	github.com/mitchellh/copystructure v1.0.0 // indirect
 	github.com/operator-framework/operator-lib v0.11.0
+	go.uber.org/zap v1.19.1
 )
 
 replace github.com/openshift/api => github.com/openshift/api v0.0.0-20220211145901-aa98df527546

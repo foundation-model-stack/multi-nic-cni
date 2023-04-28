@@ -9,7 +9,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"reflect"
 
 	"github.com/containernetworking/cni/pkg/types"
 	"github.com/go-logr/logr"
@@ -22,13 +21,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	multinicv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
+	"github.com/foundation-model-stack/multi-nic-cni/controllers/vars"
 	"github.com/foundation-model-stack/multi-nic-cni/plugin"
-)
-
-const (
-	MULTI_NIC_IPAM_TYPE        = "multi-nic-ipam"
-	DEFAULT_MULTI_NIC_CNI_TYPE = "multi-nic"
-	DEFAULT_DAEMON_PORT        = 11000
 )
 
 type PluginInterface plugin.Plugin
@@ -38,31 +32,25 @@ type MultiNicNetworkReconciler struct {
 	client.Client
 	*plugin.NetAttachDefHandler
 	*CIDRHandler
-	Log       logr.Logger
 	Scheme    *runtime.Scheme
 	PluginMap map[string]*PluginInterface
 }
 
-func GetPluginMap(config *rest.Config, logger logr.Logger) map[string]*PluginInterface {
+func GetPluginMap(config *rest.Config) map[string]*PluginInterface {
 	pluginMap := make(map[string]*PluginInterface)
 	pluginMap[plugin.IPVLAN_TYPE] = new(PluginInterface)
-	*pluginMap[plugin.IPVLAN_TYPE] = &plugin.IPVLANPlugin{
-		Log: logger,
-	}
+	*pluginMap[plugin.IPVLAN_TYPE] = &plugin.IPVLANPlugin{}
 	pluginMap[plugin.MACVLAN_TYPE] = new(PluginInterface)
-	*pluginMap[plugin.MACVLAN_TYPE] = &plugin.MACVLANPlugin{
-		Log: logger,
-	}
+	*pluginMap[plugin.MACVLAN_TYPE] = &plugin.MACVLANPlugin{}
 	pluginMap[plugin.SRIOV_TYPE] = new(PluginInterface)
-	sriovPlugin := &plugin.SriovPlugin{
-		Log: logger,
+	sriovPlugin := &plugin.SriovPlugin{}
+	err := sriovPlugin.Init(config)
+	if err != nil {
+		vars.NetworkLog.V(2).Info("Failed to init SR-IoV Plugin: %v", err)
 	}
-	sriovPlugin.Init(config)
 	*pluginMap[plugin.SRIOV_TYPE] = sriovPlugin
 	pluginMap[plugin.AWS_IPVLAN_TYPE] = new(PluginInterface)
-	awsVpcCNIPlugin := &plugin.AwsVpcCNIPlugin{
-		Log: logger,
-	}
+	awsVpcCNIPlugin := &plugin.AwsVpcCNIPlugin{}
 	*pluginMap[plugin.AWS_IPVLAN_TYPE] = awsVpcCNIPlugin
 	return pluginMap
 }
@@ -79,12 +67,12 @@ func IsMultiNICIPAM(instance *multinicv1.MultiNicNetwork) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("%s: %v", instance.Spec.IPAM, err)
 	}
-	return simpleIPAM.Type == MULTI_NIC_IPAM_TYPE, nil
+	return simpleIPAM.Type == vars.MultiNICIPAMType, nil
 }
 
 func (r *MultiNicNetworkReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	if !ConfigReady {
-		return ctrl.Result{RequeueAfter: ConfigWaitingReconcileTime}, nil
+		return ctrl.Result{RequeueAfter: vars.NormalReconcileTime}, nil
 	}
 	_ = log.FromContext(ctx)
 
@@ -96,10 +84,10 @@ func (r *MultiNicNetworkReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			// Return and don't requeue
 			return ctrl.Result{}, nil
 		}
-		r.Log.V(7).Info(fmt.Sprintf("Cannot get #%v ", err))
+		vars.NetworkLog.V(7).Info(fmt.Sprintf("Cannot get #%v ", err))
 		// Error reading the object - requeue the request.
 		// ReconcileTime is defined in config_controller
-		return ctrl.Result{RequeueAfter: ReconcileTime}, nil
+		return ctrl.Result{RequeueAfter: vars.LongReconcileTime}, nil
 	}
 
 	// Add finalizer to instance
@@ -113,9 +101,9 @@ func (r *MultiNicNetworkReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	is_deleted := instance.GetDeletionTimestamp() != nil
 	if is_deleted {
-		r.Log.V(2).Info(fmt.Sprintf("Network %s deletion set: %v ", instance.GetName(), instance.GetDeletionTimestamp()))
+		vars.NetworkLog.V(2).Info(fmt.Sprintf("Network %s deletion set: %v ", instance.GetName(), instance.GetDeletionTimestamp()))
 		if controllerutil.ContainsFinalizer(instance, multinicnetworkFinalizer) {
-			if err := r.callFinalizer(r.Log, instance); err != nil {
+			if err := r.callFinalizer(vars.NetworkLog, instance); err != nil {
 				return ctrl.Result{}, err
 			}
 
@@ -142,26 +130,32 @@ func (r *MultiNicNetworkReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	multinicnetworkName := instance.GetName()
 	if err != nil {
 		message := fmt.Sprintf("Failed to get main config %s: %v", multinicnetworkName, err)
-		r.CIDRHandler.MultiNicNetworkHandler.UpdateNetConfigStatus(instance, multinicv1.ConfigFailed, message)
-		r.Log.V(2).Info(message)
+		err = r.CIDRHandler.MultiNicNetworkHandler.UpdateNetConfigStatus(instance, multinicv1.ConfigFailed, message)
+		if err != nil {
+			message = fmt.Sprintf("%s and Failed to UpdateNetConfigStatus: %v", message, err)
+		}
+		vars.NetworkLog.V(2).Info(message)
 	} else {
 		mainPlugin = plugin.RemoveEmpty(instance.Spec.MainPlugin.CNIArgs, mainPlugin)
-		r.Log.V(2).Info(fmt.Sprintf("main plugin: %s", mainPlugin))
+		vars.NetworkLog.V(2).Info(fmt.Sprintf("main plugin: %s", mainPlugin))
 		// Create net attach def
 		err = r.NetAttachDefHandler.CreateOrUpdate(instance, mainPlugin, annotations)
 		if err != nil {
 			message := fmt.Sprintf("Failed to create %s: %v", multinicnetworkName, err)
-			r.CIDRHandler.MultiNicNetworkHandler.UpdateNetConfigStatus(instance, multinicv1.ConfigFailed, message)
-			r.Log.V(2).Info(message)
+			err = r.CIDRHandler.MultiNicNetworkHandler.UpdateNetConfigStatus(instance, multinicv1.ConfigFailed, message)
+			if err != nil {
+				message = fmt.Sprintf("%s and Failed to UpdateNetConfigStatus: %v", message, err)
+			}
+			vars.NetworkLog.V(2).Info(message)
 			// Reconcile if fail to update or create some of net-attach-def
-			return ctrl.Result{RequeueAfter: ReconcileTime}, nil
+			return ctrl.Result{RequeueAfter: vars.NormalReconcileTime}, nil
 		}
 		// Handle multi-nic IPAM
 		err = r.HandleMultiNicIPAM(instance)
 		if err != nil {
 			message := fmt.Sprintf("Failed to manage %s: %v", multinicnetworkName, err)
-			r.Log.V(2).Info(message)
-			return ctrl.Result{RequeueAfter: ReconcileTime}, nil
+			vars.NetworkLog.V(2).Info(message)
+			return ctrl.Result{RequeueAfter: vars.NormalReconcileTime}, nil
 		}
 	}
 	routeStatus := instance.Status.RouteStatus
@@ -172,23 +166,29 @@ func (r *MultiNicNetworkReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			routeStatus = r.CIDRHandler.SyncCIDRRoute(cidr, false)
 			netStatus, err := r.CIDRHandler.MultiNicNetworkHandler.SyncAllStatus(multinicnetworkName, cidr, routeStatus, daemonSize, infoAvailableSize, false)
 			if err != nil {
-				r.Log.V(2).Info(fmt.Sprintf("failed to update route status of %s: %v", multinicnetworkName, err))
+				vars.NetworkLog.V(2).Info(fmt.Sprintf("Failed to update route status of %s: %v", multinicnetworkName, err))
 			} else if netStatus.CIDRProcessedHost != netStatus.InterfaceInfoAvailable {
 				r.CIDRHandler.UpdateCIDRs()
 			}
 			if routeStatus == multinicv1.RouteUnknown {
-				return ctrl.Result{RequeueAfter: ReconcileTime}, nil
+				return ctrl.Result{RequeueAfter: vars.NormalReconcileTime}, nil
 			} else if routeStatus == multinicv1.AllRouteApplied {
 				//success
-				r.Log.V(3).Info(fmt.Sprintf("CIDR %s successfully applied", multinicnetworkName))
+				vars.NetworkLog.V(3).Info(fmt.Sprintf("CIDR %s successfully applied", multinicnetworkName))
 			}
 		}
 	} else if !instance.Spec.IsMultiNICIPAM && routeStatus == multinicv1.RouteNoApplied {
 		// not related to L3
-		r.CIDRHandler.MultiNicNetworkHandler.UpdateNetConfigStatus(instance, multinicv1.ConfigComplete, "")
+		err = r.CIDRHandler.MultiNicNetworkHandler.UpdateNetConfigStatus(instance, multinicv1.ConfigComplete, "")
+		if err != nil {
+			vars.NetworkLog.V(3).Info(fmt.Sprintf("Failed to UpdateNetConfigStatus %s for non-L3: %v", instance.Name, err))
+		}
 	} else if routeStatus != multinicv1.AllRouteApplied {
 		// some route still fails
-		r.CIDRHandler.MultiNicNetworkHandler.UpdateNetConfigStatus(instance, multinicv1.WaitForConfig, "")
+		err = r.CIDRHandler.MultiNicNetworkHandler.UpdateNetConfigStatus(instance, multinicv1.WaitForConfig, "")
+		if err != nil {
+			vars.NetworkLog.V(3).Info(fmt.Sprintf("Failed to UpdateNetConfigStatus %s at route failure: %v", instance.Name, err))
+		}
 	}
 	return ctrl.Result{}, nil
 }
@@ -208,8 +208,8 @@ func (r *MultiNicNetworkReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-// getIPAMConfig get IPAM config from network definition
-func (r *MultiNicNetworkReconciler) getIPAMConfig(instance *multinicv1.MultiNicNetwork) (*multinicv1.PluginConfig, error) {
+// GetIPAMConfig get IPAM config from network definition
+func (r *MultiNicNetworkReconciler) GetIPAMConfig(instance *multinicv1.MultiNicNetwork) (*multinicv1.PluginConfig, error) {
 	isMultiNicIPAM, err := IsMultiNICIPAM(instance)
 	ipamConfig := &multinicv1.PluginConfig{}
 	if err != nil {
@@ -217,7 +217,10 @@ func (r *MultiNicNetworkReconciler) getIPAMConfig(instance *multinicv1.MultiNicN
 	}
 	if isMultiNicIPAM {
 		name := instance.GetName()
-		json.Unmarshal([]byte(instance.Spec.IPAM), ipamConfig)
+		err := json.Unmarshal([]byte(instance.Spec.IPAM), ipamConfig)
+		if err != nil {
+			return nil, err
+		}
 		ipamConfig.Name = name
 		ipamConfig.Type = instance.Spec.MainPlugin.Type
 		ipamConfig.Subnet = instance.Spec.Subnet
@@ -229,35 +232,24 @@ func (r *MultiNicNetworkReconciler) getIPAMConfig(instance *multinicv1.MultiNicN
 
 // HandleMultiNicIPAM handles ipam if target type
 func (r *MultiNicNetworkReconciler) HandleMultiNicIPAM(instance *multinicv1.MultiNicNetwork) error {
-	ipamConfig, err := r.getIPAMConfig(instance)
+	ipamConfig, err := r.GetIPAMConfig(instance)
 	if err == nil {
 		cidrName := instance.GetName()
 		_, err := r.CIDRHandler.GetCIDR(cidrName)
 		// create new cidr if not created yet. otherwise, let cidr controller update
 		if err == nil {
-			r.Log.V(3).Info(fmt.Sprintf("CIDR %s already exists", cidrName))
+			vars.NetworkLog.V(3).Info(fmt.Sprintf("CIDR %s already exists", cidrName))
 		} else {
 			if errors.IsNotFound(err) {
 				_, err = r.CIDRHandler.NewCIDRWithNewConfig(*ipamConfig, instance.GetNamespace())
 			}
 			if err != nil {
-				r.Log.V(3).Info(fmt.Sprintf("Failed to HandleMultiNicIPAM for %s: %v", cidrName, err))
+				vars.NetworkLog.V(3).Info(fmt.Sprintf("Failed to HandleMultiNicIPAM for %s: %v", cidrName, err))
 			}
 			return err
 		}
 	}
 	return err
-}
-
-// deprecated
-// isExistConfig checks if considering plugin config do not change from the config in the existing CIDR
-func (r *MultiNicNetworkReconciler) isExistConfig(instance *multinicv1.MultiNicNetwork, ipamConfig multinicv1.PluginConfig) bool {
-	cidrName := instance.GetName()
-	cidr, err := r.CIDRHandler.GetCIDR(cidrName)
-	if err == nil {
-		return reflect.DeepEqual(cidr.Spec.Config, ipamConfig)
-	}
-	return false
 }
 
 // callFinalizer deletes NetworkAttachmentDefinition, CIDR and its dependencies
@@ -267,7 +259,10 @@ func (r *MultiNicNetworkReconciler) callFinalizer(reqLogger logr.Logger, instanc
 		cidrName := instance.GetName()
 		cidrInstance, _ := r.CIDRHandler.GetCIDR(cidrName)
 		// Delete CIDR and its dependencies
-		r.CIDRHandler.DeleteCIDR(*cidrInstance)
+		err = r.CIDRHandler.DeleteCIDR(*cidrInstance)
+		if err != nil {
+			reqLogger.V(2).Info(fmt.Sprintf("Failed to delete CIDR %s: %v", cidrName, err))
+		}
 	}
 	// CleanUp plugin resources
 	spec := instance.Spec.MainPlugin

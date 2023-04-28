@@ -10,7 +10,6 @@ import (
 
 	"github.com/containernetworking/cni/pkg/types"
 	multinicv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
-	"github.com/go-logr/logr"
 	"k8s.io/client-go/rest"
 )
 
@@ -19,7 +18,6 @@ const (
 )
 
 type MACVLANPlugin struct {
-	Log logr.Logger
 }
 
 type MACVLANTypeNetConf struct {
@@ -28,7 +26,7 @@ type MACVLANTypeNetConf struct {
 	MTU  int    `json:"mtu"`
 }
 
-func (p *MACVLANPlugin) Init(config *rest.Config, logger logr.Logger) error {
+func (p *MACVLANPlugin) Init(config *rest.Config) error {
 	return nil
 }
 
@@ -36,10 +34,9 @@ func (p *MACVLANPlugin) GetConfig(net multinicv1.MultiNicNetwork, hifList map[st
 	spec := net.Spec.MainPlugin
 	args := spec.CNIArgs
 	conf := &MACVLANTypeNetConf{}
-	argBytes, _ := json.Marshal(args)
-	json.Unmarshal(argBytes, conf)
 	conf.CNIVersion = net.Spec.MainPlugin.CNIVersion
 	conf.Type = MACVLAN_TYPE
+	conf.Mode = args["mode"]
 	val, err := getInt(args, "mtu")
 	if err == nil {
 		conf.MTU = val

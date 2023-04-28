@@ -42,6 +42,8 @@ spec:
                 description: 'INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
                   Important: Run "make" to regenerate code after modifying this file'
                 type: string
+              contextTimeoutMinutes:
+                type: integer
               daemon:
                 properties:
                   env:
@@ -463,6 +465,14 @@ spec:
                 type: string
               joinPath:
                 type: string
+              logLevel:
+                type: integer
+              longReconcileMinutes:
+                type: integer
+              normalReconcileMinutes:
+                type: integer
+              urgentReconcileSeconds:
+                type: integer
             required:
             - cniType
             - daemon

@@ -9,6 +9,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/containernetworking/cni/pkg/invoke"
 	"github.com/containernetworking/cni/pkg/skel"
@@ -35,15 +36,16 @@ func execPlugin(plugin string, command string, confBytes []byte, args *skel.CmdA
 	if err != nil {
 		return nil, err
 	}
-
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
 	if withResult {
-		r, err := invoke.ExecPluginWithResult(context.TODO(), pluginPath, confBytes, singleNicArgs, defaultExec)
+		r, err := invoke.ExecPluginWithResult(ctx, pluginPath, confBytes, singleNicArgs, defaultExec)
 		if err != nil {
 			return nil, err
 		}
 		return current.NewResultFromResult(r)
 	} else {
-		err = invoke.ExecPluginWithoutResult(context.TODO(), pluginPath, confBytes, singleNicArgs, defaultExec)
+		err = invoke.ExecPluginWithoutResult(ctx, pluginPath, confBytes, singleNicArgs, defaultExec)
 		return nil, err
 	}
 }

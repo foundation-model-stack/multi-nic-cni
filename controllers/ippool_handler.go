@@ -8,20 +8,19 @@ package controllers
 import (
 	"context"
 	"strings"
-	"sync"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"fmt"
 	"net"
 
-	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"reflect"
 
 	multinicv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
 	"github.com/foundation-model-stack/multi-nic-cni/compute"
+	"github.com/foundation-model-stack/multi-nic-cni/controllers/vars"
 	"k8s.io/apimachinery/pkg/types"
 
 	"strconv"
@@ -32,9 +31,7 @@ import (
 // - update IPPool according to CIDR
 type IPPoolHandler struct {
 	client.Client
-	Log logr.Logger
 	*SafeCache
-	mu sync.Mutex
 }
 
 // GetIPPool gets IPPool from IPPool name
@@ -44,14 +41,18 @@ func (h *IPPoolHandler) GetIPPool(name string) (*multinicv1.IPPool, error) {
 		Name:      name,
 		Namespace: metav1.NamespaceAll,
 	}
-	err := h.Client.Get(context.TODO(), namespacedName, ippool)
+	ctx, cancel := context.WithTimeout(context.Background(), vars.ContextTimeout)
+	defer cancel()
+	err := h.Client.Get(ctx, namespacedName, ippool)
 	return ippool, err
 }
 
 // ListIPPool returns a map from IPPool name to IPPool
 func (h *IPPoolHandler) ListIPPool() (map[string]multinicv1.IPPool, error) {
 	poolList := &multinicv1.IPPoolList{}
-	err := h.Client.List(context.TODO(), poolList)
+	ctx, cancel := context.WithTimeout(context.Background(), vars.ContextTimeout)
+	defer cancel()
+	err := h.Client.List(ctx, poolList)
 	poolMap := make(map[string]multinicv1.IPPool)
 	if err == nil {
 		for _, pool := range poolList.Items {
@@ -133,10 +134,10 @@ func (h *IPPoolHandler) UpdateIPPool(netAttachDef string, podCIDR string, vlanCI
 			// report if allocated ip addresses have conflicts with the new IPPool (for example, in exclude list)
 			invalidAllocations := h.checkPoolValidity(excludesInterface, prevSpec.Allocations)
 			if len(invalidAllocations) > 0 {
-				h.Log.V(5).Info(fmt.Sprintf("Update IPPool %s - conflict allocation: %v", ippoolName, invalidAllocations))
+				vars.IPPoolLog.V(5).Info(fmt.Sprintf("Update IPPool %s - conflict allocation: %v", ippoolName, invalidAllocations))
 			}
 			if prevSpec.HostName != hostName && len(prevSpec.Allocations) > 0 {
-				h.Log.V(5).Info(fmt.Sprintf("Update IPPool %s - changes with exist %d allocations", ippoolName, len(prevSpec.Allocations)))
+				vars.IPPoolLog.V(5).Info(fmt.Sprintf("Update IPPool %s - changes with exist %d allocations", ippoolName, len(prevSpec.Allocations)))
 			}
 		}
 	} else {
@@ -150,7 +151,7 @@ func (h *IPPoolHandler) UpdateIPPool(netAttachDef string, podCIDR string, vlanCI
 			Spec: spec,
 		}
 		err = h.Client.Create(context.Background(), newIPPool)
-		h.Log.V(5).Info(fmt.Sprintf("New IPPool %s: %v, %v", ippoolName, newIPPool, err))
+		vars.IPPoolLog.V(5).Info(fmt.Sprintf("New IPPool %s: %v, %v", ippoolName, newIPPool, err))
 	}
 	return err
 }
@@ -195,7 +196,7 @@ func (h *IPPoolHandler) UpdateIPPools(defName string, entries []multinicv1.CIDRE
 		for _, host := range entry.Hosts {
 			err := h.UpdateIPPool(defName, host.PodCIDR, entry.VlanCIDR, host.HostName, host.InterfaceName, excludes)
 			if err != nil {
-				h.Log.V(5).Info(fmt.Sprintf("Cannot update IPPools for host %s: error=%v", host.HostName, err))
+				vars.IPPoolLog.V(5).Info(fmt.Sprintf("Cannot update IPPools for host %s: error=%v", host.HostName, err))
 			}
 		}
 	}
