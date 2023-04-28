@@ -4,6 +4,10 @@ metadata:
   annotations:
     node.alpha.kubernetes.io/ttl: "0"
     kwok.x-k8s.io/node: fake
+    k8s.ovn.org/l3-gateway-config: |
+      {"default": {"mode": ""}}
+  finalizers:
+    - node.kwok/finalizers
   labels:
     beta.kubernetes.io/arch: amd64
     beta.kubernetes.io/os: linux
