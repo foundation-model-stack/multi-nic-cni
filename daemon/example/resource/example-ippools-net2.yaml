@@ -5,7 +5,7 @@ metadata:
 spec:
   allocations: []
   excludes: []
-  hostName: master0
+  hostName: master0.local
   interfaceName: test-eth2
   netAttachDef: multi-nic-sample
   podCIDR: 192.168.64.0/26
