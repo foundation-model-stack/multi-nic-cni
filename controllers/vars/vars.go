@@ -20,6 +20,7 @@ const (
 	// environment name definition
 	MaxQueueSizeKey   = "MAX_QSIZE"       // daemon pod queue size
 	TickerIntervalKey = "TICKER_INTERVAL" // synchronizer ticker interval
+	NodeNameKey       = "K8S_NODENAME"
 
 	// common constant
 	PodStatusField    = "status.phase"

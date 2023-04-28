@@ -2,7 +2,7 @@
  * Copyright 2022- IBM Inc. All rights reserved
  * SPDX-License-Identifier: Apache2.0
  */
- 
+
 package main
 
 import (
@@ -13,8 +13,9 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"time"
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/gorilla/mux"
 
@@ -23,10 +24,9 @@ import (
 	di "github.com/foundation-model-stack/multi-nic-cni/daemon/iface"
 	dr "github.com/foundation-model-stack/multi-nic-cni/daemon/router"
 	ds "github.com/foundation-model-stack/multi-nic-cni/daemon/selector"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/client-go/kubernetes"
-
 )
 
 type IPAMInfo struct {
@@ -42,16 +42,19 @@ const (
 	ADD_ROUTE_PATH    = "/addroute"
 	DELETE_ROUTE_PATH = "/deleteroute"
 
-	ADD_L3CONFIG_PATH = "/addl3"
+	ADD_L3CONFIG_PATH    = "/addl3"
 	DELETE_L3CONFIG_PATH = "/deletel3"
 
 	ALLOCATE_PATH   = "/allocate"
 	DEALLOCATE_PATH = "/deallocate"
 
 	NIC_SELECT_PATH = "/select"
+
+	NODENAME_ENV = "K8S_NODENAME"
 )
 
 var DAEMON_PORT int = 11000
+var hostName string
 
 func handleRequests() *mux.Router {
 	router := mux.NewRouter().StrictSlash(true)
@@ -167,6 +170,11 @@ func SelectNic(w http.ResponseWriter, r *http.Request) {
 	reqBody, _ := ioutil.ReadAll(r.Body)
 	var req ds.NICSelectRequest
 	err := json.Unmarshal(reqBody, &req)
+	if strings.Contains(hostName, req.HostName) {
+		// hostName has prefix-suffix
+		req.HostName = hostName
+	}
+
 	var resp ds.NICSelectResponse
 	if err == nil {
 		log.Println(fmt.Sprintf("request: %v", req))
@@ -185,6 +193,11 @@ func Allocate(w http.ResponseWriter, r *http.Request) {
 	reqBody, _ := ioutil.ReadAll(r.Body)
 	var req da.IPRequest
 	err := json.Unmarshal(reqBody, &req)
+	if strings.Contains(hostName, req.HostName) {
+		// hostName has prefix-suffix
+		req.HostName = hostName
+	}
+
 	var ipResponses []da.IPResponse
 	if err == nil {
 		log.Println(fmt.Sprintf("request: %v", req))
@@ -202,6 +215,11 @@ func Deallocate(w http.ResponseWriter, r *http.Request) {
 	reqBody, _ := ioutil.ReadAll(r.Body)
 	var req da.IPRequest
 	err := json.Unmarshal(reqBody, &req)
+	if strings.Contains(hostName, req.HostName) {
+		// hostName has prefix-suffix
+		req.HostName = hostName
+	}
+
 	if err == nil {
 		da.DeallocateIP(req)
 	}
@@ -223,7 +241,6 @@ func InitClient() *rest.Config {
 		log.Printf("Config Error: %v", err)
 	}
 
-
 	da.IppoolHandler = backend.NewIPPoolHandler(config)
 	ds.MultinicnetHandler = backend.NewMultiNicNetworkHandler(config)
 	ds.NetAttachDefHandler = backend.NewNetAttachDefHandler(config)
@@ -234,12 +251,22 @@ func InitClient() *rest.Config {
 
 }
 
+func initHostName() {
+	var err error
+	var found bool
+	hostName, found = os.LookupEnv(NODENAME_ENV)
+	if !found {
+		hostName, err = os.Hostname()
+		if err != nil {
+			log.Println("failed to get host name")
+		}
+	}
+	log.Printf("hostName=%s\n", hostName)
+}
+
 func main() {
 	InitClient()
-	hostName, err := os.Hostname()
-	if err != nil {
-		log.Println("failed to get host name")
-	}
+	initHostName()
 	setDaemonPort, found := os.LookupEnv("DAEMON_PORT")
 	if found && setDaemonPort != "" {
 		setDaemonPortInt, err := strconv.Atoi(setDaemonPort)
@@ -248,7 +275,7 @@ func main() {
 		}
 	}
 	dr.SetRTTablePath()
-	
+
 	da.CleanHangingAllocation(hostName)
 	router := handleRequests()
 	daemonAddress := fmt.Sprintf("0.0.0.0:%d", DAEMON_PORT)

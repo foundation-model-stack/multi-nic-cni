@@ -259,6 +259,16 @@ func (r *ConfigReconciler) newCNIDaemonSet(client *kubernetes.Clientset, name st
 		vmnts = append(vmnts, vmnt)
 		volumes = append(volumes, volume)
 	}
+	// hostName environment
+	hostNameVar := corev1.EnvVar{
+		Name: vars.NodeNameKey,
+		ValueFrom: &corev1.EnvVarSource{
+			FieldRef: &corev1.ObjectFieldSelector{
+				FieldPath: "spec.nodeName",
+			},
+		},
+	}
+	daemonSpec.Env = append(daemonSpec.Env, hostNameVar)
 
 	// prepare secret
 	secrets := []corev1.LocalObjectReference{}
