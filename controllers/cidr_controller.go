@@ -8,7 +8,6 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -18,6 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	multinicv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
+	"github.com/foundation-model-stack/multi-nic-cni/controllers/vars"
 )
 
 // CIDRReconciler reconciles a CIDR object
@@ -27,7 +27,6 @@ type CIDRReconciler struct {
 	client.Client
 	*CIDRHandler
 	*DaemonWatcher
-	Log    logr.Logger
 	Scheme *runtime.Scheme
 }
 
@@ -35,14 +34,13 @@ type CIDRReconciler struct {
 //+kubebuilder:rbac:groups=multinic.fms.io,resources=cidrs/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=multinic.fms.io,resources=cidrs/finalizers,verbs=update
 
-const CIDRReconcileTime = time.Minute
 const cidrFinalizer = "finalizers.cidr.multinic.fms.io"
 
 func (r *CIDRReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	if !ConfigReady {
-		return ctrl.Result{RequeueAfter: ConfigWaitingReconcileTime}, nil
+		return ctrl.Result{RequeueAfter: vars.NormalReconcileTime}, nil
 	}
-	_ = r.Log.WithValues("cidr", req.NamespacedName)
+	_ = vars.CIDRLog.WithValues("cidr", req.NamespacedName)
 	cidrName := req.Name
 	instance := &multinicv1.CIDR{}
 	err := r.Client.Get(ctx, req.NamespacedName, instance)
@@ -52,10 +50,9 @@ func (r *CIDRReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 			// Return and don't requeue
 			return ctrl.Result{}, nil
 		}
-		r.Log.V(7).Info(fmt.Sprintf("Requeue CIDR %s: %v", cidrName, err))
+		vars.CIDRLog.V(7).Info(fmt.Sprintf("Requeue CIDR %s: %v", cidrName, err))
 		// Error reading the object - requeue the request.
-		// ReconcileTime is defined in config_controller
-		return ctrl.Result{RequeueAfter: CIDRReconcileTime}, nil
+		return ctrl.Result{RequeueAfter: vars.LongReconcileTime}, nil
 	}
 
 	// Add finalizer to instance
@@ -71,7 +68,7 @@ func (r *CIDRReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	is_deleted := instance.GetDeletionTimestamp() != nil
 	if is_deleted {
 		if controllerutil.ContainsFinalizer(instance, cidrFinalizer) {
-			if err := r.callFinalizer(r.Log, instance); err != nil {
+			if err := r.callFinalizer(vars.CIDRLog, instance); err != nil {
 				return ctrl.Result{}, err
 			}
 
@@ -90,9 +87,9 @@ func (r *CIDRReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	infoAvailableSize := r.CIDRHandler.HostInterfaceHandler.GetInfoAvailableSize()
 	netStatus, err := r.CIDRHandler.MultiNicNetworkHandler.SyncAllStatus(cidrName, instance.Spec, routeStatus, daemonSize, infoAvailableSize, true)
 	if err != nil {
-		r.Log.V(2).Info(fmt.Sprintf("failed to update route status of %s: %v", cidrName, err))
-		r.Log.V(7).Info(fmt.Sprintf("Requeue CIDR %s: %v", cidrName, err))
-		return ctrl.Result{RequeueAfter: CIDRReconcileTime}, nil
+		vars.CIDRLog.V(2).Info(fmt.Sprintf("Failed to update route status of %s: %v", cidrName, err))
+		vars.CIDRLog.V(7).Info(fmt.Sprintf("Requeue CIDR %s: %v", cidrName, err))
+		return ctrl.Result{RequeueAfter: vars.NormalReconcileTime}, nil
 	} else if netStatus.CIDRProcessedHost != netStatus.InterfaceInfoAvailable {
 		r.UpdateCIDRs()
 	}
@@ -100,7 +97,10 @@ func (r *CIDRReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	// call greeting
 	daemonSnapshot := r.CIDRHandler.DaemonCacheHandler.ListCache()
 	for _, daemon := range daemonSnapshot {
-		r.DaemonWatcher.IpamJoin(daemon)
+		err = r.DaemonWatcher.IpamJoin(daemon)
+		if err != nil {
+			vars.CIDRLog.V(4).Info(fmt.Sprintf("Failed to join %s: %v", daemon.NodeName, err))
+		}
 	}
 
 	return ctrl.Result{}, nil
@@ -115,8 +115,12 @@ func (r *CIDRReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 // callFinalizer deletes CIDR and its dependencies
 func (r *CIDRReconciler) callFinalizer(reqLogger logr.Logger, instance *multinicv1.CIDR) error {
-	r.CIDRHandler.DeleteCIDR(*instance)
-	r.CIDRHandler.SafeCache.UnsetCache(instance.ObjectMeta.Name)
-	reqLogger.V(3).Info(fmt.Sprintf("Finalized %s", instance.ObjectMeta.Name))
+	name := instance.ObjectMeta.Name
+	err := r.CIDRHandler.DeleteCIDR(*instance)
+	if err != nil {
+		vars.CIDRLog.V(3).Info(fmt.Sprintf("Failed to delete %s", name))
+	}
+	r.CIDRHandler.SafeCache.UnsetCache(name)
+	reqLogger.V(3).Info(fmt.Sprintf("Finalized %s", name))
 	return nil
 }

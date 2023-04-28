@@ -6,12 +6,11 @@
 package plugin
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 
 	multinicv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
-	"github.com/go-logr/logr"
+	"github.com/foundation-model-stack/multi-nic-cni/controllers/vars"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
@@ -44,7 +43,6 @@ const (
 )
 
 type SriovPlugin struct {
-	Log                           logr.Logger
 	SriovNetworkHandler           *DynamicHandler
 	SriovNetworkNodePolicyHandler *DynamicHandler
 	SriovNetworkNodeStateHandler  *DynamicHandler
@@ -136,9 +134,9 @@ func (p *SriovPlugin) getRootDevices(net multinicv1.MultiNicNetwork, hifList map
 				netAddrHash[iface.NetAddress] = nameDeviceMap[iface.InterfaceName]
 			}
 		}
-		p.Log.V(2).Info(fmt.Sprintf("host: %s, deviceMap: %v", hostName, nameDeviceMap))
+		vars.NetworkLog.V(2).Info(fmt.Sprintf("host: %s, deviceMap: %v", hostName, nameDeviceMap))
 	}
-	p.Log.V(2).Info(fmt.Sprintf("hif: %d, netAddrHash: %v", len(hifList), netAddrHash))
+	vars.NetworkLog.V(2).Info(fmt.Sprintf("hif: %d, netAddrHash: %v", len(hifList), netAddrHash))
 	rootDevices := []string{}
 	for _, val := range netAddrHash {
 		if val != "" {
@@ -150,8 +148,7 @@ func (p *SriovPlugin) getRootDevices(net multinicv1.MultiNicNetwork, hifList map
 
 func (p *SriovPlugin) getResource(name string, args map[string]string, resourceName string, rootDevices []string) string {
 	spec := &SriovNetworkNodePolicySpec{}
-	argBytes, _ := json.Marshal(args)
-	json.Unmarshal(argBytes, spec)
+	spec.ResourceName = args["resourceName"]
 	if spec.ResourceName == "" {
 		// create new resource
 		val, err := getInt(args, "priority")
@@ -186,21 +183,19 @@ func (p *SriovPlugin) getResource(name string, args map[string]string, resourceN
 		result := &SriovNetworkNodePolicy{}
 		err = p.SriovNetworkNodePolicyHandler.Create(SRIOV_NAMESPACE, policy, result)
 		if err != nil {
-			p.Log.V(2).Info(fmt.Sprintf("Policy: %v", policy.Spec))
-			p.Log.V(2).Info(fmt.Sprintf("Failed to create policy %s: %v", name, err))
+			vars.NetworkLog.V(2).Info(fmt.Sprintf("Policy: %v", policy.Spec))
+			vars.NetworkLog.V(2).Info(fmt.Sprintf("Failed to create policy %s: %v", name, err))
 		} else {
-			p.Log.V(2).Info(fmt.Sprintf("Create new SriovNetworkNodePolicy: %s", name))
+			vars.NetworkLog.V(2).Info(fmt.Sprintf("Create new SriovNetworkNodePolicy: %s", name))
 		}
 		return resourceName
 	}
-	p.Log.V(2).Info(fmt.Sprintf("Use existing resource %s", spec.ResourceName))
+	vars.NetworkLog.V(2).Info(fmt.Sprintf("Use existing resource %s", spec.ResourceName))
 	return spec.ResourceName
 }
 
 func (p *SriovPlugin) createSriovNetwork(name string, namespace string, args map[string]string, resourceName string) (*SriovNetwork, error) {
 	spec := &SriovNetworkSpec{}
-	argBytes, _ := json.Marshal(args)
-	json.Unmarshal(argBytes, spec)
 	spec.NetworkNamespace = namespace
 	spec.ResourceName = resourceName
 	val, err := getInt(args, "vlan")
@@ -243,8 +238,7 @@ func (p *SriovPlugin) CleanUp(net multinicv1.MultiNicNetwork) error {
 	spec := net.Spec.MainPlugin
 	args := spec.CNIArgs
 	nodeSpec := &SriovNetworkNodePolicySpec{}
-	argBytes, _ := json.Marshal(args)
-	json.Unmarshal(argBytes, nodeSpec)
+	nodeSpec.ResourceName = args["resourceName"]
 	var policyerr error
 	if nodeSpec.ResourceName == "" {
 		// multi-nic-defined resource

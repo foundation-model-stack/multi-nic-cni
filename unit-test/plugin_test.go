@@ -10,6 +10,7 @@ import (
 	"fmt"
 
 	"github.com/containernetworking/cni/pkg/types"
+	"github.com/foundation-model-stack/multi-nic-cni/controllers"
 	"github.com/foundation-model-stack/multi-nic-cni/plugin"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -44,7 +45,7 @@ var _ = Describe("Test GetConfig of main plugins", func() {
 		}
 		expectedBytes, _ := json.Marshal(expected)
 		Expect(mainPlugin).To(Equal(string(expectedBytes)))
-		isMultiNicIPAM, err := IsMultiNICIPAM(multinicnetwork)
+		isMultiNicIPAM, err := controllers.IsMultiNICIPAM(multinicnetwork)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(isMultiNicIPAM).To(Equal(true))
 		err = ipvlanPlugin.CleanUp(*multinicnetwork)
@@ -73,7 +74,7 @@ var _ = Describe("Test GetConfig of main plugins", func() {
 		}
 		expectedBytes, _ := json.Marshal(expected)
 		Expect(mainPlugin).To(Equal(string(expectedBytes)))
-		isMultiNicIPAM, err := IsMultiNICIPAM(multinicnetwork)
+		isMultiNicIPAM, err := controllers.IsMultiNICIPAM(multinicnetwork)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(isMultiNicIPAM).To(Equal(true))
 		err = macvlanPlugin.CleanUp(*multinicnetwork)

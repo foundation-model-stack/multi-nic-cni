@@ -17,13 +17,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	multinicv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
+	"github.com/foundation-model-stack/multi-nic-cni/controllers/vars"
 )
 
 // IPPoolReconciler reconciles a IPPool object
 // - if IPPool is deleted, delete corresponding routes
 type IPPoolReconciler struct {
 	client.Client
-	Log    logr.Logger
 	Scheme *runtime.Scheme
 	*CIDRHandler
 }
@@ -46,9 +46,8 @@ func InitIppoolCache(ippoolHandler *IPPoolHandler) error {
 
 func (r *IPPoolReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	if !ConfigReady {
-		return ctrl.Result{RequeueAfter: ConfigWaitingReconcileTime}, nil
+		return ctrl.Result{RequeueAfter: vars.NormalReconcileTime}, nil
 	}
-	_ = r.Log.WithValues("ippool", req.NamespacedName)
 
 	instance := &multinicv1.IPPool{}
 	err := r.Client.Get(ctx, req.NamespacedName, instance)
@@ -58,17 +57,17 @@ func (r *IPPoolReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 			// Return and don't requeue
 			return ctrl.Result{}, nil
 		}
-		r.Log.V(7).Info(fmt.Sprintf("Cannot get #%v ", err))
+		vars.IPPoolLog.V(7).Info(fmt.Sprintf("Cannot get #%v ", err))
 		// Error reading the object - requeue the request.
 		// ReconcileTime is defined in config_controller
-		return ctrl.Result{RequeueAfter: ReconcileTime}, nil
+		return ctrl.Result{RequeueAfter: vars.LongReconcileTime}, nil
 	}
 
 	// If IPPool is deleted, delete corresponding routes
 	is_deleted := instance.GetDeletionTimestamp() != nil
 	if is_deleted {
 		if controllerutil.ContainsFinalizer(instance, ippoolFinalizer) {
-			if err := r.callFinalizer(r.Log, instance); err != nil {
+			if err := r.callFinalizer(vars.IPPoolLog, instance); err != nil {
 				return ctrl.Result{}, err
 			}
 

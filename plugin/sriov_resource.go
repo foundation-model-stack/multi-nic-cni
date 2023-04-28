@@ -171,9 +171,6 @@ type SriovNetworkNicSelector struct {
 
 // RenderNetAttDef renders a net-att-def for sriov CNI
 func (cr *SriovNetwork) RenderNetAttDef() (*unstructured.Unstructured, error) {
-	var err error
-	objs := []*unstructured.Unstructured{}
-
 	// render RawCNIConfig manifests
 	data := MakeRenderData()
 	data.Data["MetaPluginsConfigured"] = false
@@ -255,7 +252,7 @@ func (cr *SriovNetwork) RenderNetAttDef() (*unstructured.Unstructured, error) {
 		data.Data["SriovCniIpam"] = "\"ipam\":{}"
 	}
 
-	objs, err = RenderDir(SRIOV_MANIFEST_PATH, &data)
+	objs, err := RenderDir(SRIOV_MANIFEST_PATH, &data)
 	if err != nil {
 		return nil, err
 	}

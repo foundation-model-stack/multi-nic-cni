@@ -18,7 +18,7 @@ import (
 func updateCIDR(multinicnetwork *multinicv1.MultiNicNetwork, cidr multinicv1.CIDRSpec, new, expectChange bool) multinicv1.CIDRSpec {
 	def := cidr.Config
 	excludes := compute.SortAddress(def.ExcludeCIDRs)
-	entriesMap, changed := multinicnetworkReconciler.CIDRHandler.updateEntries(cidr, excludes, new)
+	entriesMap, changed := multinicnetworkReconciler.CIDRHandler.UpdateEntries(cidr, excludes, new)
 	fmt.Printf("EntryMap: %v\n", entriesMap)
 	Expect(changed).To(Equal(expectChange))
 
@@ -70,9 +70,9 @@ var _ = Describe("Test Multi-NIC IPAM", func() {
 	cniArgs["mtu"] = fmt.Sprintf("%d", mtu)
 	multinicnetwork := getMultiNicCNINetwork("test-ipam", cniVersion, cniType, cniArgs)
 	It("Dynamically compute CIDR", func() {
-		ipamConfig, err := multinicnetworkReconciler.getIPAMConfig(multinicnetwork)
+		ipamConfig, err := multinicnetworkReconciler.GetIPAMConfig(multinicnetwork)
 		Expect(err).NotTo(HaveOccurred())
-		cidr, err := multinicnetworkReconciler.CIDRHandler.newCIDR(*ipamConfig, multinicnetwork.GetNamespace())
+		cidr, err := multinicnetworkReconciler.CIDRHandler.NewCIDR(*ipamConfig, multinicnetwork.GetNamespace())
 		Expect(err).NotTo(HaveOccurred())
 		cidr = updateCIDR(multinicnetwork, cidr, true, true)
 		cidr = updateCIDR(multinicnetwork, cidr, false, false)
@@ -107,7 +107,7 @@ var _ = Describe("Test Multi-NIC IPAM", func() {
 		// Add Host back
 		fmt.Println("Add Host Back")
 		multinicnetworkReconciler.CIDRHandler.HostInterfaceHandler.SetCache(newHostName, newHif)
-		cidr = updateCIDR(multinicnetwork, cidr, false, true)
+		updateCIDR(multinicnetwork, cidr, false, true)
 		// Clean up
 		multinicnetworkReconciler.CIDRHandler.HostInterfaceHandler.SafeCache.UnsetCache(newHostName)
 	})
@@ -133,7 +133,7 @@ var _ = Describe("Test Multi-NIC IPAM", func() {
 		// uncontain
 		podCIDR = "192.168.0.0/26"
 		unsyncedIp = "192.168.1.1"
-		contains, index = multinicnetworkReconciler.CIDRHandler.CIDRCompute.GetIndexInRange(podCIDR, unsyncedIp)
+		contains, _ = multinicnetworkReconciler.CIDRHandler.CIDRCompute.GetIndexInRange(podCIDR, unsyncedIp)
 		Expect(contains).To(Equal(false))
 	})
 })

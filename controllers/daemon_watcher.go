@@ -9,7 +9,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/go-logr/logr"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -21,11 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	multinicv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
-)
-
-const (
-	DEFAULT_DAEMON_NAMESPACE = "multi-nic-cni"
-	JOIN_LABEL_NAME          = "multi-nicd-join"
+	"github.com/foundation-model-stack/multi-nic-cni/controllers/vars"
 )
 
 // DaemonWatcher watches daemon pods and updates HostInterface and CIDR
@@ -33,7 +28,6 @@ type DaemonWatcher struct {
 	*kubernetes.Clientset
 	PodQueue chan *v1.Pod
 	Quit     chan struct{}
-	Log      logr.Logger
 	*HostInterfaceHandler
 	*DaemonCacheHandler
 }
@@ -49,24 +43,23 @@ func isContainerReady(pod v1.Pod) bool {
 }
 
 // NewDaemonWatcher creates new daemon watcher
-func NewDaemonWatcher(client client.Client, config *rest.Config, logger logr.Logger, hostInterfaceHandler *HostInterfaceHandler, daemonCacheHandler *DaemonCacheHandler, podQueue chan *v1.Pod, quit chan struct{}) *DaemonWatcher {
+func NewDaemonWatcher(client client.Client, config *rest.Config, hostInterfaceHandler *HostInterfaceHandler, daemonCacheHandler *DaemonCacheHandler, podQueue chan *v1.Pod, quit chan struct{}) *DaemonWatcher {
 	clientset, _ := kubernetes.NewForConfig(config)
 
 	watcher := &DaemonWatcher{
 		Clientset:            clientset,
 		PodQueue:             podQueue,
 		Quit:                 quit,
-		Log:                  logger,
 		HostInterfaceHandler: hostInterfaceHandler,
 		DaemonCacheHandler:   daemonCacheHandler,
 	}
 	// add existing daemon pod to the process queue
 	err := watcher.UpdateCurrentList()
 	if err != nil {
-		watcher.Log.V(4).Info(fmt.Sprintf("cannot UpdateCurrentList: %v", err))
+		vars.DaemonLog.V(4).Info(fmt.Sprintf("cannot UpdateCurrentList: %v", err))
 	}
 
-	watcher.Log.V(7).Info("Init Informer")
+	vars.DaemonLog.V(7).Info("Init Informer")
 
 	factory := informers.NewSharedInformerFactory(clientset, 0)
 	podInformer := factory.Core().V1().Pods()
@@ -118,7 +111,9 @@ func (w *DaemonWatcher) getDaemonPods() (*v1.PodList, error) {
 	listOptions := metav1.ListOptions{
 		LabelSelector: labels,
 	}
-	return w.Clientset.CoreV1().Pods(DAEMON_NAMESPACE).List(context.TODO(), listOptions)
+	ctx, cancel := context.WithTimeout(context.Background(), vars.ContextTimeout)
+	defer cancel()
+	return w.Clientset.CoreV1().Pods(DAEMON_NAMESPACE).List(ctx, listOptions)
 }
 
 // UpdateCurrentList puts existing daemon pods to the process queue
@@ -127,7 +122,7 @@ func (w *DaemonWatcher) UpdateCurrentList() error {
 	if err != nil {
 		return err
 	}
-	w.Log.V(4).Info(fmt.Sprintf("Found %d daemons running", len(initialList.Items)))
+	vars.DaemonLog.V(4).Info(fmt.Sprintf("Found %d daemons running", len(initialList.Items)))
 	for _, existingDaemon := range initialList.Items {
 		if isContainerReady(existingDaemon) {
 			// early add to the spec for CIDR check
@@ -148,7 +143,7 @@ func (w *DaemonWatcher) UpdateCurrentList() error {
 // Run executes daemon watcher routine until get quit signal
 func (w *DaemonWatcher) Run() {
 	defer close(w.PodQueue)
-	w.Log.V(7).Info("start watching multi-nic Daemon")
+	vars.DaemonLog.V(7).Info("start watching multi-nic Daemon")
 	wait.Until(w.ProcessPodQueue, 0, w.Quit)
 }
 
@@ -161,7 +156,7 @@ func (w *DaemonWatcher) ProcessPodQueue() {
 	if daemon != nil {
 		nodeName := daemon.Spec.NodeName
 		if daemon.GetDeletionTimestamp() == nil {
-			w.Log.V(7).Info(fmt.Sprintf("Daemon pod %s for %s update", daemon.GetName(), nodeName))
+			vars.DaemonLog.V(7).Info(fmt.Sprintf("Daemon pod %s for %s update", daemon.GetName(), nodeName))
 			// set daemon
 			daemonPod := DaemonPod{
 				Name:      daemon.Name,
@@ -175,13 +170,16 @@ func (w *DaemonWatcher) ProcessPodQueue() {
 			// not terminating, update HostInterface
 			err := w.createHostInterfaceInfo(*daemon)
 			if err != nil {
-				w.Log.V(4).Info(fmt.Sprintf("Fail to create hostinterface %s: %v", daemon.GetName(), err))
+				vars.DaemonLog.V(4).Info(fmt.Sprintf("Failed to create hostinterface %s: %v", daemon.GetName(), err))
 			}
 		} else {
-			w.Log.V(4).Info(fmt.Sprintf("Daemon pod for %s deleted", nodeName))
+			vars.DaemonLog.V(4).Info(fmt.Sprintf("Daemon pod for %s deleted", nodeName))
 			// deleted, delete HostInterface
 			w.DaemonCacheHandler.SafeCache.UnsetCache(nodeName)
-			w.HostInterfaceHandler.DeleteHostInterface(daemon.Spec.NodeName)
+			err := w.HostInterfaceHandler.DeleteHostInterface(nodeName)
+			if err != nil {
+				vars.DaemonLog.V(4).Info(fmt.Sprintf("Failed to delete HostInterface %s: %v", nodeName, err))
+			}
 		}
 	}
 }

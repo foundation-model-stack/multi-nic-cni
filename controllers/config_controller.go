@@ -11,12 +11,14 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	"go.uber.org/zap/zapcore"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	multinicv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
+	"github.com/foundation-model-stack/multi-nic-cni/controllers/vars"
 	"github.com/foundation-model-stack/multi-nic-cni/plugin"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -35,8 +37,6 @@ const (
 
 	// NetworkAttachmentDefinition watching queue size
 	MAX_QSIZE = 100
-
-	ConfigWaitingReconcileTime = 5 * time.Second
 )
 
 var (
@@ -68,15 +68,11 @@ type ConfigReconciler struct {
 	*rest.Config
 	*CIDRHandler
 	*plugin.NetAttachDefHandler
-	DefLog logr.Logger
-	Log    logr.Logger
 	Scheme *runtime.Scheme
 }
 
 //+kubebuilder:rbac:groups=multinic.fms.io,resources=configs,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=multinic.fms.io,resources=configs/status,verbs=get;update;patch
-
-const ReconcileTime = 30 * time.Minute
 
 func (r *ConfigReconciler) CreateDefaultDaemonConfig() error {
 	objMeta := metav1.ObjectMeta{
@@ -143,7 +139,7 @@ func (r *ConfigReconciler) CreateDefaultDaemonConfig() error {
 }
 
 func (r *ConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = r.Log.WithValues("config", req.NamespacedName)
+	_ = vars.ConfigLog.WithValues("config", req.NamespacedName)
 
 	instance := &multinicv1.Config{}
 	err := r.Client.Get(ctx, req.NamespacedName, instance)
@@ -152,16 +148,21 @@ func (r *ConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
 			// Return and don't requeue
-			r.callFinalizer(r.Log, req.NamespacedName.Name)
+			err = r.callFinalizer(vars.ConfigLog, req.NamespacedName.Name)
+			if err != nil {
+				vars.ConfigLog.V(1).Info(fmt.Sprintf("Failed to finalize %s: %v ", req.NamespacedName.Name, err))
+			}
 			return ctrl.Result{}, nil
 		}
-		r.Log.V(7).Info(fmt.Sprintf("Cannot get #%v ", err))
+		vars.ConfigLog.V(7).Info(fmt.Sprintf("Cannot get #%v ", err))
 		// Error reading the object - requeue the request.
-		return ctrl.Result{RequeueAfter: ReconcileTime}, nil
+		return ctrl.Result{RequeueAfter: vars.LongReconcileTime}, nil
 	}
+	r.UpdateConfigBySpec(&instance.Spec)
+
 	if !ConfigReady {
 		r.CIDRHandler.SyncAllPendingCustomCR(r.NetAttachDefHandler)
-		r.Log.Info("Set ConfigReady")
+		vars.ConfigLog.Info("Set ConfigReady")
 		ConfigReady = true
 		// initial run
 		r.CIDRHandler.UpdateCIDRs()
@@ -175,15 +176,15 @@ func (r *ConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		if errors.IsNotFound(err) {
 			r.newNetAttachDefWatcher(instance)
 			_, err = r.Clientset.AppsV1().DaemonSets(OPERATOR_NAMESPACE).Create(context.TODO(), daemonset, metav1.CreateOptions{})
-			r.Log.V(7).Info(fmt.Sprintf("Create new multi-nic daemonset #%s (cni=%s,ipam=%s), err=%v ", dsName, instance.Spec.CNIType, instance.Spec.IPAMType, err))
+			vars.ConfigLog.V(7).Info(fmt.Sprintf("Create new multi-nic daemonset #%s (cni=%s,ipam=%s), err=%v ", dsName, instance.Spec.CNIType, instance.Spec.IPAMType, err))
 		} else {
-			r.Log.Info(fmt.Sprintf("Cannot get daemonset #%v ", err))
+			vars.ConfigLog.Info(fmt.Sprintf("Cannot get daemonset #%v ", err))
 		}
 	} else {
 		// - otherwise, update the existing daemonset and restart NetworkAttachmentDefinition watcher
 		r.newNetAttachDefWatcher(instance)
 		_, err = r.Clientset.AppsV1().DaemonSets(OPERATOR_NAMESPACE).Update(context.TODO(), daemonset, metav1.UpdateOptions{})
-		r.Log.V(7).Info(fmt.Sprintf("Update multi-nic daemonset #%s, err=%v ", dsName, err))
+		vars.ConfigLog.V(7).Info(fmt.Sprintf("Update multi-nic daemonset #%s, err=%v ", dsName, err))
 	}
 	return ctrl.Result{}, nil
 }
@@ -195,10 +196,40 @@ func (r *ConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
+// UpdateConfigBySpec updates configuration variables defined in the spec
+func (r *ConfigReconciler) UpdateConfigBySpec(spec *multinicv1.ConfigSpec) {
+	// set configurations
+	if spec.UrgentReconcileSeconds > 0 {
+		vars.ConfigLog.Info(fmt.Sprintf("Configure UrgentReconcileSeconds = %d", spec.UrgentReconcileSeconds))
+		vars.UrgentReconcileTime = time.Duration(spec.UrgentReconcileSeconds) * time.Second
+	}
+	if spec.NormalReconcileMinutes > 0 {
+		vars.ConfigLog.Info(fmt.Sprintf("Configure NormalReconcileMinutes = %d", spec.NormalReconcileMinutes))
+		vars.NormalReconcileTime = time.Duration(spec.NormalReconcileMinutes) * time.Minute
+	}
+	if spec.LongReconcileMinutes > 0 {
+		vars.ConfigLog.Info(fmt.Sprintf("Configure LongReconcileMinutes = %d", spec.LongReconcileMinutes))
+		vars.LongReconcileTime = time.Duration(spec.LongReconcileMinutes) * time.Minute
+	}
+	if spec.ContextTimeoutMinutes > 0 {
+		vars.ConfigLog.Info(fmt.Sprintf("Configure ContextTimeoutMinutes = %d", spec.ContextTimeoutMinutes))
+		vars.ContextTimeout = time.Duration(spec.ContextTimeoutMinutes) * time.Minute
+	}
+	if spec.LogLevel >= 1 && spec.LogLevel <= 127 {
+		if !vars.ConfigLog.V(spec.LogLevel).Enabled() {
+			vars.ConfigLog.Info(fmt.Sprintf("Configure LogLevel = %d", spec.LogLevel))
+			intLevel := -1 * spec.LogLevel
+			zaplevel := zapcore.Level(int8(intLevel))
+			vars.ZapOpts.Level = zaplevel
+			vars.SetLog()
+		}
+	}
+}
+
 // newNetAttachDefWatcher restarts NetworkAttachmentDefinition watcher
 func (r *ConfigReconciler) newNetAttachDefWatcher(instance *multinicv1.Config) {
-	r.NetAttachDefHandler.DaemonPort = instance.Spec.Daemon.DaemonPort
-	r.NetAttachDefHandler.TargetCNI = instance.Spec.CNIType
+	vars.DaemonPort = instance.Spec.Daemon.DaemonPort
+	vars.TargetCNI = instance.Spec.CNIType
 	DaemonName = instance.GetName()
 	SetDaemon(instance.Spec)
 }
@@ -288,8 +319,11 @@ func (r *ConfigReconciler) callFinalizer(reqLogger logr.Logger, dsName string) e
 	// delete all CIDRs
 	cidrMap, err := r.CIDRHandler.ListCIDR()
 	if err == nil {
-		for _, cidr := range cidrMap {
-			r.CIDRHandler.DeleteCIDR(cidr)
+		for cidrName, cidr := range cidrMap {
+			err := r.CIDRHandler.DeleteCIDR(cidr)
+			if err != nil {
+				reqLogger.V(3).Info(fmt.Sprintf("Failed to delete CIDR %s: %v", cidrName, err))
+			}
 		}
 	}
 	// wait for all ippools deleted
@@ -303,5 +337,8 @@ func (r *ConfigReconciler) callFinalizer(reqLogger logr.Logger, dsName string) e
 	// delete CNI deamonset
 	err = r.Clientset.AppsV1().DaemonSets(OPERATOR_NAMESPACE).Delete(context.TODO(), dsName, metav1.DeleteOptions{})
 	ConfigReady = false
+	if err != nil {
+		vars.ConfigLog.Info(fmt.Sprintf("Failed to finalize %s: %v", dsName, err))
+	}
 	return nil
 }
