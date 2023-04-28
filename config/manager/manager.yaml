@@ -33,6 +33,7 @@ spec:
         - --leader-elect
         - --zap-log-level=4
         - --zap-stacktrace-level=error
+        - --zap-time-encoding=iso8601
         image: controller:latest
         imagePullPolicy: Always
         name: manager
