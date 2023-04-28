@@ -39,6 +39,12 @@ func InitIppoolCache(ippoolHandler *IPPoolHandler) error {
 	if err == nil {
 		for name, instance := range listObjects {
 			ippoolHandler.SetCache(name, instance.Spec)
+			// if any label is not set, set the label
+			if _, found := instance.ObjectMeta.Labels[vars.HostNameLabel]; !found {
+				err = ippoolHandler.AddLabel(&instance)
+			} else if _, found := instance.ObjectMeta.Labels[vars.DefNameLabel]; !found {
+				err = ippoolHandler.AddLabel(&instance)
+			}
 		}
 	}
 	return err

@@ -19,12 +19,16 @@ import (
 	"github.com/foundation-model-stack/multi-nic-cni/daemon/backend"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/kubernetes"
 )
 
 const (
 	SHIFT_BYTE_VAL  = 256
 	HISTORY_TIMEOUT = 60 // seconds
+
+	HOSTNAME_LABEL_NAME = "hostname"
+	DEFNAME_LABEL_NAME  = "netname"
 )
 
 var allocatorLock sync.Mutex
@@ -182,7 +186,11 @@ func AllocateIP(req IPRequest) []IPResponse {
 	var responses []IPResponse
 	startAllocate := time.Now()
 	allocatorLock.Lock()
-	ippoolSpecMap, err := IppoolHandler.ListIPPool()
+	labelMap := map[string]string{HOSTNAME_LABEL_NAME: hostName, DEFNAME_LABEL_NAME: defName}
+	listOptions := metav1.ListOptions{
+		LabelSelector: labels.SelectorFromSet(labelMap).String(),
+	}
+	ippoolSpecMap, err := IppoolHandler.ListIPPool(listOptions)
 	if err != nil {
 		return responses
 	}
@@ -194,86 +202,84 @@ func AllocateIP(req IPRequest) []IPResponse {
 			break
 		}
 		spec := ippoolSpecMap[ippoolName]
-		if spec.NetAttachDefName == defName && strings.Contains(spec.HostName, hostName) {
-			deleteIndex := -1
-			for deleteIndex = 0; deleteIndex < len(interfaceNames); deleteIndex++ {
-				interfaceName := interfaceNames[deleteIndex]
-				if spec.InterfaceName == interfaceName {
-					break
-				}
+		deleteIndex := -1
+		for deleteIndex = 0; deleteIndex < len(interfaceNames); deleteIndex++ {
+			interfaceName := interfaceNames[deleteIndex]
+			if spec.InterfaceName == interfaceName {
+				break
 			}
-			if deleteIndex >= 0 && deleteIndex != len(interfaceNames) {
-				interfaceNames = append(interfaceNames[0:deleteIndex], interfaceNames[deleteIndex+1:]...)
-			} else {
-				// not match
-				log.Printf("Interface %s is not requested by %v\n", spec.InterfaceName, interfaceNames)
-				continue
-			}
+		}
+		if deleteIndex >= 0 && deleteIndex != len(interfaceNames) {
+			interfaceNames = append(interfaceNames[0:deleteIndex], interfaceNames[deleteIndex+1:]...)
+		} else {
+			// not match
+			log.Printf("Interface %s is not requested by %v\n", spec.InterfaceName, interfaceNames)
+			continue
+		}
 
-			podCIDR := spec.PodCIDR
-			allocations := spec.Allocations
-			cidrBlockStr := strings.Split(podCIDR, "/")[1]
-			cirdBlock, _ := strconv.ParseInt(cidrBlockStr, 10, 64)
-			excludes := spec.Excludes
+		podCIDR := spec.PodCIDR
+		allocations := spec.Allocations
+		cidrBlockStr := strings.Split(podCIDR, "/")[1]
+		cirdBlock, _ := strconv.ParseInt(cidrBlockStr, 10, 64)
+		excludes := spec.Excludes
 
-			exludeRanges := getExcludeRanges(podCIDR, excludes)
-			availableBlock := 32 - cirdBlock
-			maxIndex := math.Pow(2, float64(availableBlock)) - 2 // except broadcast address
-			indexes := GenerateAllocateIndexes(allocations, int(maxIndex), exludeRanges)
-			log.Printf("exclude %v, indexes %v\n", exludeRanges, indexes)
-			var nextIndex int
-			if len(indexes) > 0 {
-				lastIndex := indexes[len(indexes)-1]
-				nextIndex = lastIndex + offset
-			} else {
-				nextIndex = offset // except network address
-			}
+		exludeRanges := getExcludeRanges(podCIDR, excludes)
+		availableBlock := 32 - cirdBlock
+		maxIndex := math.Pow(2, float64(availableBlock)) - 2 // except broadcast address
+		indexes := GenerateAllocateIndexes(allocations, int(maxIndex), exludeRanges)
+		log.Printf("exclude %v, indexes %v\n", exludeRanges, indexes)
+		var nextIndex int
+		if len(indexes) > 0 {
+			lastIndex := indexes[len(indexes)-1]
+			nextIndex = lastIndex + offset
+		} else {
+			nextIndex = offset // except network address
+		}
 
-			nextAddress := ""
-			if nextIndex < int(maxIndex) {
+		nextAddress := ""
+		if nextIndex < int(maxIndex) {
+			nextAddress = getAddressByIndex(podCIDR, nextIndex)
+		} else {
+			nextIndex = FindAvailableIndex(indexes, 0)
+			if nextIndex != -1 {
 				nextAddress = getAddressByIndex(podCIDR, nextIndex)
-			} else {
-				nextIndex = FindAvailableIndex(indexes, 0)
-				if nextIndex != -1 {
-					nextAddress = getAddressByIndex(podCIDR, nextIndex)
+			}
+		}
+		if nextAddress != "" {
+			newAllocation := backend.Allocation{
+				Pod:       podName,
+				Namespace: podNamespace,
+				Index:     nextIndex,
+				Address:   nextAddress,
+			}
+			log.Println(newAllocation)
+			toInsertIndex := -1
+			for allocationIndex, allocation := range allocations {
+				if allocation.Index > newAllocation.Index {
+					toInsertIndex = allocationIndex
 				}
 			}
-			if nextAddress != "" {
-				newAllocation := backend.Allocation{
-					Pod:       podName,
-					Namespace: podNamespace,
-					Index:     nextIndex,
-					Address:   nextAddress,
-				}
-				log.Println(newAllocation)
-				toInsertIndex := -1
-				for allocationIndex, allocation := range allocations {
-					if allocation.Index > newAllocation.Index {
-						toInsertIndex = allocationIndex
-					}
-				}
-				if toInsertIndex == -1 {
-					allocations = append(allocations, newAllocation)
-				} else {
-					appendedAllocation := append(allocations[0:toInsertIndex], newAllocation)
-					allocations = append(appendedAllocation, allocations[toInsertIndex:]...)
-				}
+			if toInsertIndex == -1 {
+				allocations = append(allocations, newAllocation)
+			} else {
+				appendedAllocation := append(allocations[0:toInsertIndex], newAllocation)
+				allocations = append(appendedAllocation, allocations[toInsertIndex:]...)
+			}
 
-				_, err = IppoolHandler.PatchIPPool(ippoolName, allocations)
-				if err == nil {
-					response := IPResponse{
-						InterfaceName: spec.InterfaceName,
-						IPAddress:     nextAddress,
-						VLANBlockSize: strings.Split(spec.VlanCIDR, "/")[1],
-					}
-					log.Println(fmt.Sprintf("Append response %v (ip=%s)", response, nextAddress))
-					responses = append(responses, response)
-				} else {
-					log.Println(fmt.Sprintf("Cannot patch IPPool: %v", err))
+			_, err = IppoolHandler.PatchIPPool(ippoolName, allocations)
+			if err == nil {
+				response := IPResponse{
+					InterfaceName: spec.InterfaceName,
+					IPAddress:     nextAddress,
+					VLANBlockSize: strings.Split(spec.VlanCIDR, "/")[1],
 				}
+				log.Println(fmt.Sprintf("Append response %v (ip=%s)", response, nextAddress))
+				responses = append(responses, response)
 			} else {
-				log.Println(fmt.Sprintf("Cannot get NextAddress for %s", podCIDR))
+				log.Println(fmt.Sprintf("Cannot patch IPPool: %v", err))
 			}
+		} else {
+			log.Println(fmt.Sprintf("Cannot get NextAddress for %s", podCIDR))
 		}
 	}
 	allocatorLock.Unlock()
@@ -288,25 +294,28 @@ func getPod(podName, podNamespace string) (*corev1.Pod, error) {
 
 }
 func CleanHangingAllocation(hostName string) error {
-	ippoolSpecMap, err := IppoolHandler.ListIPPool()
+	labelMap := map[string]string{HOSTNAME_LABEL_NAME: hostName}
+	// hostName suffix
+	listOptions := metav1.ListOptions{
+		LabelSelector: labels.SelectorFromSet(labelMap).String(),
+	}
+	ippoolSpecMap, err := IppoolHandler.ListIPPool(listOptions)
 	if err != nil {
 		return err
 	}
 	for ippoolName, _ := range ippoolSpecMap {
 		spec := ippoolSpecMap[ippoolName]
-		if strings.Contains(spec.HostName, hostName) {
-			allocations := spec.Allocations
-			remains := []backend.Allocation{}
-			for _, allocation := range allocations {
-				_, err := getPod(allocation.Pod, allocation.Namespace)
-				if err == nil {
-					remains = append(remains, allocation)
-				}
+		allocations := spec.Allocations
+		remains := []backend.Allocation{}
+		for _, allocation := range allocations {
+			_, err := getPod(allocation.Pod, allocation.Namespace)
+			if err == nil {
+				remains = append(remains, allocation)
 			}
-			_, err = IppoolHandler.PatchIPPool(ippoolName, remains)
-			if err != nil {
-				log.Println(fmt.Sprintf("Cannot patch IPPool: %v", err))
-			}
+		}
+		_, err = IppoolHandler.PatchIPPool(ippoolName, remains)
+		if err != nil {
+			log.Println(fmt.Sprintf("Cannot patch IPPool: %v", err))
 		}
 	}
 	return nil
@@ -330,7 +339,11 @@ func DeallocateIP(req IPRequest) []IPResponse {
 	var responses []IPResponse
 	startDeallocate := time.Now()
 	allocatorLock.Lock()
-	ippoolSpecMap, err := IppoolHandler.ListIPPool()
+	labelMap := map[string]string{HOSTNAME_LABEL_NAME: hostName, DEFNAME_LABEL_NAME: defName}
+	listOptions := metav1.ListOptions{
+		LabelSelector: labels.SelectorFromSet(labelMap).String(),
+	}
+	ippoolSpecMap, err := IppoolHandler.ListIPPool(listOptions)
 	if err != nil {
 		return responses
 	}

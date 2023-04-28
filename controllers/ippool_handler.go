@@ -7,6 +7,7 @@ package controllers
 
 import (
 	"context"
+	"errors"
 	"strings"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -81,6 +82,7 @@ func (h *IPPoolHandler) DeleteIPPool(netAttachDef string, podCIDR string) error 
 // IPPool name is composed of NetworkAttachmentDefinition name and PodCIDR
 func (h *IPPoolHandler) UpdateIPPool(netAttachDef string, podCIDR string, vlanCIDR string, hostName string, interfaceName string, excludes []compute.IPValue) error {
 	excludesInterface := []string{}
+	labels := map[string]string{vars.HostNameLabel: hostName, vars.DefNameLabel: netAttachDef}
 
 	// find CIDR ranges that excluded in the PodCIDR range
 	for _, item := range excludes {
@@ -129,6 +131,7 @@ func (h *IPPoolHandler) UpdateIPPool(netAttachDef string, podCIDR string, vlanCI
 		prevSpec := ippool.Spec
 		ippool.Spec = spec
 		ippool.Spec.Allocations = prevSpec.Allocations
+		ippool.ObjectMeta.Labels = labels
 		err = h.Client.Update(context.TODO(), ippool)
 		if !reflect.DeepEqual(prevSpec.Excludes, excludesInterface) {
 			// report if allocated ip addresses have conflicts with the new IPPool (for example, in exclude list)
@@ -147,6 +150,7 @@ func (h *IPPoolHandler) UpdateIPPool(netAttachDef string, podCIDR string, vlanCI
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      ippoolName,
 				Namespace: metav1.NamespaceAll,
+				Labels:    labels,
 			},
 			Spec: spec,
 		}
@@ -209,7 +213,7 @@ func (h *IPPoolHandler) SetCache(key string, value multinicv1.IPPoolSpec) {
 func (h *IPPoolHandler) GetCache(key string) (multinicv1.IPPoolSpec, error) {
 	value := h.SafeCache.GetCache(key)
 	if value == nil {
-		return multinicv1.IPPoolSpec{}, fmt.Errorf("Not Found")
+		return multinicv1.IPPoolSpec{}, errors.New(vars.NotFoundError)
 	}
 	return value.(multinicv1.IPPoolSpec), nil
 }
@@ -222,4 +226,14 @@ func (h *IPPoolHandler) ListCache() map[string]multinicv1.IPPoolSpec {
 	}
 	h.SafeCache.Unlock()
 	return snapshot
+}
+
+func (h *IPPoolHandler) AddLabel(ippool *multinicv1.IPPool) error {
+	hostName := ippool.Spec.HostName
+	netAttachDef := ippool.Spec.NetAttachDefName
+	labels := map[string]string{vars.HostNameLabel: hostName, vars.DefNameLabel: netAttachDef}
+	patch := client.MergeFrom(ippool.DeepCopy())
+	ippool.ObjectMeta.Labels = labels
+	err := h.Client.Patch(context.Background(), ippool, patch)
+	return err
 }

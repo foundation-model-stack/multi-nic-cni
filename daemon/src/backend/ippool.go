@@ -6,6 +6,7 @@
 package backend
 
 import (
+	"log"
 	"strings"
 
 	"k8s.io/client-go/discovery"
@@ -73,8 +74,9 @@ func (h *IPPoolHandler) getIPPoolName(netAttachDef string, podCIDR string) strin
 	return netAttachDef + "-" + strings.ReplaceAll(podCIDR, "/", "-")
 }
 
-func (h *IPPoolHandler) ListIPPool() (map[string]IPPoolType, error) {
-	poolList, err := h.DynamicHandler.List(metav1.NamespaceAll, metav1.ListOptions{})
+func (h *IPPoolHandler) ListIPPool(listOptions metav1.ListOptions) (map[string]IPPoolType, error) {
+	log.Println(fmt.Sprintf("ListIPPool with selector: %s", listOptions.LabelSelector))
+	poolList, err := h.DynamicHandler.List(metav1.NamespaceAll, listOptions)
 	poolSpecMap := make(map[string]IPPoolType)
 	if err == nil {
 		for _, pool := range poolList.Items {

@@ -19,12 +19,16 @@ import (
 	"github.com/foundation-model-stack/multi-nic-cni/e2e-test/daemon-stub/backend"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/kubernetes"
 )
 
 const (
 	SHIFT_BYTE_VAL  = 256
 	HISTORY_TIMEOUT = 60 // seconds
+
+	HOSTNAME_LABEL_NAME = "hostname"
+	DEFNAME_LABEL_NAME  = "netname"
 )
 
 var allocatorLock sync.Mutex
@@ -182,7 +186,11 @@ func AllocateIP(req IPRequest) []IPResponse {
 	var responses []IPResponse
 	startAllocate := time.Now()
 	allocatorLock.Lock()
-	ippoolSpecMap, err := IppoolHandler.ListIPPool()
+	labelMap := map[string]string{HOSTNAME_LABEL_NAME: hostName, DEFNAME_LABEL_NAME: defName}
+	listOptions := metav1.ListOptions{
+		LabelSelector: labels.SelectorFromSet(labelMap).String(),
+	}
+	ippoolSpecMap, err := IppoolHandler.ListIPPool(listOptions)
 	if err != nil {
 		log.Printf("Fail to list IPPool: %v", err)
 		return responses
@@ -289,7 +297,11 @@ func getPod(podName, podNamespace string) (*corev1.Pod, error) {
 
 }
 func CleanHangingAllocation(hostName string) error {
-	ippoolSpecMap, err := IppoolHandler.ListIPPool()
+	labelMap := map[string]string{HOSTNAME_LABEL_NAME: hostName}
+	listOptions := metav1.ListOptions{
+		LabelSelector: labels.SelectorFromSet(labelMap).String(),
+	}
+	ippoolSpecMap, err := IppoolHandler.ListIPPool(listOptions)
 	if err != nil {
 		return err
 	}
@@ -331,7 +343,11 @@ func DeallocateIP(req IPRequest) []IPResponse {
 	var responses []IPResponse
 	startDeallocate := time.Now()
 	allocatorLock.Lock()
-	ippoolSpecMap, err := IppoolHandler.ListIPPool()
+	labelMap := map[string]string{HOSTNAME_LABEL_NAME: hostName, DEFNAME_LABEL_NAME: defName}
+	listOptions := metav1.ListOptions{
+		LabelSelector: labels.SelectorFromSet(labelMap).String(),
+	}
+	ippoolSpecMap, err := IppoolHandler.ListIPPool(listOptions)
 	if err != nil {
 		return responses
 	}
