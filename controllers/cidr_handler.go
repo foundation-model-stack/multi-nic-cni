@@ -241,10 +241,10 @@ func (h *CIDRHandler) GetAllNetAddrs() []string {
 //
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// newCIDR returns new CIDR from PluginConfig
-func (h *CIDRHandler) newCIDR(def multinicv1.PluginConfig, namespace string) (multinicv1.CIDRSpec, error) {
+// NewCIDR returns new CIDR from PluginConfig
+func (h *CIDRHandler) NewCIDR(def multinicv1.PluginConfig, namespace string) (multinicv1.CIDRSpec, error) {
 	if def.Subnet == "" {
-		return h.generateCIDRFromHostSubnet(def)
+		return h.GenerateCIDRFromHostSubnet(def)
 	}
 	entries := []multinicv1.CIDREntry{}
 	masterIndex := int(0)
@@ -486,11 +486,6 @@ func (h *CIDRHandler) updateCIDR(cidrSpec multinicv1.CIDRSpec, new bool) (bool, 
 	}
 	h.Mutex.Lock()
 	def := cidrSpec.Config
-	excludesInStr := []string{}
-	excludesInStr = append(excludesInStr, def.ExcludeCIDRs...)
-	if def.Subnet == "" {
-		excludesInStr = append(excludesInStr, h.getHostAddressesToExclude()...)
-	}
 	excludes := compute.SortAddress(def.ExcludeCIDRs)
 	vars.CIDRLog.V(7).Info(fmt.Sprintf("Update CIDR %s", def.Name))
 	entriesMap, changed := h.UpdateEntries(cidrSpec, excludes, new)
@@ -931,9 +926,9 @@ func (h *CIDRHandler) GetHostInterfaceIndexMap(entries []multinicv1.CIDREntry) m
 	return hostInterfaceIndexMap
 }
 
-// generateCIDRFromHostSubnet generates CIDR from Host Subnet
+// GenerateCIDRFromHostSubnet generates CIDR from Host Subnet
 // in the case that podCIDR must be shared with host subnet (e.g., in aws VPC)
-func (h *CIDRHandler) generateCIDRFromHostSubnet(def multinicv1.PluginConfig) (multinicv1.CIDRSpec, error) {
+func (h *CIDRHandler) GenerateCIDRFromHostSubnet(def multinicv1.PluginConfig) (multinicv1.CIDRSpec, error) {
 	vlanIndexMap := make(map[string]int)
 	entryMap := make(map[string]multinicv1.CIDREntry)
 	lastIndex := 0
@@ -976,9 +971,9 @@ func (h *CIDRHandler) generateCIDRFromHostSubnet(def multinicv1.PluginConfig) (m
 	return cidrSpec, nil
 }
 
-// getHostAddressesToExclude returns host addresses to be excluded
+// GetHostAddressesToExclude returns host addresses to be excluded
 // in the case that dedicated podCIDR must be shared with host subnet (e.g., in aws VPC)
-func (h *CIDRHandler) getHostAddressesToExclude() []string {
+func (h *CIDRHandler) GetHostAddressesToExclude() []string {
 	excludes := []string{}
 	snapshot := h.HostInterfaceHandler.ListCache()
 	for _, hif := range snapshot {

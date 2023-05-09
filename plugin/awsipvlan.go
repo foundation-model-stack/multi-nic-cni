@@ -10,7 +10,6 @@ import (
 
 	"github.com/containernetworking/cni/pkg/types"
 	multinicv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
-	"github.com/go-logr/logr"
 	"k8s.io/client-go/rest"
 )
 
@@ -19,7 +18,6 @@ const (
 )
 
 type AwsVpcCNIPlugin struct {
-	Log logr.Logger
 }
 
 type AWSIPVLANNetConf struct {
@@ -31,7 +29,7 @@ type AWSIPVLANNetConf struct {
 	MTU       int                    `json:"mtu"`
 }
 
-func (p *AwsVpcCNIPlugin) Init(config *rest.Config, logger logr.Logger) error {
+func (p *AwsVpcCNIPlugin) Init(config *rest.Config) error {
 	return nil
 }
 

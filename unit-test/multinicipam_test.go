@@ -140,15 +140,15 @@ var _ = Describe("Test Multi-NIC IPAM", func() {
 	It("Empty subnet", func() {
 		emptySubnetMultinicnetwork := getMultiNicCNINetwork("empty-ipam", cniVersion, cniType, cniArgs)
 		emptySubnetMultinicnetwork.Spec.Subnet = ""
-		ipamConfig, err := multinicnetworkReconciler.getIPAMConfig(emptySubnetMultinicnetwork)
+		ipamConfig, err := multinicnetworkReconciler.GetIPAMConfig(emptySubnetMultinicnetwork)
 		ipamConfig.InterfaceBlock = 0
 		ipamConfig.HostBlock = 4
 		Expect(err).NotTo(HaveOccurred())
-		cidrSpec, err := multinicnetworkReconciler.CIDRHandler.generateCIDRFromHostSubnet(*ipamConfig)
+		cidrSpec, err := multinicnetworkReconciler.CIDRHandler.GenerateCIDRFromHostSubnet(*ipamConfig)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(len(cidrSpec.CIDRs)).To(Equal(len(interfaceNames)))
 		fmt.Println(cidrSpec)
-		hostIPs := multinicnetworkReconciler.CIDRHandler.getHostAddressesToExclude()
+		hostIPs := multinicnetworkReconciler.CIDRHandler.GetHostAddressesToExclude()
 		Expect(len(hostIPs)).To(BeEquivalentTo(len(interfaceNames) * multinicnetworkReconciler.CIDRHandler.HostInterfaceHandler.GetSize()))
 	})
 })
