@@ -40,3 +40,6 @@ patchesJson6902:
       - op: add
         path: /spec/template/spec/containers/1/args/1
         value: "--zap-log-level=4"
+      - op: add
+        path: /spec/template/spec/containers/1/args/2
+        value: "--zap-time-encoding=iso8601"
