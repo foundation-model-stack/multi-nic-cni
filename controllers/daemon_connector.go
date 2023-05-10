@@ -23,8 +23,9 @@ import (
 var DAEMON_NAMESPACE, DAEMON_PORT, INTERFACE_PATH, ADD_ROUTE_PATH, DELETE_ROUTE_PATH, REGISTER_IPAM_PATH string
 
 // SetDaemon sets daemon environments
-func SetDaemon(daemonSpec multinicv1.ConfigSpec) {
-	DAEMON_PORT = fmt.Sprintf("%d", daemonSpec.Daemon.DaemonPort)
+func SetDaemonConnector(daemonSpec multinicv1.ConfigSpec) {
+	daemonPort := fmt.Sprintf("%d", daemonSpec.Daemon.DaemonPort)
+	DAEMON_PORT = daemonPort
 	DAEMON_NAMESPACE = OPERATOR_NAMESPACE
 	INTERFACE_PATH = daemonSpec.InterfacePath
 	ADD_ROUTE_PATH = daemonSpec.AddRoutePath

@@ -23,17 +23,29 @@ const (
 	NodeNameKey       = "K8S_NODENAME"
 
 	// common constant
-	PodStatusField           = "status.phase"
-	PodStatusRunning         = "Running"
-	JoinLabelName            = "multi-nicd-join"
-	HostNameLabel            = "hostname"
-	DefNameLabel             = "netname"
-	TestModeLabel            = "test-mode"
-	DefaultDaemonPort        = 11000
-	DeamonLabelKey           = "app"
-	DaemonLabelValue         = "multi-nicd"
-	ServiceAccountName       = "multi-nic-cni-operator-controller-manager"
-	DefaultOperatorNamespace = "multi-nic-cni-operator-system"
+	PodStatusField                           = "status.phase"
+	PodStatusRunning                         = "Running"
+	JoinLabelName                            = "multi-nicd-join"
+	HostNameLabel                            = "hostname"
+	DefNameLabel                             = "netname"
+	TestModeLabel                            = "test-mode"
+	DefaultDaemonPort                        = 11000
+	DeamonLabelKey                           = "app"
+	DaemonLabelValue                         = "multi-nicd"
+	ServiceAccountName                       = "multi-nic-cni-operator-controller-manager"
+	DefaultOperatorNamespace                 = "multi-nic-cni-operator-system"
+	DefaultCNIType                           = "multi-nic"
+	DefaultIPAMType                          = "multi-nic-ipam"
+	DefaultDaemonImage                       = "ghcr.io/foundation-model-stack/multi-nic-cni-daemon:v1.1.0"
+	DefaultJoinPath                          = "/join"
+	DefaultInterfacePath                     = "/interface"
+	DefaultAddRoutePath                      = "/addl3"
+	DefaultDeleteRoutePath                   = "/deletel3"
+	DefaultUrgentReconcileTime time.Duration = 5 * time.Second
+	DefaultNormalReconcileTime time.Duration = time.Minute
+	DefaultLongReconcileTime   time.Duration = 10 * time.Minute
+	DefaultContextTimeout      time.Duration = 2 * time.Minute
+	DefaultLogLevel                          = 4
 
 	//	multus-related constants
 	MultusLabelKey     = "app"
@@ -52,13 +64,13 @@ var (
 	TickerInterval time.Duration = time.Duration(InitIntFromEnv(TickerIntervalKey, 10)) * time.Minute
 
 	// var overrided by config CR
-	MultiNICIPAMType    string        = "multi-nic-ipam"
-	TargetCNI           string        = "multi-nic"
-	DaemonPort          int           = 11000
-	UrgentReconcileTime time.Duration = 5 * time.Second
-	NormalReconcileTime time.Duration = time.Minute
-	LongReconcileTime   time.Duration = 10 * time.Minute
-	ContextTimeout      time.Duration = 2 * time.Minute
+	MultiNICIPAMType    string        = DefaultIPAMType
+	TargetCNI           string        = DefaultCNIType
+	DaemonPort          int           = DefaultDaemonPort
+	UrgentReconcileTime time.Duration = DefaultUrgentReconcileTime
+	NormalReconcileTime time.Duration = DefaultNormalReconcileTime
+	LongReconcileTime   time.Duration = DefaultLongReconcileTime
+	ContextTimeout      time.Duration = DefaultContextTimeout
 
 	// logger options to change log level on the fly
 	ZapOpts    *zap.Options
