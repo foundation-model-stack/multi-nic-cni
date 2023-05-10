@@ -37,3 +37,8 @@ spec:
       requests:
         cpu: "100m"
         memory: "50Mi"
+  urgentReconcileSeconds: 5
+  normalReconcileMinutes: 1
+  longReconcileMinutes: 10
+  contextTimeoutMinutes: 2
+  logLevel: 4
