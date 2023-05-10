@@ -2,10 +2,13 @@ apiVersion: multinic.fms.io/v1
 kind: IPPool
 metadata:
   name: multi-nic-sample-192.168.64.0-26
+  labels:
+    hostname: master0.local
+    netname: multi-nic-sample
 spec:
   allocations: []
   excludes: []
-  hostName: master0
+  hostName: master0.local
   interfaceName: test-eth2
   netAttachDef: multi-nic-sample
   podCIDR: 192.168.64.0/26

@@ -1,7 +1,14 @@
+/*
+ * Copyright 2022- IBM Inc. All rights reserved
+ * SPDX-License-Identifier: Apache2.0
+ */
+
 package controllers
 
 import (
-	"fmt"
+	"errors"
+
+	"github.com/foundation-model-stack/multi-nic-cni/controllers/vars"
 )
 
 type DaemonPod struct {
@@ -23,7 +30,7 @@ func (h *DaemonCacheHandler) SetCache(key string, value DaemonPod) {
 func (h *DaemonCacheHandler) GetCache(key string) (DaemonPod, error) {
 	value := h.SafeCache.GetCache(key)
 	if value == nil {
-		return DaemonPod{}, fmt.Errorf("Not Found")
+		return DaemonPod{}, errors.New(vars.NotFoundError)
 	}
 	return value.(DaemonPod), nil
 }

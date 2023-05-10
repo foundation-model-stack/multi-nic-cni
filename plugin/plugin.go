@@ -37,7 +37,11 @@ func GetMetaObject(name string, namespace string, annotations map[string]string)
 func RemoveEmpty(args map[string]string, pluginStr string) string {
 	var pluginObj map[string]interface{}
 	cleanedObj := make(map[string]interface{})
-	json.Unmarshal([]byte(pluginStr), &pluginObj)
+	err := json.Unmarshal([]byte(pluginStr), &pluginObj)
+	if err != nil {
+		// cannot check, return original value
+		return pluginStr
+	}
 	for _, key := range netConfKeys {
 		cleanedObj[key] = pluginObj[key]
 	}

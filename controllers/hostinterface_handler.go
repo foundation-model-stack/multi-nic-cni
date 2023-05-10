@@ -8,11 +8,12 @@ package controllers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
 
 	multinicv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
-	"github.com/go-logr/logr"
+	"github.com/foundation-model-stack/multi-nic-cni/controllers/vars"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
@@ -25,19 +26,17 @@ import (
 type HostInterfaceHandler struct {
 	*kubernetes.Clientset
 	client.Client
-	Log logr.Logger
 	*SafeCache
 	DaemonConnector
 }
 
 // NewHostInterfaceHandler
-func NewHostInterfaceHandler(config *rest.Config, client client.Client, logger logr.Logger) *HostInterfaceHandler {
+func NewHostInterfaceHandler(config *rest.Config, client client.Client) *HostInterfaceHandler {
 	clientset, _ := kubernetes.NewForConfig(config)
 
 	return &HostInterfaceHandler{
 		Clientset: clientset,
 		Client:    client,
-		Log:       logger,
 		SafeCache: InitSafeCache(),
 		DaemonConnector: DaemonConnector{
 			Clientset: clientset,
@@ -91,7 +90,9 @@ func (h *HostInterfaceHandler) GetHostInterface(name string) (*multinicv1.HostIn
 // ListHostInterface returns a map from hostname to HostInterface
 func (h *HostInterfaceHandler) ListHostInterface() (map[string]multinicv1.HostInterface, error) {
 	hifList := &multinicv1.HostInterfaceList{}
-	err := h.Client.List(context.TODO(), hifList)
+	ctx, cancel := context.WithTimeout(context.Background(), vars.ContextTimeout)
+	defer cancel()
+	err := h.Client.List(ctx, hifList)
 	hifMap := make(map[string]multinicv1.HostInterface)
 	if err == nil {
 		for _, hif := range hifList.Items {
@@ -118,7 +119,7 @@ func (h *HostInterfaceHandler) SetCache(key string, value multinicv1.HostInterfa
 func (h *HostInterfaceHandler) GetCache(key string) (multinicv1.HostInterface, error) {
 	value := h.SafeCache.GetCache(key)
 	if value == nil {
-		return multinicv1.HostInterface{}, fmt.Errorf("Not Found")
+		return multinicv1.HostInterface{}, errors.New(vars.NotFoundError)
 	}
 	return value.(multinicv1.HostInterface), nil
 }
@@ -152,7 +153,7 @@ func (h *HostInterfaceHandler) IpamJoin(daemon DaemonPod) error {
 		hifs = append(hifs, hif.Spec.Interfaces...)
 	}
 	hifLen := len(hifs)
-	if lastLenStr, exists := daemon.Labels[JOIN_LABEL_NAME]; exists {
+	if lastLenStr, exists := daemon.Labels[vars.JoinLabelName]; exists {
 		// already join
 		lastLen, _ := strconv.ParseInt(lastLenStr, 10, 64)
 		if hifLen == int(lastLen) {
@@ -161,14 +162,14 @@ func (h *HostInterfaceHandler) IpamJoin(daemon DaemonPod) error {
 		}
 	}
 	podAddress := GetDaemonAddressByPod(daemon)
-	h.Log.V(4).Info(fmt.Sprintf("Join %s with %d hifs", daemon.HostIP, hifLen))
+	vars.HifLog.V(4).Info(fmt.Sprintf("Join %s with %d hifs", daemon.HostIP, hifLen))
 	err := h.DaemonConnector.Join(podAddress, hifs)
 	if err != nil {
 		return err
 	}
-	err = h.addLabel(daemon, JOIN_LABEL_NAME, fmt.Sprintf("%d", hifLen))
+	err = h.addLabel(daemon, vars.JoinLabelName, fmt.Sprintf("%d", hifLen))
 	if err != nil {
-		h.Log.V(4).Info(fmt.Sprintf("Fail to add label to %s: %v", daemon.Name, err))
+		vars.HifLog.V(4).Info(fmt.Sprintf("Fail to add label to %s: %v", daemon.Name, err))
 	}
 	return nil
 }

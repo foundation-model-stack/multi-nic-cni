@@ -38,36 +38,11 @@ func (c CIDRCompute) appendMask(baseMask []byte, block int) [4]byte {
 	return output
 }
 
-func (c CIDRCompute) valueToBytes(addValue int) ([]byte, error) {
-	var valueInBytes []byte
-
-	s := fmt.Sprintf("%b", addValue)
-	for s != "" {
-		target := ""
-		if len(s) > 8 {
-			target = s[len(s)-8:]
-			s = s[0 : len(s)-8]
-		} else {
-			target = s
-			for len(target) < 8 {
-				target = "0" + target
-			}
-			s = ""
-		}
-		if intValue, err := strconv.ParseInt(target, 2, 64); err != nil {
-			return []byte{}, err
-		} else {
-			valueInBytes = append([]byte{byte(intValue)}, valueInBytes...)
-		}
-	}
-	return valueInBytes, nil
-}
-
 func (c CIDRCompute) addAddress(baseAddress []byte, mask []byte, block int, addValue int) ([4]byte, error) {
 	// check if valid sum value
 	maxValue := math.Pow(2, float64(block)) - 1
 	if addValue > int(maxValue) {
-		return [4]byte{}, errors.New(fmt.Sprintf("InvalidRequest: %.0f > %d", maxValue, addValue))
+		return [4]byte{}, fmt.Errorf("InvalidRequest: %.0f > %d", maxValue, addValue)
 	}
 
 	// get value in binary length equals to block

@@ -197,7 +197,7 @@ func cmdDel(args *skel.CmdArgs) error {
 			r, err := ipam.ExecDelWithResult(n.IPAM.Type, injectedStdIn)
 			if err != nil {
 				utils.Logger.Debug(fmt.Sprintf("Failed ipam.ExecDel %s: %v", err, string(injectedStdIn)))
-				return err
+				return nil
 			}
 			if r != nil {
 				executeResult, err := current.NewResultFromResult(r)
@@ -238,7 +238,7 @@ func cmdDel(args *skel.CmdArgs) error {
 		_, err := execPlugin(deviceType, command, confBytes, args, ifName, false)
 		if err != nil {
 			utils.Logger.Debug(fmt.Sprintf("Fail execPlugin %v: %v", string(confBytes), err))
-			return fmt.Errorf("%s, %v", string(confBytes), err)
+			return nil
 		}
 	}
 

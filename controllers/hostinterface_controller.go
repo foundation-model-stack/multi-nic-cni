@@ -8,7 +8,6 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -19,6 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	multinicv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
+	"github.com/foundation-model-stack/multi-nic-cni/controllers/vars"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 )
@@ -27,23 +27,20 @@ import (
 // - if HostInterface is deleted, re-process daemon pods
 type HostInterfaceReconciler struct {
 	client.Client
-	Log    logr.Logger
 	Scheme *runtime.Scheme
 	*DaemonWatcher
 	*HostInterfaceHandler
 	*CIDRHandler
 }
 
-const HostInterfaceReconcileTime = time.Second
 const hifFinalizer = "finalizers.hostinterface.multinic.fms.io"
-const TestModelLabel = "test-mode"
 
 func InitHostInterfaceCache(clientset *kubernetes.Clientset, hostInterfaceHandler *HostInterfaceHandler, daemonCacheHandler *DaemonCacheHandler) error {
 	listObjects, err := hostInterfaceHandler.ListHostInterface()
 	if err == nil {
 		// check existing hostinterface
 		for name, instance := range listObjects {
-			if _, ok := instance.Labels[TestModelLabel]; ok {
+			if _, ok := instance.Labels[vars.TestModeLabel]; ok {
 				// on test mode, no need to init
 				break
 			}
@@ -51,7 +48,10 @@ func InitHostInterfaceCache(clientset *kubernetes.Clientset, hostInterfaceHandle
 				// not found, check whether node is still there.
 				if _, foundErr = clientset.CoreV1().Nodes().Get(context.TODO(), name, metav1.GetOptions{}); foundErr != nil {
 					// delete HostInterface and do not add
-					hostInterfaceHandler.DeleteHostInterface(name)
+					err = hostInterfaceHandler.DeleteHostInterface(name)
+					if err != nil {
+						vars.HifLog.V(4).Info(fmt.Sprintf("Failed to delete HostInterface %s: %v", name, err))
+					}
 					continue
 				}
 			}
@@ -62,7 +62,10 @@ func InitHostInterfaceCache(clientset *kubernetes.Clientset, hostInterfaceHandle
 		for name, daemon := range daemonSnapshot {
 			if _, found := listObjects[name]; !found {
 				// create missing hostinterface
-				hostInterfaceHandler.CreateHostInterface(daemon.NodeName, []multinicv1.InterfaceInfoType{})
+				createErr := hostInterfaceHandler.CreateHostInterface(daemon.NodeName, []multinicv1.InterfaceInfoType{})
+				if createErr != nil {
+					vars.HifLog.V(4).Info(fmt.Sprintf("Failed to initialize HostInterface %s: %v", name, err))
+				}
 			}
 		}
 	}
@@ -74,7 +77,7 @@ func InitHostInterfaceCache(clientset *kubernetes.Clientset, hostInterfaceHandle
 //+kubebuilder:rbac:groups=multinic.fms.io,resources=hostinterfaces/finalizers,verbs=update
 
 func (r *HostInterfaceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = r.Log.WithValues("hostinterface", req.NamespacedName)
+	_ = vars.HifLog.WithValues("hostinterface", req.NamespacedName)
 	instance := &multinicv1.HostInterface{}
 	err := r.Client.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
@@ -84,8 +87,8 @@ func (r *HostInterfaceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			return ctrl.Result{}, nil
 		}
 		// error by other reasons, requeue
-		r.Log.V(7).Info(fmt.Sprintf("Requeue HostInterface %s: %v", req.Name, err))
-		return ctrl.Result{RequeueAfter: HostInterfaceReconcileTime}, nil
+		vars.HifLog.V(7).Info(fmt.Sprintf("Requeue HostInterface %s: %v", req.Name, err))
+		return ctrl.Result{RequeueAfter: vars.UrgentReconcileTime}, nil
 	}
 
 	// Add finalizer to instance
@@ -100,7 +103,7 @@ func (r *HostInterfaceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	is_deleted := instance.GetDeletionTimestamp() != nil
 	if is_deleted {
 		if controllerutil.ContainsFinalizer(instance, hifFinalizer) {
-			if err := r.CallFinalizer(r.Log, instance); err != nil {
+			if err := r.CallFinalizer(vars.HifLog, instance); err != nil {
 				return ctrl.Result{}, err
 			}
 
@@ -119,15 +122,15 @@ func (r *HostInterfaceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 
 	if !ConfigReady || !r.DaemonWatcher.IsDaemonSetReady() {
-		return ctrl.Result{RequeueAfter: ConfigWaitingReconcileTime}, nil
+		return ctrl.Result{RequeueAfter: vars.NormalReconcileTime}, nil
 	}
 
-	r.Log.V(7).Info(fmt.Sprintf("HostInterface reconciled: %s", instance.ObjectMeta.Name))
+	vars.HifLog.V(7).Info(fmt.Sprintf("HostInterface reconciled: %s", instance.ObjectMeta.Name))
 	err = r.UpdateInterfaces(*instance)
 	if err != nil {
 		// deamon pod may be missing for a short time
-		r.Log.V(4).Info(fmt.Sprintf("Requeue HostInterface %s, cannot update interfaces: %v", instance.ObjectMeta.Name, err))
-		return ctrl.Result{RequeueAfter: HostInterfaceReconcileTime}, nil
+		vars.HifLog.V(4).Info(fmt.Sprintf("Requeue HostInterface %s, cannot update interfaces: %v", instance.ObjectMeta.Name, err))
+		return ctrl.Result{RequeueAfter: vars.UrgentReconcileTime}, nil
 	}
 	return ctrl.Result{}, nil
 }
@@ -151,37 +154,45 @@ func (r *HostInterfaceReconciler) UpdateInterfaces(instance multinicv1.HostInter
 			return err
 		}
 		if r.interfaceChanged(instance.Spec.Interfaces, interfaces) {
-			r.DaemonWatcher.IpamJoin(pod)
+			err = r.DaemonWatcher.IpamJoin(pod)
+			if err != nil {
+				vars.HifLog.V(4).Info(fmt.Sprintf("Failed to join %s: %v", nodeName, err))
+			}
+
 			updatedHif, err := r.HostInterfaceHandler.UpdateHostInterface(instance, interfaces)
 			if err != nil {
 				return err
 			}
-			r.Log.V(7).Info(fmt.Sprintf("%s's interfaces updated", nodeName))
+			vars.HifLog.V(7).Info(fmt.Sprintf("%s's interfaces updated", nodeName))
 			r.HostInterfaceHandler.SetCache(hifName, *updatedHif.DeepCopy())
 			r.CIDRHandler.UpdateCIDRs()
 		}
 		return nil
 	}
-	if _, ok := instance.Labels[TestModelLabel]; ok {
-		r.Log.V(7).Info(fmt.Sprintf("%s on test mode", nodeName))
+	if _, ok := instance.Labels[vars.TestModeLabel]; ok {
+		vars.HifLog.V(7).Info(fmt.Sprintf("%s on test mode", nodeName))
 		return nil
 	}
 	// daemon pod does not exist
 	_, err = r.DaemonWatcher.Clientset.CoreV1().Nodes().Get(context.TODO(), nodeName, metav1.GetOptions{})
 	if err == nil {
 		// node exists but might be tainted
-		r.Log.V(4).Info(fmt.Sprintf("Hostinterface %s: no daemon pod found (node exists)", nodeName))
+		vars.HifLog.V(4).Info(fmt.Sprintf("Hostinterface %s: no daemon pod found (node exists)", nodeName))
 		return nil
 	}
 	if errors.IsNotFound(err) {
 		// not found node
 		r.DaemonCacheHandler.UnsetCache(nodeName)
-		r.HostInterfaceHandler.DeleteHostInterface(nodeName)
-		r.Log.V(4).Info(fmt.Sprintf("Delete Hostinterface %s: node no more exists", nodeName))
+		err = r.HostInterfaceHandler.DeleteHostInterface(nodeName)
+		if err != nil {
+			vars.HifLog.V(4).Info(fmt.Sprintf("Failed to delete HostInterface %s: %v", nodeName, err))
+		} else {
+			vars.HifLog.V(4).Info(fmt.Sprintf("Delete Hostinterface %s: node no more exists", nodeName))
+		}
 		return nil
 	} else {
 		// err to get node
-		r.Log.V(4).Info(fmt.Sprintf("Hostinterface %s: cannot confirm node status", nodeName))
+		vars.HifLog.V(4).Info(fmt.Sprintf("Hostinterface %s: cannot confirm node status", nodeName))
 		return err
 	}
 }

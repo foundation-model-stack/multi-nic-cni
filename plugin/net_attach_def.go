@@ -13,7 +13,7 @@ import (
 
 	"github.com/containernetworking/cni/pkg/types"
 	multinicv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
-	"github.com/go-logr/logr"
+	"github.com/foundation-model-stack/multi-nic-cni/controllers/vars"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -86,14 +86,11 @@ type NetworkStatus struct {
 }
 
 type NetAttachDefHandler struct {
-	TargetCNI  string
-	DaemonPort int
 	*DynamicHandler
 	*kubernetes.Clientset
-	Log logr.Logger
 }
 
-func GetNetAttachDefHandler(config *rest.Config, logger logr.Logger) (*NetAttachDefHandler, error) {
+func GetNetAttachDefHandler(config *rest.Config) (*NetAttachDefHandler, error) {
 	dyn, err := dynamic.NewForConfig(config)
 	if err != nil {
 		return nil, err
@@ -107,7 +104,6 @@ func GetNetAttachDefHandler(config *rest.Config, logger logr.Logger) (*NetAttach
 	return &NetAttachDefHandler{
 		DynamicHandler: handler,
 		Clientset:      clientset,
-		Log:            logger,
 	}, nil
 }
 
@@ -142,7 +138,9 @@ func (h *NetAttachDefHandler) CreateOrUpdate(net *multinicv1.MultiNicNetwork, pl
 func (h *NetAttachDefHandler) getNamespace(net *multinicv1.MultiNicNetwork) ([]string, error) {
 	namespaces := net.Spec.Namespaces
 	if len(namespaces) == 0 {
-		namespaceList, err := h.Clientset.CoreV1().Namespaces().List(context.TODO(), metav1.ListOptions{})
+		ctx, cancel := context.WithTimeout(context.Background(), vars.ContextTimeout)
+		defer cancel()
+		namespaceList, err := h.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
 		if err == nil {
 			for _, ns := range namespaceList.Items {
 				namespaces = append(namespaces, ns.Name)
@@ -161,7 +159,7 @@ func (h *NetAttachDefHandler) generate(net *multinicv1.MultiNicNetwork, pluginSt
 	if err != nil {
 		return defs, err
 	}
-	h.Log.V(2).Info(fmt.Sprintf("generate net-attach-def config on %d namespaces", len(namespaces)))
+	vars.NetworkLog.V(2).Info(fmt.Sprintf("generate net-attach-def config on %d namespaces", len(namespaces)))
 	for _, ns := range namespaces {
 		name := net.GetName()
 		namespace := ns
@@ -169,17 +167,20 @@ func (h *NetAttachDefHandler) generate(net *multinicv1.MultiNicNetwork, pluginSt
 			NetConf: types.NetConf{
 				CNIVersion: CNI_VERSION,
 				Name:       name,
-				Type:       h.TargetCNI,
+				Type:       vars.TargetCNI,
 			},
 			Subnet:         net.Spec.Subnet,
 			MasterNetAddrs: net.Spec.MasterNetAddrs,
 			IsMultiNICIPAM: net.Spec.IsMultiNICIPAM,
-			DaemonPort:     h.DaemonPort,
+			DaemonPort:     vars.DaemonPort,
 		}
 		var ipamObj map[string]interface{}
 		configBytes, _ := json.Marshal(config)
 		configStr := string(configBytes)
-		json.Unmarshal([]byte(net.Spec.IPAM), &ipamObj)
+		err := json.Unmarshal([]byte(net.Spec.IPAM), &ipamObj)
+		if err != nil {
+			return defs, err
+		}
 		ipamBytes, _ := json.Marshal(ipamObj)
 		pluginValue := fmt.Sprintf("\"plugin\":%s", pluginStr)
 		ipamValue := fmt.Sprintf("\"ipam\":%s", string(ipamBytes))
@@ -218,7 +219,7 @@ func (h *NetAttachDefHandler) IsExist(name string, namespace string) bool {
 	_, err := h.Get(name, namespace)
 	if err != nil {
 		if !errors.IsNotFound(err) {
-			h.Log.V(2).Info(fmt.Sprintf("Not exist: %v", err))
+			vars.NetworkLog.V(2).Info(fmt.Sprintf("Not exist: %v", err))
 		}
 		return false
 	}

@@ -13,7 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	multinicv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
-	"github.com/go-logr/logr"
+	"github.com/foundation-model-stack/multi-nic-cni/controllers/vars"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -33,7 +33,6 @@ type MultiNicNetworkHandler struct {
 	client.Client
 	syncFlag bool
 	sync.Mutex
-	Log logr.Logger
 }
 
 func (h *MultiNicNetworkHandler) GetNetwork(name string) (*multinicv1.MultiNicNetwork, error) {
@@ -52,7 +51,7 @@ func (h *MultiNicNetworkHandler) SyncAllStatus(name string, spec multinicv1.CIDR
 		return multinicv1.MultiNicNetworkStatus{}, err
 	}
 	if h.syncFlag {
-		return instance.Status, fmt.Errorf("syncFlag is set (skip SyncAllStatus to avoid congestion).")
+		return instance.Status, fmt.Errorf("syncFlag is set (skip SyncAllStatus to avoid congestion)")
 	}
 	h.Mutex.Lock()
 	h.syncFlag = true
@@ -98,6 +97,8 @@ func (h *MultiNicNetworkHandler) updateStatus(instance *multinicv1.MultiNicNetwo
 			results = append(results, result)
 		}
 		discoverStatus.CIDRProcessedHost = maxNumOfHost
+	} else {
+		results = instance.Status.ComputeResults
 	}
 
 	netStatus := multinicv1.MultiNicNetworkStatus{
@@ -112,7 +113,7 @@ func (h *MultiNicNetworkHandler) updateStatus(instance *multinicv1.MultiNicNetwo
 	instance.Status = netStatus
 	err := h.Client.Status().Update(context.Background(), instance)
 	if err != nil {
-		h.Log.V(2).Info(fmt.Sprintf("Failed to update %s status: %v", instance.Name, err))
+		vars.NetworkLog.V(2).Info(fmt.Sprintf("Failed to update %s status: %v", instance.Name, err))
 	}
 	return netStatus, err
 }
@@ -127,8 +128,5 @@ func (h *MultiNicNetworkHandler) UpdateNetConfigStatus(instance *multinicv1.Mult
 	instance.Status.LastSyncTime = metav1.Now()
 	instance.Status.NetConfigStatus = netConfigStatus
 	err := h.Client.Status().Update(context.Background(), instance)
-	if err != nil {
-		h.Log.V(2).Info(fmt.Sprintf("Failed to update %s network status: %v", instance.Name, err))
-	}
 	return err
 }

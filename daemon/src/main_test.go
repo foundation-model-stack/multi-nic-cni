@@ -44,6 +44,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+
+	"os"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -75,6 +77,7 @@ var requestL3ConfigForceDelete = dr.L3ConfigRequest{
 
 const (
 	HOST_NAME         = "master0"
+	FULL_HOST_NAME    = HOST_NAME + ".local"
 	DEF_NAME          = "multi-nic-sample"
 	DEVCLASS_DEF_NAME = "multi-nic-dev"
 	POD_NAME          = "sample-pod"
@@ -122,6 +125,11 @@ func setTestLatestInterfaces() {
 }
 
 var _ = BeforeSuite(func() {
+
+	// this env should be set by config.multinic when creating the daemonset
+	os.Setenv(NODENAME_ENV, FULL_HOST_NAME)
+	initHostName()
+	Expect(hostName).To(Equal(FULL_HOST_NAME))
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
 	install.Install(scheme)
 

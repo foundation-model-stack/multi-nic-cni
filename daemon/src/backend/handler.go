@@ -91,7 +91,9 @@ func (h *DynamicHandler) Update(mapObj map[string]interface{}, namespace string,
 func (h *DynamicHandler) List(namespace string, options metav1.ListOptions) (*unstructured.UnstructuredList, error) {
 	gvr, _ := schema.ParseResourceArg(h.ResourceName)
 	start := time.Now()
-	res, err := h.DYN.Resource(*gvr).Namespace(namespace).List(context.TODO(), options)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+	res, err := h.DYN.Resource(*gvr).Namespace(namespace).List(ctx, options)
 	elapsed := time.Since(start)
 	log.Println(fmt.Sprintf("List%s elapsed: %d us", h.Kind, int64(elapsed/time.Microsecond)))
 	return res, err

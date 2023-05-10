@@ -16,19 +16,16 @@ import (
 	"errors"
 
 	multinicv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
+	"github.com/foundation-model-stack/multi-nic-cni/controllers/vars"
 	"k8s.io/client-go/kubernetes"
-)
-
-const (
-	CONNECTION_REFUSED = "connection refused"
-	MAX_CONNECT_TRY    = 10
 )
 
 var DAEMON_NAMESPACE, DAEMON_PORT, INTERFACE_PATH, ADD_ROUTE_PATH, DELETE_ROUTE_PATH, REGISTER_IPAM_PATH string
 
 // SetDaemon sets daemon environments
-func SetDaemon(daemonSpec multinicv1.ConfigSpec) {
-	DAEMON_PORT = fmt.Sprintf("%d", daemonSpec.Daemon.DaemonPort)
+func SetDaemonConnector(daemonSpec multinicv1.ConfigSpec) {
+	daemonPort := fmt.Sprintf("%d", daemonSpec.Daemon.DaemonPort)
+	DAEMON_PORT = daemonPort
 	DAEMON_NAMESPACE = OPERATOR_NAMESPACE
 	INTERFACE_PATH = daemonSpec.InterfacePath
 	ADD_ROUTE_PATH = daemonSpec.AddRoutePath
@@ -85,8 +82,8 @@ func (dc DaemonConnector) GetInterfaces(podAddress string) ([]multinicv1.Interfa
 	if err != nil {
 		return []multinicv1.InterfaceInfoType{}, err
 	}
-	json.Unmarshal(body, &interfaces)
-	return interfaces, nil
+	err = json.Unmarshal(body, &interfaces)
+	return interfaces, err
 }
 
 // Join notifies new daemon to get knowing the existing daemons on the other hosts
@@ -150,11 +147,11 @@ func (dc DaemonConnector) putRouteRequest(podAddress string, path string, cidrNa
 	} else {
 		res, err := http.Post(address, "application/json; charset=utf-8", bytes.NewBuffer(jsonReq))
 		if err != nil {
-			response.Message = CONNECTION_REFUSED
+			response.Message = vars.ConnectionRefusedError
 			return response, err
 		}
 		if res.StatusCode != http.StatusOK {
-			response.Message = CONNECTION_REFUSED
+			response.Message = vars.ConnectionRefusedError
 			return response, errors.New(res.Status)
 		}
 

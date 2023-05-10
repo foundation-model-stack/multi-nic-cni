@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -80,7 +81,9 @@ func (h *CIDRHandler) getName(cidr unstructured.Unstructured) string {
 func (h *CIDRHandler) List(options metav1.ListOptions) map[string]CIDRSpec {
 	cidrSpecMap := make(map[string]CIDRSpec)
 	gvr, _ := schema.ParseResourceArg(h.ResourceName)
-	cidrList, err := h.DYN.Resource(*gvr).Namespace(metav1.NamespaceAll).List(context.TODO(), options)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+	cidrList, err := h.DYN.Resource(*gvr).Namespace(metav1.NamespaceAll).List(ctx, options)
 	if err != nil {
 		log.Println(fmt.Sprintf("Cannot list CIDR: %v", err))
 	} else {

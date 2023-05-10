@@ -7,21 +7,21 @@ package controllers
 
 import (
 	"context"
+	"errors"
 	"strings"
-	"sync"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"fmt"
 	"net"
 
-	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"reflect"
 
 	multinicv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
 	"github.com/foundation-model-stack/multi-nic-cni/compute"
+	"github.com/foundation-model-stack/multi-nic-cni/controllers/vars"
 	"k8s.io/apimachinery/pkg/types"
 
 	"strconv"
@@ -32,9 +32,7 @@ import (
 // - update IPPool according to CIDR
 type IPPoolHandler struct {
 	client.Client
-	Log logr.Logger
 	*SafeCache
-	mu sync.Mutex
 }
 
 // GetIPPool gets IPPool from IPPool name
@@ -44,14 +42,18 @@ func (h *IPPoolHandler) GetIPPool(name string) (*multinicv1.IPPool, error) {
 		Name:      name,
 		Namespace: metav1.NamespaceAll,
 	}
-	err := h.Client.Get(context.TODO(), namespacedName, ippool)
+	ctx, cancel := context.WithTimeout(context.Background(), vars.ContextTimeout)
+	defer cancel()
+	err := h.Client.Get(ctx, namespacedName, ippool)
 	return ippool, err
 }
 
 // ListIPPool returns a map from IPPool name to IPPool
 func (h *IPPoolHandler) ListIPPool() (map[string]multinicv1.IPPool, error) {
 	poolList := &multinicv1.IPPoolList{}
-	err := h.Client.List(context.TODO(), poolList)
+	ctx, cancel := context.WithTimeout(context.Background(), vars.ContextTimeout)
+	defer cancel()
+	err := h.Client.List(ctx, poolList)
 	poolMap := make(map[string]multinicv1.IPPool)
 	if err == nil {
 		for _, pool := range poolList.Items {
@@ -80,6 +82,7 @@ func (h *IPPoolHandler) DeleteIPPool(netAttachDef string, podCIDR string) error 
 // IPPool name is composed of NetworkAttachmentDefinition name and PodCIDR
 func (h *IPPoolHandler) UpdateIPPool(netAttachDef string, podCIDR string, vlanCIDR string, hostName string, interfaceName string, excludes []compute.IPValue) error {
 	excludesInterface := []string{}
+	labels := map[string]string{vars.HostNameLabel: hostName, vars.DefNameLabel: netAttachDef}
 
 	// find CIDR ranges that excluded in the PodCIDR range
 	for _, item := range excludes {
@@ -128,15 +131,16 @@ func (h *IPPoolHandler) UpdateIPPool(netAttachDef string, podCIDR string, vlanCI
 		prevSpec := ippool.Spec
 		ippool.Spec = spec
 		ippool.Spec.Allocations = prevSpec.Allocations
+		ippool.ObjectMeta.Labels = labels
 		err = h.Client.Update(context.TODO(), ippool)
 		if !reflect.DeepEqual(prevSpec.Excludes, excludesInterface) {
 			// report if allocated ip addresses have conflicts with the new IPPool (for example, in exclude list)
 			invalidAllocations := h.checkPoolValidity(excludesInterface, prevSpec.Allocations)
 			if len(invalidAllocations) > 0 {
-				h.Log.V(5).Info(fmt.Sprintf("Update IPPool %s - conflict allocation: %v", ippoolName, invalidAllocations))
+				vars.IPPoolLog.V(5).Info(fmt.Sprintf("Update IPPool %s - conflict allocation: %v", ippoolName, invalidAllocations))
 			}
 			if prevSpec.HostName != hostName && len(prevSpec.Allocations) > 0 {
-				h.Log.V(5).Info(fmt.Sprintf("Update IPPool %s - changes with exist %d allocations", ippoolName, len(prevSpec.Allocations)))
+				vars.IPPoolLog.V(5).Info(fmt.Sprintf("Update IPPool %s - changes with exist %d allocations", ippoolName, len(prevSpec.Allocations)))
 			}
 		}
 	} else {
@@ -146,11 +150,12 @@ func (h *IPPoolHandler) UpdateIPPool(netAttachDef string, podCIDR string, vlanCI
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      ippoolName,
 				Namespace: metav1.NamespaceAll,
+				Labels:    labels,
 			},
 			Spec: spec,
 		}
 		err = h.Client.Create(context.Background(), newIPPool)
-		h.Log.V(5).Info(fmt.Sprintf("New IPPool %s: %v, %v", ippoolName, newIPPool, err))
+		vars.IPPoolLog.V(5).Info(fmt.Sprintf("New IPPool %s: %v, %v", ippoolName, newIPPool, err))
 	}
 	return err
 }
@@ -195,7 +200,7 @@ func (h *IPPoolHandler) UpdateIPPools(defName string, entries []multinicv1.CIDRE
 		for _, host := range entry.Hosts {
 			err := h.UpdateIPPool(defName, host.PodCIDR, entry.VlanCIDR, host.HostName, host.InterfaceName, excludes)
 			if err != nil {
-				h.Log.V(5).Info(fmt.Sprintf("Cannot update IPPools for host %s: error=%v", host.HostName, err))
+				vars.IPPoolLog.V(5).Info(fmt.Sprintf("Cannot update IPPools for host %s: error=%v", host.HostName, err))
 			}
 		}
 	}
@@ -208,7 +213,7 @@ func (h *IPPoolHandler) SetCache(key string, value multinicv1.IPPoolSpec) {
 func (h *IPPoolHandler) GetCache(key string) (multinicv1.IPPoolSpec, error) {
 	value := h.SafeCache.GetCache(key)
 	if value == nil {
-		return multinicv1.IPPoolSpec{}, fmt.Errorf("Not Found")
+		return multinicv1.IPPoolSpec{}, errors.New(vars.NotFoundError)
 	}
 	return value.(multinicv1.IPPoolSpec), nil
 }
@@ -221,4 +226,14 @@ func (h *IPPoolHandler) ListCache() map[string]multinicv1.IPPoolSpec {
 	}
 	h.SafeCache.Unlock()
 	return snapshot
+}
+
+func (h *IPPoolHandler) AddLabel(ippool *multinicv1.IPPool) error {
+	hostName := ippool.Spec.HostName
+	netAttachDef := ippool.Spec.NetAttachDefName
+	labels := map[string]string{vars.HostNameLabel: hostName, vars.DefNameLabel: netAttachDef}
+	patch := client.MergeFrom(ippool.DeepCopy())
+	ippool.ObjectMeta.Labels = labels
+	err := h.Client.Patch(context.Background(), ippool, patch)
+	return err
 }

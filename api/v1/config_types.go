@@ -37,13 +37,18 @@ type HostPathMount struct {
 type ConfigSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	CNIType         string     `json:"cniType"`
-	IPAMType        string     `json:"ipamType"`
-	Daemon          DaemonSpec `json:"daemon"`
-	JoinPath        string     `json:"joinPath"`
-	InterfacePath   string     `json:"getInterfacePath"`
-	AddRoutePath    string     `json:"addRoutePath,omitempty"`
-	DeleteRoutePath string     `json:"deleteRoutePath,omitempty"`
+	CNIType                string     `json:"cniType"`
+	IPAMType               string     `json:"ipamType"`
+	Daemon                 DaemonSpec `json:"daemon"`
+	JoinPath               string     `json:"joinPath"`
+	InterfacePath          string     `json:"getInterfacePath"`
+	AddRoutePath           string     `json:"addRoutePath,omitempty"`
+	DeleteRoutePath        string     `json:"deleteRoutePath,omitempty"`
+	UrgentReconcileSeconds int        `json:"urgentReconcileSeconds,omitempty"`
+	NormalReconcileMinutes int        `json:"normalReconcileMinutes,omitempty"`
+	LongReconcileMinutes   int        `json:"longReconcileMinutes,omitempty"`
+	ContextTimeoutMinutes  int        `json:"contextTimeoutMinutes,omitempty"`
+	LogLevel               int        `json:"logLevel,omitempty"`
 }
 
 // ConfigStatus defines the observed state of Config

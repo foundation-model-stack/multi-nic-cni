@@ -2,7 +2,6 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: multi-nicd-stub-{{ .index }}
-  namespace: multi-nic-cni-operator-system
 spec:
   containers:
   - env:
@@ -12,7 +11,9 @@ spec:
       valueFrom:
         fieldRef:
           fieldPath: status.podIP
-    image: e2e-test/daemon-stub:latest
+    - name: NODENAME
+      value: kwok-node-{{ .index }}
+    image: {{ .image }}
     imagePullPolicy: IfNotPresent
     name: multi-nicd
     ports:
