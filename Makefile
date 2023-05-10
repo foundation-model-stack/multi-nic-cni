@@ -18,6 +18,7 @@ endif
 # - use environment variables to overwrite this value (e.g export VERSION=0.0.2)
 # VERSION ?= 0.0.1
 VERSION ?= 1.1.0
+export CHANNELS = "alpha"
 
 # CHANNELS define the bundle channels used in the bundle.
 # Add a new line here if you would like to change its default config. (E.g CHANNELS = "preview,fast,stable")
@@ -93,9 +94,13 @@ fmt: ## Run go fmt against code.
 vet: ## Run go vet against code.
 	go vet ./...
 
-ENVTEST_ASSETS_DIR=$(shell pwd)/testbin
+tidy:
+	go mod tidy
+
+BASE_DIR=$(shell pwd)
+ENVTEST_ASSETS_DIR=$(BASE_DIR)/testbin
 test: SHELL := /bin/bash
-test: manifests generate fmt vet ## Run tests.
+test: tidy manifests generate fmt vet ## Run tests.
 	mkdir -p ${ENVTEST_ASSETS_DIR}
 	test -f ${ENVTEST_ASSETS_DIR}/setup-envtest.sh || curl -sSLo ${ENVTEST_ASSETS_DIR}/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.7.2/hack/setup-envtest.sh
 	source ${ENVTEST_ASSETS_DIR}/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); go test ./... -coverprofile cover.out
@@ -107,6 +112,14 @@ build: generate fmt vet ## Build manager binary.
 
 run: manifests generate fmt vet ## Run a controller from your host.
 	go run ./main.go
+
+golint:
+	docker pull golangci/golangci-lint:latest
+	docker run --tty --rm \
+		--volume '$(BASE_DIR):/app' \
+		--workdir /app \
+		golangci/golangci-lint \
+		golangci-lint run --verbose
 
 docker-build: test ## Build docker image with the manager.
 	docker build -t ${IMG} .

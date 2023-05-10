@@ -37,10 +37,16 @@ func (p *AwsVpcCNIPlugin) GetConfig(net multinicv1.MultiNicNetwork, hifList map[
 	spec := net.Spec.MainPlugin
 	args := spec.CNIArgs
 	conf := &AWSIPVLANNetConf{}
-	argBytes, _ := json.Marshal(args)
-	json.Unmarshal(argBytes, conf)
 	conf.CNIVersion = net.Spec.MainPlugin.CNIVersion
 	conf.Type = AWS_IPVLAN_TYPE
+	var primaryIP map[string]interface{}
+	err := json.Unmarshal([]byte(args["primaryIP"]), &primaryIP)
+	if err == nil {
+		conf.PrimaryIP = primaryIP
+	}
+	conf.PodIP = args["podIP"]
+	conf.Master = args["master"]
+	conf.Mode = args["mode"]
 	val, err := getInt(args, "mtu")
 	if err == nil {
 		conf.MTU = val
