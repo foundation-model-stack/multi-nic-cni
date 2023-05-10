@@ -16,6 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	multinicv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
 	"github.com/foundation-model-stack/multi-nic-cni/controllers/vars"
@@ -31,28 +32,20 @@ import (
 	"os"
 )
 
-const (
-	SERVICE_ACCOUNT_NAME       = "multi-nic-cni-operator-controller-manager"
-	DEFAULT_OPERATOR_NAMESPACE = "multi-nic-cni-operator-system"
-
-	// NetworkAttachmentDefinition watching queue size
-	MAX_QSIZE = 100
-)
+const configFinalizer = "finalizers.config.multinic.fms.io"
 
 var (
 	OPERATOR_NAMESPACE string = getOperatorNamespace()
 	ConfigReady        bool   = false
 	// referred by daemon watcher
-	DAEMON_LABEL_NAME         = "app"
-	DAEMON_LABEL_VALUE        = "multi-nicd"
-	DaemonName         string = DAEMON_LABEL_VALUE
+	DaemonName string = vars.DaemonLabelValue
 )
 
 func getOperatorNamespace() string {
 	key := "OPERATOR_NAMESPACE"
 	val, found := os.LookupEnv(key)
 	if !found {
-		return DEFAULT_OPERATOR_NAMESPACE
+		return vars.DefaultOperatorNamespace
 	}
 	return val
 }
@@ -74,13 +67,10 @@ type ConfigReconciler struct {
 //+kubebuilder:rbac:groups=multinic.fms.io,resources=configs,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=multinic.fms.io,resources=configs/status,verbs=get;update;patch
 
-func (r *ConfigReconciler) CreateDefaultDaemonConfig() error {
-	objMeta := metav1.ObjectMeta{
-		Name: DaemonName,
-	}
+func (r *ConfigReconciler) getDefaultConfigSpec() multinicv1.ConfigSpec {
 	daemonEnv := corev1.EnvVar{
 		Name:  "DAEMON_PORT",
-		Value: "11000",
+		Value: fmt.Sprintf("%d", vars.DefaultDaemonPort),
 	}
 	routeEnv := corev1.EnvVar{
 		Name:  "RT_TABLE_PATH",
@@ -90,7 +80,7 @@ func (r *ConfigReconciler) CreateDefaultDaemonConfig() error {
 	binMnt := multinicv1.HostPathMount{
 		Name:        "cnibin",
 		PodCNIPath:  "/host/opt/cni/bin",
-		HostCNIPath: "/var/lib/cni/bin",
+		HostCNIPath: r.getCNIHostPath(),
 	}
 	devPluginMnt := multinicv1.HostPathMount{
 		Name:        "device-plugin",
@@ -114,25 +104,33 @@ func (r *ConfigReconciler) CreateDefaultDaemonConfig() error {
 		Privileged: &privileged,
 	}
 	daemonSpec := multinicv1.DaemonSpec{
-		Image:           "ghcr.io/foundation-model-stack/multi-nic-cni-daemon:v1.0.4",
+		Image:           vars.DefaultDaemonImage,
 		Env:             env,
 		HostPathMounts:  hostPathMounts,
 		Resources:       resources,
 		SecurityContext: securityContext,
-		DaemonPort:      11000,
+		DaemonPort:      vars.DefaultDaemonPort,
 	}
 	spec := multinicv1.ConfigSpec{
-		CNIType:         "multi-nic",
-		IPAMType:        "multi-nic-ipam",
+		CNIType:         vars.DefaultCNIType,
+		IPAMType:        vars.DefaultIPAMType,
 		Daemon:          daemonSpec,
-		JoinPath:        "/join",
-		InterfacePath:   "/interface",
-		AddRoutePath:    "/addl3",
-		DeleteRoutePath: "/deletel3",
+		JoinPath:        vars.DefaultJoinPath,
+		InterfacePath:   vars.DefaultInterfacePath,
+		AddRoutePath:    vars.DefaultAddRoutePath,
+		DeleteRoutePath: vars.DefaultDeleteRoutePath,
 	}
+	return spec
+}
+
+func (r *ConfigReconciler) CreateDefaultDaemonConfig() error {
+	objMeta := metav1.ObjectMeta{
+		Name: DaemonName,
+	}
+
 	cfg := &multinicv1.Config{
 		ObjectMeta: objMeta,
-		Spec:       spec,
+		Spec:       r.getDefaultConfigSpec(),
 	}
 	err := r.Client.Create(context.TODO(), cfg)
 	return err
@@ -148,16 +146,39 @@ func (r *ConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
 			// Return and don't requeue
-			err = r.callFinalizer(vars.ConfigLog, req.NamespacedName.Name)
-			if err != nil {
-				vars.ConfigLog.V(1).Info(fmt.Sprintf("Failed to finalize %s: %v ", req.NamespacedName.Name, err))
-			}
 			return ctrl.Result{}, nil
 		}
 		vars.ConfigLog.V(7).Info(fmt.Sprintf("Cannot get #%v ", err))
 		// Error reading the object - requeue the request.
 		return ctrl.Result{RequeueAfter: vars.LongReconcileTime}, nil
 	}
+
+	// Add finalizer to instance
+	if !controllerutil.ContainsFinalizer(instance, configFinalizer) {
+		controllerutil.AddFinalizer(instance, configFinalizer)
+		err = r.Update(ctx, instance)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
+	// If config is deleted, delete corresponding daemonset
+	is_deleted := instance.GetDeletionTimestamp() != nil
+	if is_deleted {
+		if controllerutil.ContainsFinalizer(instance, configFinalizer) {
+			if err = r.callFinalizer(vars.ConfigLog, req.NamespacedName.Name); err != nil {
+				return ctrl.Result{}, err
+			}
+
+			controllerutil.RemoveFinalizer(instance, configFinalizer)
+			err := r.Client.Update(ctx, instance)
+			if err != nil {
+				return ctrl.Result{}, err
+			}
+		}
+		return ctrl.Result{}, nil
+	}
+
 	r.UpdateConfigBySpec(&instance.Spec)
 
 	if !ConfigReady {
@@ -172,17 +193,17 @@ func (r *ConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	_, err = r.Clientset.AppsV1().DaemonSets(OPERATOR_NAMESPACE).Get(context.TODO(), dsName, metav1.GetOptions{})
 	daemonset := r.newCNIDaemonSet(r.Clientset, dsName, instance.Spec.Daemon)
 	if err != nil {
-		// - create CNI daemonset, and NetworkAttachmentDefinition watcher if not exist
+		// - create CNI daemonset
 		if errors.IsNotFound(err) {
-			r.newNetAttachDefWatcher(instance)
+			SetDaemonConnector(instance.Spec)
 			_, err = r.Clientset.AppsV1().DaemonSets(OPERATOR_NAMESPACE).Create(context.TODO(), daemonset, metav1.CreateOptions{})
 			vars.ConfigLog.V(7).Info(fmt.Sprintf("Create new multi-nic daemonset #%s (cni=%s,ipam=%s), err=%v ", dsName, instance.Spec.CNIType, instance.Spec.IPAMType, err))
 		} else {
 			vars.ConfigLog.Info(fmt.Sprintf("Cannot get daemonset #%v ", err))
 		}
 	} else {
-		// - otherwise, update the existing daemonset and restart NetworkAttachmentDefinition watcher
-		r.newNetAttachDefWatcher(instance)
+		// - otherwise, update the existing daemonset
+		SetDaemonConnector(instance.Spec)
 		_, err = r.Clientset.AppsV1().DaemonSets(OPERATOR_NAMESPACE).Update(context.TODO(), daemonset, metav1.UpdateOptions{})
 		vars.ConfigLog.V(7).Info(fmt.Sprintf("Update multi-nic daemonset #%s, err=%v ", dsName, err))
 	}
@@ -224,19 +245,13 @@ func (r *ConfigReconciler) UpdateConfigBySpec(spec *multinicv1.ConfigSpec) {
 			vars.SetLog()
 		}
 	}
-}
-
-// newNetAttachDefWatcher restarts NetworkAttachmentDefinition watcher
-func (r *ConfigReconciler) newNetAttachDefWatcher(instance *multinicv1.Config) {
-	vars.DaemonPort = instance.Spec.Daemon.DaemonPort
-	vars.TargetCNI = instance.Spec.CNIType
-	DaemonName = instance.GetName()
-	SetDaemon(instance.Spec)
+	vars.DaemonPort = spec.Daemon.DaemonPort
+	vars.TargetCNI = spec.CNIType
 }
 
 // newCNIDaemonSet creates new CNI daemonset
 func (r *ConfigReconciler) newCNIDaemonSet(client *kubernetes.Clientset, name string, daemonSpec multinicv1.DaemonSpec) *appsv1.DaemonSet {
-	labels := map[string]string{DAEMON_LABEL_NAME: DAEMON_LABEL_VALUE}
+	labels := map[string]string{vars.DeamonLabelKey: vars.DaemonLabelValue}
 
 	// prepare container port
 	containerPort := corev1.ContainerPort{ContainerPort: int32(daemonSpec.DaemonPort)}
@@ -306,7 +321,7 @@ func (r *ConfigReconciler) newCNIDaemonSet(client *kubernetes.Clientset, name st
 				ObjectMeta: metav1.ObjectMeta{Labels: labels},
 				Spec: corev1.PodSpec{
 					HostNetwork:        true,
-					ServiceAccountName: SERVICE_ACCOUNT_NAME,
+					ServiceAccountName: vars.ServiceAccountName,
 					NodeSelector:       daemonSpec.NodeSelector,
 					Tolerations:        daemonSpec.Tolerations,
 					Containers: []corev1.Container{
@@ -320,12 +335,40 @@ func (r *ConfigReconciler) newCNIDaemonSet(client *kubernetes.Clientset, name st
 	}
 }
 
+func (r *ConfigReconciler) getCNIHostPath() string {
+	ctx, cancel := context.WithTimeout(context.Background(), vars.ContextTimeout)
+	defer cancel()
+	// find multus pod
+	labels := fmt.Sprintf("%s=%s", vars.MultusLabelKey, vars.MultusLabelValue)
+	listOptions := metav1.ListOptions{
+		LabelSelector: labels,
+		Limit:         1,
+	}
+	multusPods, err := r.Clientset.CoreV1().Pods(metav1.NamespaceAll).List(ctx, listOptions)
+	if err != nil {
+		return vars.DefaultCNIHostPath
+	}
+	for _, multusPod := range multusPods.Items {
+		volumes := multusPod.Spec.Volumes
+		for _, volume := range volumes {
+			if volume.Name == vars.CNIBinVolumeName {
+				if volume.HostPath != nil {
+					cniPath := volume.HostPath.Path
+					vars.ConfigLog.Info(fmt.Sprintf("Find Multus CNI path: %s", cniPath))
+					return cniPath
+				} else {
+					// hostpath is not defined
+					return vars.DefaultCNIHostPath
+				}
+			}
+		}
+	}
+	return vars.DefaultCNIHostPath
+}
+
 // callFinalizer deletes all CIDRs, waits for all ippools deleted, deletes CNI deamonset, and stops NetworkAttachmentDefinition watcher
 func (r *ConfigReconciler) callFinalizer(reqLogger logr.Logger, dsName string) error {
-	// reset default name
-	DaemonName = DAEMON_LABEL_VALUE
 	reqLogger.Info(fmt.Sprintf("Finalize %s", dsName))
-
 	// delete all CIDRs
 	cidrMap, err := r.CIDRHandler.ListCIDR()
 	if err == nil {

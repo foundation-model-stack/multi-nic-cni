@@ -107,7 +107,7 @@ func NewDaemonWatcher(client client.Client, config *rest.Config, hostInterfaceHa
 
 // getDaemonPods returns all daemon pod
 func (w *DaemonWatcher) getDaemonPods() (*v1.PodList, error) {
-	labels := fmt.Sprintf("%s=%s", DAEMON_LABEL_NAME, DAEMON_LABEL_VALUE)
+	labels := fmt.Sprintf("%s=%s", vars.DeamonLabelKey, vars.DaemonLabelValue)
 	listOptions := metav1.ListOptions{
 		LabelSelector: labels,
 	}
@@ -186,8 +186,8 @@ func (w *DaemonWatcher) ProcessPodQueue() {
 
 // isDaemonPod checks if created/updated pod label with DEFAULT_DAEMON_LABEL_NAME=DEFAULT_DAEMON_LABEL_VALUE
 func isDaemonPod(pod *v1.Pod) bool {
-	if val, ok := pod.ObjectMeta.Labels[DAEMON_LABEL_NAME]; ok {
-		if val == DAEMON_LABEL_VALUE {
+	if val, ok := pod.ObjectMeta.Labels[vars.DeamonLabelKey]; ok {
+		if val == vars.DaemonLabelValue {
 			return true
 		}
 	}

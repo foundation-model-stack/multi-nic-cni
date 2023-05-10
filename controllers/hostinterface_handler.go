@@ -8,6 +8,7 @@ package controllers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
 
@@ -118,7 +119,7 @@ func (h *HostInterfaceHandler) SetCache(key string, value multinicv1.HostInterfa
 func (h *HostInterfaceHandler) GetCache(key string) (multinicv1.HostInterface, error) {
 	value := h.SafeCache.GetCache(key)
 	if value == nil {
-		return multinicv1.HostInterface{}, fmt.Errorf("Not Found")
+		return multinicv1.HostInterface{}, errors.New(vars.NotFoundError)
 	}
 	return value.(multinicv1.HostInterface), nil
 }
