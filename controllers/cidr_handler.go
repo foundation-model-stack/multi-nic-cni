@@ -55,7 +55,7 @@ type CIDRHandler struct {
 func NewCIDRHandler(client client.Client, config *rest.Config, hostInterfaceHandler *HostInterfaceHandler, daemonCache *DaemonCacheHandler, quit chan struct{}) *CIDRHandler {
 	clientset, _ := kubernetes.NewForConfig(config)
 	cidrCompute := compute.CIDRCompute{}
-	updateReq := make(chan struct{}, MAX_QSIZE)
+	updateReq := make(chan struct{}, vars.MaxQueueSize)
 	handler := &CIDRHandler{
 		Client:               client,
 		Clientset:            clientset,

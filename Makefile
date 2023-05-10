@@ -126,8 +126,6 @@ clean-resource:
 	@cd ./live-migration && chmod +x live_migrate.sh && ./live_migrate.sh _clean_resource
 
 predeploy: manifests kustomize
-	rm -f config/samples/multinic.fms.io_config.yaml
-	envsubst < config/samples/multinic.fms.io_config.template > config/samples/multinic.fms.io_config.yaml
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	cd config/samples && $(KUSTOMIZE) edit set image multi-nic-cni-daemon=${DAEMON_IMG}
 

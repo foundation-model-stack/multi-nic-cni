@@ -31,28 +31,18 @@ import (
 	"os"
 )
 
-const (
-	SERVICE_ACCOUNT_NAME       = "multi-nic-cni-operator-controller-manager"
-	DEFAULT_OPERATOR_NAMESPACE = "multi-nic-cni-operator-system"
-
-	// NetworkAttachmentDefinition watching queue size
-	MAX_QSIZE = 100
-)
-
 var (
 	OPERATOR_NAMESPACE string = getOperatorNamespace()
 	ConfigReady        bool   = false
 	// referred by daemon watcher
-	DAEMON_LABEL_NAME         = "app"
-	DAEMON_LABEL_VALUE        = "multi-nicd"
-	DaemonName         string = DAEMON_LABEL_VALUE
+	DaemonName string = vars.DaemonLabelValue
 )
 
 func getOperatorNamespace() string {
 	key := "OPERATOR_NAMESPACE"
 	val, found := os.LookupEnv(key)
 	if !found {
-		return DEFAULT_OPERATOR_NAMESPACE
+		return vars.DefaultOperatorNamespace
 	}
 	return val
 }
@@ -90,7 +80,7 @@ func (r *ConfigReconciler) CreateDefaultDaemonConfig() error {
 	binMnt := multinicv1.HostPathMount{
 		Name:        "cnibin",
 		PodCNIPath:  "/host/opt/cni/bin",
-		HostCNIPath: "/var/lib/cni/bin",
+		HostCNIPath: r.getCNIHostPath(),
 	}
 	devPluginMnt := multinicv1.HostPathMount{
 		Name:        "device-plugin",
@@ -236,7 +226,7 @@ func (r *ConfigReconciler) newNetAttachDefWatcher(instance *multinicv1.Config) {
 
 // newCNIDaemonSet creates new CNI daemonset
 func (r *ConfigReconciler) newCNIDaemonSet(client *kubernetes.Clientset, name string, daemonSpec multinicv1.DaemonSpec) *appsv1.DaemonSet {
-	labels := map[string]string{DAEMON_LABEL_NAME: DAEMON_LABEL_VALUE}
+	labels := map[string]string{vars.DeamonLabelKey: vars.DaemonLabelValue}
 
 	// prepare container port
 	containerPort := corev1.ContainerPort{ContainerPort: int32(daemonSpec.DaemonPort)}
@@ -306,7 +296,7 @@ func (r *ConfigReconciler) newCNIDaemonSet(client *kubernetes.Clientset, name st
 				ObjectMeta: metav1.ObjectMeta{Labels: labels},
 				Spec: corev1.PodSpec{
 					HostNetwork:        true,
-					ServiceAccountName: SERVICE_ACCOUNT_NAME,
+					ServiceAccountName: vars.ServiceAccountName,
 					NodeSelector:       daemonSpec.NodeSelector,
 					Tolerations:        daemonSpec.Tolerations,
 					Containers: []corev1.Container{
@@ -320,10 +310,41 @@ func (r *ConfigReconciler) newCNIDaemonSet(client *kubernetes.Clientset, name st
 	}
 }
 
+func (r *ConfigReconciler) getCNIHostPath() string {
+	ctx, cancel := context.WithTimeout(context.Background(), vars.ContextTimeout)
+	defer cancel()
+	// find multus pod
+	labels := fmt.Sprintf("%s=%s", vars.MultusLabelKey, vars.MultusLabelValue)
+	listOptions := metav1.ListOptions{
+		LabelSelector: labels,
+		Limit:         1,
+	}
+	multusPods, err := r.Clientset.CoreV1().Pods(metav1.NamespaceAll).List(ctx, listOptions)
+	if err != nil {
+		return vars.DefaultCNIHostPath
+	}
+	for _, multusPod := range multusPods.Items {
+		volumes := multusPod.Spec.Volumes
+		for _, volume := range volumes {
+			if volume.Name == vars.CNIBinVolumeName {
+				if volume.HostPath != nil {
+					cniPath := volume.HostPath.Path
+					vars.ConfigLog.Info(fmt.Sprintf("Find Multus CNI path: %s", cniPath))
+					return cniPath
+				} else {
+					// hostpath is not defined
+					return vars.DefaultCNIHostPath
+				}
+			}
+		}
+	}
+	return vars.DefaultCNIHostPath
+}
+
 // callFinalizer deletes all CIDRs, waits for all ippools deleted, deletes CNI deamonset, and stops NetworkAttachmentDefinition watcher
 func (r *ConfigReconciler) callFinalizer(reqLogger logr.Logger, dsName string) error {
 	// reset default name
-	DaemonName = DAEMON_LABEL_VALUE
+	DaemonName = vars.DaemonLabelValue
 	reqLogger.Info(fmt.Sprintf("Finalize %s", dsName))
 
 	// delete all CIDRs

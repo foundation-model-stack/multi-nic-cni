@@ -23,13 +23,23 @@ const (
 	NodeNameKey       = "K8S_NODENAME"
 
 	// common constant
-	PodStatusField    = "status.phase"
-	PodStatusRunning  = "Running"
-	JoinLabelName     = "multi-nicd-join"
-	HostNameLabel     = "hostname"
-	DefNameLabel      = "netname"
-	TestModeLabel     = "test-mode"
-	DefaultDaemonPort = 11000
+	PodStatusField           = "status.phase"
+	PodStatusRunning         = "Running"
+	JoinLabelName            = "multi-nicd-join"
+	HostNameLabel            = "hostname"
+	DefNameLabel             = "netname"
+	TestModeLabel            = "test-mode"
+	DefaultDaemonPort        = 11000
+	DeamonLabelKey           = "app"
+	DaemonLabelValue         = "multi-nicd"
+	ServiceAccountName       = "multi-nic-cni-operator-controller-manager"
+	DefaultOperatorNamespace = "multi-nic-cni-operator-system"
+
+	//	multus-related constants
+	MultusLabelKey     = "app"
+	MultusLabelValue   = "multus"
+	DefaultCNIHostPath = "/var/lib/cni/bin"
+	CNIBinVolumeName   = "cnibin"
 
 	// errors
 	ConnectionRefusedError = "connection refused"
