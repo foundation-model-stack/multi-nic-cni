@@ -122,7 +122,8 @@ func (r *HostInterfaceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 
 	if !ConfigReady || !r.DaemonWatcher.IsDaemonSetReady() {
-		return ctrl.Result{RequeueAfter: vars.NormalReconcileTime}, nil
+		// only hostinterface must be reconciled urgently after config is ready because it's tightly coupling with daemon
+		return ctrl.Result{RequeueAfter: vars.UrgentReconcileTime}, nil
 	}
 
 	vars.HifLog.V(7).Info(fmt.Sprintf("HostInterface reconciled: %s", instance.ObjectMeta.Name))
