@@ -320,6 +320,7 @@ func (r *ConfigReconciler) newCNIDaemonSet(client *kubernetes.Clientset, name st
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{Labels: labels},
 				Spec: corev1.PodSpec{
+					PriorityClassName:  "system-cluster-critical",
 					HostNetwork:        true,
 					ServiceAccountName: vars.ServiceAccountName,
 					NodeSelector:       daemonSpec.NodeSelector,
