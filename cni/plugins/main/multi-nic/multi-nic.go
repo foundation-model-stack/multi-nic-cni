@@ -184,7 +184,8 @@ func cmdDel(args *skel.CmdArgs) error {
 	ips := []*current.IPConfig{}
 	n, deviceType, err := loadConf(args)
 	if err != nil {
-		return fmt.Errorf("fail to load conf: %v", err)
+		utils.Logger.Debug(fmt.Sprintf("fail to load conf: %v", err))
+		return nil
 	}
 	utils.Logger.Debug(fmt.Sprintf("Received an DEL request for: conf=%v", n))
 	// On chained invocation, IPAM block can be empty
@@ -225,7 +226,7 @@ func cmdDel(args *skel.CmdArgs) error {
 	}
 	if err != nil {
 		utils.Logger.Debug(fmt.Sprintf("Fail loading %v: %v", string(args.StdinData), err))
-		return err
+		return nil
 	}
 	if len(confBytesArray) == 0 {
 		utils.Logger.Debug(fmt.Sprintf("zero config on cmdDel: %v (%d)", string(args.StdinData), len(n.Masters)))
@@ -241,7 +242,6 @@ func cmdDel(args *skel.CmdArgs) error {
 			return nil
 		}
 	}
-
 	return nil
 }
 
@@ -252,18 +252,21 @@ func cmdCheck(args *skel.CmdArgs) error {
 
 	n, deviceType, err := loadConf(args)
 	if err != nil {
-		return fmt.Errorf("fail to load conf")
+		utils.Logger.Debug(fmt.Sprintf("fail to load conf: %v", err))
+		return nil
 	}
 
 	var result *current.Result
 	// parse previous result
 	if n.NetConf.RawPrevResult != nil {
 		if err = version.ParsePrevResult(&n.NetConf); err != nil {
-			return fmt.Errorf("could not parse prevResult: %v", err)
+			utils.Logger.Debug(fmt.Sprintf("could not parse prevResult: %v", err))
+			return nil
 		}
 		result, err = current.NewResultFromResult(n.NetConf.PrevResult)
 		if err != nil {
-			return fmt.Errorf("could not convert result to current version: %v", err)
+			utils.Logger.Debug(fmt.Sprintf("could not convert result to current version: %v", err))
+			return nil
 		}
 	} else {
 		result = &current.Result{CNIVersion: current.ImplementedSpecVersion}
@@ -283,7 +286,7 @@ func cmdCheck(args *skel.CmdArgs) error {
 	}
 	if err != nil {
 		utils.Logger.Debug(fmt.Sprintf("Fail loading %v: %v", string(args.StdinData), err))
-		return err
+		return nil
 	}
 	if len(confBytesArray) == 0 {
 		utils.Logger.Debug(fmt.Sprintf("zero config on cmdCheck: %v (%d)", string(args.StdinData), len(n.Masters)))
@@ -295,10 +298,10 @@ func cmdCheck(args *skel.CmdArgs) error {
 		utils.Logger.Debug(fmt.Sprintf("Exec %s %s: %s", command, ifName, string(confBytes)))
 		_, err := execPlugin(deviceType, command, confBytes, args, ifName, false)
 		if err != nil {
-			return err
+			utils.Logger.Debug(fmt.Sprintf("Fail execPlugin %v: %v", string(confBytes), err))
+			return nil
 		}
 	}
-
 	return nil
 }
 
