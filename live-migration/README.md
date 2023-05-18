@@ -75,16 +75,7 @@ To reinstall/upgrade multi-nic-cni-operator without affecting workloads running 
    
     4.1 install operator via GUI (recommended). For other installation, check [Installation Guide](https://foundation-model-stack.github.io/multi-nic-cni/user_guide/#quick-installation).
 
-    4.2 If multi-nicd image also need to be updated, run
-    ```bash
-    ./live_migrate.sh patch_daemon
-    ```
-
-    4.3 Wait until multi-nicd daemon is all running:
-    ```bash
-    ./live_migrate.sh wait_daemon
-    ```
-    4.4 Check if CRs are deleted or not (not deleted by default):
+    4.2 Check if CRs are deleted or not (not deleted by default):
     ```bash
     kubectl get cidr
     ```
@@ -92,9 +83,9 @@ To reinstall/upgrade multi-nic-cni-operator without affecting workloads running 
     # expected output if CRs are deleted
     No resources found
     ```
-    If CRs are deleted (for example, by operator-sdk cleanup or with CRD updates, by updated CDR), do 4.5 - 4.7
+    If CRs are deleted (for example, by operator-sdk cleanup or with CRD updates, by updated CDR), do 4.3 - 4.5
     
-    4.5 deploy dump multinicnetwork
+    4.3 deploy dump multinicnetwork
     ```bash
     ./live_migrate.sh deactivate_route_config
     ```
@@ -103,11 +94,11 @@ To reinstall/upgrade multi-nic-cni-operator without affecting workloads running 
     multinicnetwork.multinic.fms.io/<multinicnetwork-name> configured
     Deactivate route configuration.
     ```
-    4.6 apply snapshot status CR
+    4.4 apply snapshot status CR
     ```bash
     ./live_migrate.sh deploy_status_cr
     ```
-    4.7 restart controller to activate cache initialization
+    4.5 restart controller to activate cache initialization
     ```bash
     ./live_migrate.sh restart_controller
     ```
@@ -130,7 +121,7 @@ To reinstall/upgrade multi-nic-cni-operator without affecting workloads running 
     Activate route configuration.
     ```
     
-6. Check multinicnetwork status (available from v1.0.3)
+6. Check multinicnetwork status (available from v1.0.3), wait until all Success.
    ```bash
    ./live_migrate.sh get_status
     ```
@@ -140,4 +131,15 @@ To reinstall/upgrade multi-nic-cni-operator without affecting workloads running 
    <multinicnetwork-name>   Success        Success       5           5                      5          2023-02-02T09:31:06Z
    ```
 
-7. Try [check connection](../README.md#check-connections).
+7. Check functionality and connectivity with [health checker](../health-check/) if deployed. 
+
+    ```
+    # forward port on one terminal
+    checker=$(kubectl get po -n openshift-operators|grep multi-nic-cni-health-checker|awk '{ print $1 }')
+    kubectl port-forward ${checker} -n openshift-operators 8080:8080
+
+    # request the status check on another terminal. This request will activate the health check signal at the request time.
+    curl localhost:8080/status|jq
+    ```
+
+8. (Optional) Try [manual health check](../README.md#check-connections).
