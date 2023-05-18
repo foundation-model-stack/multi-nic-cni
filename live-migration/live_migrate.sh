@@ -25,7 +25,7 @@ get_controller_log() {
 }
 
 get_status() {
-    kubectl get multinicnetwork -o custom-columns=NAME:.metadata.name,ConfigStatus:.status.configStatus,RouteStatus:.status.routeStatus,TotalHost:.status.discovery.existDaemon,HostWithSecondaryNIC:.status.discovery.infoAvailable,ProcessedHost:.status.discovery.cidrProcessed,Time:.status.lastSyncTime
+    kubectl get multinicnetwork -o custom-columns=NAME:.metadata.name,ConfigStatus:.status.configStatus,RouteStatus:.status.routeStatus,TotalHost:.status.discovery.existDaemon,HostWithSecondaryNIC:.status.discovery.infoAvailable,ProcessedHost:.status.discovery.cidrProcessed,Time:.status.lastSyncTime -w
 }
 
 get_secondary_ip() {
@@ -197,6 +197,7 @@ restart_controller() {
     while [ -z "$ready" ];
     do
         sleep 5
+        kubectl get po -n ${OPERATOR_NAMESPACE}|grep multi-nic-cni-operator-controller-manager
         echo "Wait for config to be ready..."
         ready=$(echo $(get_controller_log)|grep ConfigReady)
     done
