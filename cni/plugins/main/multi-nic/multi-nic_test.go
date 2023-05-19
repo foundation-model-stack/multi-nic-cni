@@ -125,9 +125,8 @@ func buildOneConfig(cniVersion string, orig *NetConf, prevResult types.Result) (
 
 }
 
-func multinicAddCheckDelTest(conf, masterName string, originalNS, targetNS ns.NetNS) {
-	log.Printf("multinicAddCheckDelTest")
-	log.Printf("%s", conf)
+func multinicAddTest(conf, masterName string, originalNS, targetNS ns.NetNS) types.Result {
+	log.Printf("Add %s", conf)
 	// Unmarshal to pull out CNI spec version
 	rawConfig := make(map[string]interface{})
 	err := json.Unmarshal([]byte(conf), &rawConfig)
@@ -176,6 +175,23 @@ func multinicAddCheckDelTest(conf, masterName string, originalNS, targetNS ns.Ne
 		return nil
 	})
 	Expect(err).NotTo(HaveOccurred())
+	return result
+}
+
+func multinicCheckDelTest(conf, masterName string, originalNS, targetNS ns.NetNS, result types.Result) {
+	log.Printf("CheckDel %s", conf)
+	// Unmarshal to pull out CNI spec version
+	rawConfig := make(map[string]interface{})
+	err := json.Unmarshal([]byte(conf), &rawConfig)
+	Expect(err).NotTo(HaveOccurred())
+	cniVersion := rawConfig["cniVersion"].(string)
+
+	args := &skel.CmdArgs{
+		ContainerID: "dummy",
+		Netns:       targetNS.Path(),
+		IfName:      "net1",
+		StdinData:   []byte(conf),
+	}
 
 	n := &NetConf{}
 	err = json.Unmarshal([]byte(conf), &n)
@@ -226,6 +242,19 @@ func multinicAddCheckDelTest(conf, masterName string, originalNS, targetNS ns.Ne
 		return nil
 	})
 	Expect(err).NotTo(HaveOccurred())
+}
+
+func multinicAddCheckDelTest(conf, masterName string, originalNS, targetNS ns.NetNS) {
+	log.Printf("multinicAddCheckDelTest")
+	result := multinicAddTest(conf, masterName, originalNS, targetNS)
+	multinicCheckDelTest(conf, masterName, originalNS, targetNS, result)
+}
+
+func multinicDelWithoutDaemonTest(conf, masterName string, originalNS, targetNS ns.NetNS) {
+	log.Printf("multinicDelWithoutDaemonTest")
+	result := multinicAddTest(conf, masterName, originalNS, targetNS)
+	confWithoutDaemon := strings.ReplaceAll(conf, BRIDGE_HOST_IP, "")
+	multinicCheckDelTest(confWithoutDaemon, masterName, originalNS, targetNS, result)
 }
 
 type tester interface {
@@ -405,6 +434,7 @@ var _ = Describe("Operations", func() {
 			`, BRIDGE_HOST_IP, daemonPort)
 			conf := getConfig(ver, multiNICIPAM, masterNets)
 			multinicAddCheckDelTest(conf, "", originalNS, targetNS)
+			multinicDelWithoutDaemonTest(conf, "", originalNS, targetNS)
 		})
 
 		It(fmt.Sprintf("[%s] configures and deconfigures link with ADD/DEL (single-nic IPAM)", ver), func() {
