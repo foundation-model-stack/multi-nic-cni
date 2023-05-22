@@ -1,4 +1,4 @@
-# Troubleshooting 
+# Manual Troubleshooting
 Before start troubleshooting, set common variables for reference simplicity.
 ```bash
 export FAILED_POD= # pod that fails to run
@@ -153,11 +153,22 @@ If yes, try [restarting multi-nic-cni controller node](#restart-controller) to f
 
 ## Actions
 
-### Get CNI log
+### Get CNI log (available after v1.0.3)
 ```bash
+# default main plugin
 kubectl exec $(kubectl get po -owide -A|grep multi-nicd\
 |grep $FAILED_NODE|awk '{printf "%s -n %s", $2, $1}')\
 -- cat /host/var/log/multi-nic-cni.log
+
+# multi-nic on aws main plugin
+kubectl exec $(kubectl get po -owide -A|grep multi-nicd\
+|grep $FAILED_NODE|awk '{printf "%s -n %s", $2, $1}')\
+-- cat /var/log/multi-nic-aws-ipvlan.log
+
+# IPAM plugin
+kubectl exec $(kubectl get po -owide -A|grep multi-nicd\
+|grep $FAILED_NODE|awk '{printf "%s -n %s", $2, $1}')\
+-- cat /host/var/log/multi-nic-ipam.log
 ```
 ### Get Controller log
 ```bash

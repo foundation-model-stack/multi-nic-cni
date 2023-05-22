@@ -24,7 +24,7 @@ kubectl apply -f deploy/
 **by bundle with operator-sdk**
 
 ```bash
-operator-sdk run bundle ghcr.io/foundation-model-stack/multi-nic-cni-bundle:v1.0.2
+operator-sdk run bundle ghcr.io/foundation-model-stack/multi-nic-cni-bundle:v1.0.4
 ```
 ## Deploy MultiNicNetwork resource
 

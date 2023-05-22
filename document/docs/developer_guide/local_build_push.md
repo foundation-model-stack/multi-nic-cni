@@ -58,7 +58,12 @@
 
 ## Test
 ```bash
+# test golang linter (available after v1.0.4)
+make golint
+# test controller 
 make test
+# test daemon (available after v1.0.3)
+make test-daemon
 ```
 
 ## Install operator
