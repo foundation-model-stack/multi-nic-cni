@@ -113,6 +113,7 @@ func (h *NetAttachDefHandler) CreateOrUpdate(net *multinicv1.MultiNicNetwork, pl
 	if err != nil {
 		return err
 	}
+	errMsg := ""
 	for _, def := range defs {
 		name := def.GetName()
 		namespace := def.GetNamespace()
@@ -122,14 +123,17 @@ func (h *NetAttachDefHandler) CreateOrUpdate(net *multinicv1.MultiNicNetwork, pl
 			def.ObjectMeta = existingDef.ObjectMeta
 			err := h.DynamicHandler.Update(namespace, def, result)
 			if err != nil {
-				return err
+				errMsg = fmt.Sprintf("%s\n%s: %v", errMsg, namespace, err)
 			}
 		} else {
 			err := h.DynamicHandler.Create(namespace, def, result)
 			if err != nil {
-				return err
+				errMsg = fmt.Sprintf("%s\n%s: %v", errMsg, namespace, err)
 			}
 		}
+	}
+	if errMsg != "" {
+		return fmt.Errorf(errMsg)
 	}
 	return nil
 }
