@@ -70,6 +70,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 	// open specified network namespace
 	netns, err := ns.GetNS(args.Netns)
 	if err != nil {
+		utils.Logger.Debug(fmt.Sprintf("failed to open netns %q: %v", args.Netns, err))
 		return fmt.Errorf("failed to open netns %q: %v", args.Netns, err)
 	}
 	defer netns.Close()
@@ -80,11 +81,13 @@ func cmdAdd(args *skel.CmdArgs) error {
 	// parse previous result
 	if n.NetConf.RawPrevResult != nil {
 		if err = version.ParsePrevResult(&n.NetConf); err != nil {
+			utils.Logger.Debug(fmt.Sprintf("could not parse prevResult: %v", err))
 			return fmt.Errorf("could not parse prevResult: %v", err)
 		}
 
 		result, err = current.NewResultFromResult(n.NetConf.PrevResult)
 		if err != nil {
+			utils.Logger.Debug(fmt.Sprintf("could not convert result to current version: %v", err))
 			return fmt.Errorf("could not convert result to current version: %v", err)
 		}
 
@@ -97,6 +100,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 	}
 
 	if !haveResult && n.IsMultiNICIPAM {
+		utils.Logger.Debug(fmt.Sprintf("use multi-nic-ipam: %s", n.IPAM.Type))
 		// run the IPAM plugin and get back the config to apply
 		injectedStdIn := injectMaster(args.StdinData, n.MasterNetAddrs, n.Masters, n.DeviceIDs)
 		r, err := ipam.ExecAdd(n.IPAM.Type, injectedStdIn)
