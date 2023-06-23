@@ -210,7 +210,7 @@ var _ = BeforeSuite(func() {
 			AddRoutePath:    "/addroute",
 			DeleteRoutePath: "/deleteroute",
 			Daemon: multinicv1.DaemonSpec{
-				Image:           "ghcr.io/foundation-model-stack/multi-nic-cni-daemon:v1.0.4",
+				Image:           "ghcr.io/foundation-model-stack/multi-nic-cni-daemon:v1.0.5",
 				ImagePullPolicy: "Always",
 				SecurityContext: &v1.SecurityContext{
 					Privileged: &trueValue,

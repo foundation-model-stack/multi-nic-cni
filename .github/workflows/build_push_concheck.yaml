@@ -3,13 +3,13 @@ name: Build and push connection check image
 on:
   push:
     branches:
-      - v1.0.4
+      - v1.0.5
     paths:
       - connection-check/**
       - .github/workflows/**
       
 env:
-  IMAGE_VERSION: '1.0.4'
+  IMAGE_VERSION: '1.0.5'
   IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
 
 jobs:
