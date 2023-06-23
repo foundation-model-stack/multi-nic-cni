@@ -40,6 +40,9 @@ func loadIPVANConf(bytes []byte, ifName string, n *NetConf, ipConfigs []*current
 
 	// interfaces are orderly assigned from interface set
 	for index, masterName := range n.Masters {
+		if masterName == "" {
+			continue
+		}
 		// add config
 		singleConfig, err := copyIPVLANConfig(configInIPVLAN.MainPlugin)
 		if err != nil {
