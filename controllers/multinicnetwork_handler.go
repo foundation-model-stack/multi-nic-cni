@@ -33,6 +33,7 @@ type MultiNicNetworkHandler struct {
 	client.Client
 	syncFlag bool
 	sync.Mutex
+	*SafeCache
 }
 
 func (h *MultiNicNetworkHandler) GetNetwork(name string) (*multinicv1.MultiNicNetwork, error) {
@@ -114,6 +115,8 @@ func (h *MultiNicNetworkHandler) updateStatus(instance *multinicv1.MultiNicNetwo
 	err := h.Client.Status().Update(context.Background(), instance)
 	if err != nil {
 		vars.NetworkLog.V(2).Info(fmt.Sprintf("Failed to update %s status: %v", instance.Name, err))
+	} else {
+		h.SetStatusCache(instance.Name, instance.Status)
 	}
 	return netStatus, err
 }
@@ -128,5 +131,32 @@ func (h *MultiNicNetworkHandler) UpdateNetConfigStatus(instance *multinicv1.Mult
 	instance.Status.LastSyncTime = metav1.Now()
 	instance.Status.NetConfigStatus = netConfigStatus
 	err := h.Client.Status().Update(context.Background(), instance)
+	if err != nil {
+		vars.NetworkLog.V(2).Info(fmt.Sprintf("Failed to update %s status: %v", instance.Name, err))
+	} else {
+		h.SetStatusCache(instance.Name, instance.Status)
+	}
 	return err
+}
+
+func (h *MultiNicNetworkHandler) SetStatusCache(key string, value multinicv1.MultiNicNetworkStatus) {
+	h.SafeCache.SetCache(key, value)
+}
+
+func (h *MultiNicNetworkHandler) GetStatusCache(key string) (multinicv1.MultiNicNetworkStatus, error) {
+	value := h.SafeCache.GetCache(key)
+	if value == nil {
+		return multinicv1.MultiNicNetworkStatus{}, fmt.Errorf(vars.NotFoundError)
+	}
+	return value.(multinicv1.MultiNicNetworkStatus), nil
+}
+
+func (h *MultiNicNetworkHandler) ListStatusCache() map[string]multinicv1.MultiNicNetworkStatus {
+	snapshot := make(map[string]multinicv1.MultiNicNetworkStatus)
+	h.SafeCache.Lock()
+	for key, value := range h.cache {
+		snapshot[key] = value.(multinicv1.MultiNicNetworkStatus)
+	}
+	h.SafeCache.Unlock()
+	return snapshot
 }
