@@ -119,6 +119,9 @@ func getTableIDAndReservedIDs(tableName string) (int, []int, error) {
 		line := scanner.Text()
 		splited := strings.Fields(line)
 		if len(splited) > 1 {
+			if strings.Contains(splited[0], "#") {
+				continue
+			}
 			tableID, err := strconv.ParseInt(splited[0], 10, 64)
 			if err != nil {
 				log.Printf("Cannot parse table ID %s: %v", splited[0], err)

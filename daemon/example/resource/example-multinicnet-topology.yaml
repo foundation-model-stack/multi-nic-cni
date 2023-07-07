@@ -1,0 +1,25 @@
+apiVersion: multinic.fms.io/v1
+kind: MultiNicNetwork
+metadata:
+  name: multi-nic-topology
+  namespace: default
+spec:
+  subnet: "192.168.0.0/16"
+  ipam: |
+    {
+      "type": "multi-nic-ipam",
+      "hostBlock": 8, 
+      "interfaceBlock": 2,
+      "vlanMode": "l3"
+    }
+  multiNICIPAM: true
+  attachPolicy:
+    strategy: topology
+  plugin:
+    cniVersion: "0.3.0"
+    type: ipvlan
+    args: 
+      mode: l3
+  masterNets:
+  - 10.244.0.0/24
+  - 10.244.1.0/24

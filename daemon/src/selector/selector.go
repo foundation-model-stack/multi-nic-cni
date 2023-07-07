@@ -2,17 +2,18 @@
  * Copyright 2022- IBM Inc. All rights reserved
  * SPDX-License-Identifier: Apache2.0
  */
- 
+
 package selector
 
 import (
 	"github.com/foundation-model-stack/multi-nic-cni/daemon/backend"
 	"github.com/foundation-model-stack/multi-nic-cni/daemon/iface"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"context"
-	"k8s.io/client-go/kubernetes"
 	"log"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 )
 
 // For NIC Selection
@@ -21,39 +22,39 @@ type NICSelectRequest struct {
 	PodNamespace     string   `json:"namespace"`
 	HostName         string   `json:"host"`
 	NetAttachDefName string   `json:"def"`
-	MasterNetAddrs []string   `json:"masterNets"`
+	MasterNetAddrs   []string `json:"masterNets"`
 	NicSet           NicArgs  `json:"args"`
 }
 
 // NicArgs defines additional specification in pod annotation
 type NicArgs struct {
-	NumOfInterfaces int `json:"nics,omitempty"`
+	NumOfInterfaces int      `json:"nics,omitempty"`
 	InterfaceNames  []string `json:"masters,omitempty"`
-	Target          string `json:"target,omitempty"`
-	DevClass        string `json:"class,omitempty"`
+	Target          string   `json:"target,omitempty"`
+	DevClass        string   `json:"class,omitempty"`
 }
-
 
 type NICSelectResponse struct {
-	DeviceIDs      []string   `json:"deviceIDs"`
-	Masters 	   []string   `json:"masters"`
+	DeviceIDs []string `json:"deviceIDs"`
+	Masters   []string `json:"masters"`
 }
-
 
 type Selector interface {
 	// return list of network addresses
-	Select(req NICSelectRequest, interfaceNameMap map[string]string, nameNetMap map[string]string) []string
+	Select(req NICSelectRequest, interfaceNameMap map[string]string, nameNetMap map[string]string, resourceMap map[string][]string) []string
 }
 
 var MultinicnetHandler *backend.MultiNicNetworkHandler
 var NetAttachDefHandler *backend.NetAttachDefHandler
 var K8sClientset *kubernetes.Clientset
 var DeviceClassHandler *backend.DeviceClassHandler
+var GPUIdBusIdMap = GetGPUIDMap()
+var TopologyFilePath = defaultTopologyFilePath
+var NumaAwareSelectorInstance = InitNumaAwareSelector(TopologyFilePath, GPUIdBusIdMap)
 
-
-func getDefaultResponse(req NICSelectRequest, masterNameMap map[string]string, nameNetMap map[string]string, deviceMap map[string]string) NICSelectResponse{
+func getDefaultResponse(req NICSelectRequest, masterNameMap map[string]string, nameNetMap map[string]string, deviceMap map[string]string, resourceMap map[string][]string) NICSelectResponse {
 	selector := DefaultSelector{}
-	selectedMasterNetAddrs := selector.Select(req, masterNameMap, nameNetMap)
+	selectedMasterNetAddrs := selector.Select(req, masterNameMap, nameNetMap, resourceMap)
 	selectedMasters := []string{}
 	selectedDeviceIDs := []string{}
 	for _, netAddress := range selectedMasterNetAddrs {
@@ -62,28 +63,39 @@ func getDefaultResponse(req NICSelectRequest, masterNameMap map[string]string, n
 		selectedDeviceIDs = append(selectedDeviceIDs, deviceID)
 		selectedMasters = append(selectedMasters, master)
 	}
-	
+
 	return NICSelectResponse{
 		DeviceIDs: selectedDeviceIDs,
-		Masters: selectedMasters,
+		Masters:   selectedMasters,
 	}
 }
 
 func Select(req NICSelectRequest) NICSelectResponse {
 	masterNameMap := iface.GetInterfaceNameMap()
 	nameNetMap := iface.GetNameNetMap()
-	var deviceMap map[string]string
+	deviceMap := make(map[string]string)
+	resourceMap := make(map[string][]string)
+
 	pod, err := K8sClientset.CoreV1().Pods(req.PodNamespace).Get(context.TODO(), req.PodName, metav1.GetOptions{})
-	resourceName := NetAttachDefHandler.GetResourceName(req.NetAttachDefName, req.PodNamespace)
 	if err == nil {
-		deviceMap = iface.GetDeviceMap(pod, resourceName)
+		resourceMap, err = iface.GetPodResourceMap(pod)
+		if err == nil {
+			log.Printf("resourceMap of %s: %v\n", pod.UID, resourceMap)
+			resourceName := NetAttachDefHandler.GetResourceName(req.NetAttachDefName, req.PodNamespace)
+			if resourceName != "" {
+				deviceMap = iface.GetDeviceMap(resourceMap, resourceName)
+				log.Printf("deviceMap: %v\n", deviceMap)
+			}
+		} else {
+			log.Printf("Cannot get pod resource map: %v\n", err)
+		}
 	} else {
-		deviceMap = make(map[string]string)
+		log.Printf("Cannot get pod: %v\n", err)
 	}
 
 	netSpec, err := MultinicnetHandler.Get(req.NetAttachDefName, req.PodNamespace)
 	if err != nil {
-		return getDefaultResponse(req, masterNameMap, nameNetMap, deviceMap)
+		return getDefaultResponse(req, masterNameMap, nameNetMap, deviceMap, resourceMap)
 	}
 	policy := netSpec.Policy
 
@@ -97,11 +109,10 @@ func Select(req NICSelectRequest) NICSelectResponse {
 	} else {
 		filteredMasterNameMap = masterNameMap
 	}
-	
 
 	var selector Selector
 	strategy := Strategy(policy.Strategy)
-	switch(strategy) {
+	switch strategy {
 	case None:
 		selector = DefaultSelector{}
 	case CostOpt:
@@ -110,23 +121,25 @@ func Select(req NICSelectRequest) NICSelectResponse {
 		selector = PerfOptSelector{}
 	case DevClass:
 		selector = DevClassSelector{}
+	case Topology:
+		selector = NumaAwareSelectorInstance.GetCopy()
 	default:
 		selector = DefaultSelector{}
 	}
-	selectedMasterNetAddrs := selector.Select(req, filteredMasterNameMap, nameNetMap)
+	selectedMasterNetAddrs := selector.Select(req, filteredMasterNameMap, nameNetMap, resourceMap)
 	selectedMasters := []string{}
 	selectedDeviceIDs := []string{}
 	log.Printf("masterNets %v, %v, %v\n", selectedMasterNetAddrs, filteredMasterNameMap, nameNetMap)
 	for _, netAddress := range selectedMasterNetAddrs {
 		deviceID := deviceMap[netAddress]
 		master := filteredMasterNameMap[netAddress]
-		log.Printf("masterNets %s,%s\n", deviceID,master)
+		log.Printf("masterNets %s,%s\n", deviceID, master)
 		selectedDeviceIDs = append(selectedDeviceIDs, deviceID)
 		selectedMasters = append(selectedMasters, master)
 	}
-	
+
 	return NICSelectResponse{
 		DeviceIDs: selectedDeviceIDs,
-		Masters: selectedMasters,
+		Masters:   selectedMasters,
 	}
 }

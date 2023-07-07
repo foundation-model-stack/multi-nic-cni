@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache2.0
  */
 
-package iface 
+package iface
 
 import (
 	"encoding/json"
@@ -12,15 +12,16 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strings"
-	v1 "k8s.io/api/core/v1"
-	"github.com/jaypipes/ghw"
 	"strconv"
+	"strings"
+
+	"github.com/jaypipes/ghw"
+	v1 "k8s.io/api/core/v1"
 )
 
 const (
 	SysBusPci = "/sys/bus/pci/devices"
-	netClass              = 0x02
+	netClass  = 0x02
 )
 
 var CheckPointfile string = "/var/lib/kubelet/device-plugins/kubelet_internal_checkpoint"
@@ -82,8 +83,10 @@ func convertDeviceIDs(deviceIDs interface{}) []string {
 	return deviceIDsArray
 }
 
-func GetPodDeviceIDs(pod *v1.Pod) (map[string][]string, error) {
+func GetPodResourceMap(pod *v1.Pod) (map[string][]string, error) {
 	podID := string(pod.UID)
+	log.Printf("GetPodDeviceIDs: %s (%s)\n", pod.GetName(), podID)
+
 	resourceMap := make(map[string][]string)
 	if podID == "" {
 		return resourceMap, fmt.Errorf("GetPodResourceMap: invalid Pod cannot be empty")
@@ -109,14 +112,9 @@ func GetPodDeviceIDs(pod *v1.Pod) (map[string][]string, error) {
 }
 
 // GetDeviceMap returns a map from network address to NIC device
-func GetDeviceMap(pod *v1.Pod, resourceName string) map[string]string {
+func GetDeviceMap(resourceMap map[string][]string, resourceName string) map[string]string {
 	deviceMap := make(map[string]string)
-	log.Printf("GetDeviceMap: %s in %s\n", resourceName, pod.GetName())
-	resourceMap, err := GetPodDeviceIDs(pod)
-	if err != nil {
-		log.Printf("Cannot get pod resource map: %v\n", err)
-		return deviceMap
-	}
+	log.Printf("GetDeviceMap of %s\n", resourceName)
 	nameNetMap := GetNameNetMap()
 	log.Printf("resource map: %v\n", resourceMap)
 	log.Printf("nameNetMap map: %v\n", nameNetMap)
@@ -131,7 +129,6 @@ func GetDeviceMap(pod *v1.Pod, resourceName string) map[string]string {
 			}
 		}
 	}
-	log.Printf("deviceMap map: %v\n", deviceMap)
 	return deviceMap
 }
 
@@ -168,7 +165,6 @@ func GetTargetNetworks() []NetDeviceInfo {
 		devClass, err := strconv.ParseInt(device.Class.ID, 16, 64)
 		if err != nil {
 			// cannnot convert
-			log.Printf("cannnot connvert %s to int", device.Class.ID)
 			continue
 		}
 		if devClass != netClass {
@@ -179,17 +175,16 @@ func GetTargetNetworks() []NetDeviceInfo {
 		devNames, err := getNetNames(pciAddress)
 		if err != nil {
 			// cannot get device name
-			log.Printf("cannnot get name: %v", err)
 			continue
 		}
 		for _, devName := range devNames {
 			vendorID := device.Vendor.ID
 			productID := device.Product.ID
-	
+
 			netDevice := NetDeviceInfo{
-				Name: devName,
-				Vendor: vendorID,
-				Product: productID,
+				Name:       devName,
+				Vendor:     vendorID,
+				Product:    productID,
 				PciAddress: pciAddress,
 			}
 			netDevices = append(netDevices, netDevice)
@@ -236,7 +231,7 @@ func getNetNames(pciAddr string) ([]string, error) {
 	if _, err := os.Lstat(netDir); err != nil {
 		topDir := filepath.Join(SysBusPci, pciAddr)
 		return getVirtioNetNames(topDir)
-	} 
+	}
 	fileList, err := ioutil.ReadDir(netDir)
 	if err != nil {
 		return names, fmt.Errorf("failed to read net directory %s: %q", netDir, err)
