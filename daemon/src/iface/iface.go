@@ -23,7 +23,21 @@ type InterfaceInfoType struct {
 	PciAddress    string `json:"pciAddress"`
 }
 
-var LastestInterfaceMap map[string]InterfaceInfoType
+var interfaceInfoCache = InitSafeCache()
+
+func GetInterfaceInfoCache() map[string]InterfaceInfoType {
+	snapshot := make(map[string]InterfaceInfoType)
+	interfaceInfoCache.Lock()
+	for key, value := range interfaceInfoCache.cache {
+		snapshot[key] = value.(InterfaceInfoType)
+	}
+	interfaceInfoCache.Unlock()
+	return snapshot
+}
+
+func SetInterfaceInfoCache(name string, info InterfaceInfoType) {
+	interfaceInfoCache.SetCache(name, info)
+}
 
 func getNetAddressFromLink(devLink netlink.Link) (string, error) {
 	addrs, err := netlink.AddrList(devLink, netlink.FAMILY_V4)
@@ -47,14 +61,15 @@ func getNetAddress(v *net.IPNet) string {
 // GetNameNetMap returns a map from interface name to network address
 func GetNameNetMap() map[string]string {
 	nameNetMap := make(map[string]string)
-	if LastestInterfaceMap == nil {
+	if interfaceInfoCache.GetSize() == 0 {
 		// update LastestInterfaceMap
 		interfaces := GetInterfaces()
 		if len(interfaces) == 0 {
 			return nameNetMap
 		}
 	}
-	for devName, info := range LastestInterfaceMap {
+	interfaceMap := GetInterfaceInfoCache()
+	for devName, info := range interfaceMap {
 		nameNetMap[devName] = info.NetAddress
 	}
 	return nameNetMap
@@ -63,14 +78,15 @@ func GetNameNetMap() map[string]string {
 // GetInterfaceNameMap returns a map from network address to interface name
 func GetInterfaceNameMap() map[string]string {
 	ifaceNameMap := make(map[string]string)
-	if LastestInterfaceMap == nil {
+	if interfaceInfoCache.GetSize() == 0 {
 		// update LastestInterfaceMap
 		interfaces := GetInterfaces()
 		if len(interfaces) == 0 {
 			return ifaceNameMap
 		}
 	}
-	for devName, info := range LastestInterfaceMap {
+	interfaceMap := GetInterfaceInfoCache()
+	for devName, info := range interfaceMap {
 		ifaceNameMap[info.NetAddress] = devName
 	}
 	return ifaceNameMap
@@ -95,8 +111,6 @@ func GetDefaultInterfaceSubNet() (string, error) {
 }
 
 func GetInterfaces() []InterfaceInfoType {
-	ifaceNameMap := make(map[string]InterfaceInfoType)
-
 	interfaces := []InterfaceInfoType{}
 	netDevices := GetTargetNetworks()
 	defaultSubnet, err := GetDefaultInterfaceSubNet()
@@ -143,9 +157,8 @@ func GetInterfaces() []InterfaceInfoType {
 				PciAddress:    netDevice.PciAddress,
 			}
 			interfaces = append(interfaces, iface)
-			ifaceNameMap[devName] = iface
+			interfaceInfoCache.SetCache(devName, iface)
 		}
 	}
-	LastestInterfaceMap = ifaceNameMap
 	return interfaces
 }

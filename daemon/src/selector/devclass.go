@@ -2,18 +2,18 @@
  * Copyright 2022- IBM Inc. All rights reserved
  * SPDX-License-Identifier: Apache2.0
  */
- 
+
 package selector
 
 import (
-	"github.com/foundation-model-stack/multi-nic-cni/daemon/iface"
 	"log"
+
+	"github.com/foundation-model-stack/multi-nic-cni/daemon/iface"
 )
 
+type DevClassSelector struct{}
 
-type DevClassSelector struct {}
-
-func (DevClassSelector) Select(req NICSelectRequest, interfaceNameMap map[string]string, nameNetMap map[string]string) []string {
+func (DevClassSelector) Select(req NICSelectRequest, interfaceNameMap map[string]string, nameNetMap map[string]string, resourceMap map[string][]string) []string {
 	if req.NicSet.DevClass != "" {
 		devSpec, err := DeviceClassHandler.Get(req.NicSet.DevClass)
 		if err == nil {
@@ -21,10 +21,11 @@ func (DevClassSelector) Select(req NICSelectRequest, interfaceNameMap map[string
 			for _, deviceID := range devSpec.DeviceIDs {
 				devSpecMap[deviceID.Vendor] = deviceID.Products
 			}
-	
+
 			for _, devName := range interfaceNameMap {
 				if netAddress, exists := nameNetMap[devName]; exists {
-					if info, exists := iface.LastestInterfaceMap[devName]; exists {
+					interfaceMap := iface.GetInterfaceInfoCache()
+					if info, exists := interfaceMap[devName]; exists {
 						if products, exists := devSpecMap[info.Vendor]; exists {
 							found := false
 							for _, product := range products {
@@ -40,14 +41,14 @@ func (DevClassSelector) Select(req NICSelectRequest, interfaceNameMap map[string
 						} else {
 							// not in expected vendor
 							delete(interfaceNameMap, netAddress)
-						}				
+						}
 					}
-				} 
+				}
 			}
 		} else {
 			log.Printf("cannot get device class %s: %v", req.NicSet.DevClass, err)
 		}
 	}
 	log.Printf("no device class")
-	return (DefaultSelector{}).Select(req, interfaceNameMap, nameNetMap)
+	return (DefaultSelector{}).Select(req, interfaceNameMap, nameNetMap, resourceMap)
 }

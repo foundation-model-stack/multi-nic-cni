@@ -20,9 +20,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/install"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer/yaml"
@@ -44,6 +44,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"strings"
 
 	"os"
 	//+kubebuilder:scaffold:imports
@@ -76,12 +77,14 @@ var requestL3ConfigForceDelete = dr.L3ConfigRequest{
 }
 
 const (
-	HOST_NAME         = "master0"
-	FULL_HOST_NAME    = HOST_NAME + ".local"
-	DEF_NAME          = "multi-nic-sample"
-	DEVCLASS_DEF_NAME = "multi-nic-dev"
-	POD_NAME          = "sample-pod"
-	POD_NAMESPACE     = "default"
+	HOST_NAME          = "master0"
+	FULL_HOST_NAME     = HOST_NAME + ".local"
+	DEF_NAME           = "multi-nic-sample"
+	DEVCLASS_DEF_NAME  = "multi-nic-dev"
+	TOPOLOGY_DEF_NAME  = "multi-nic-topology"
+	POD_NAME           = "sample-pod"
+	POD_NAMESPACE      = "default"
+	TO_REPLACE_POD_UID = "18134649-65e3-4bf8-ba89-e3d133fe9e53"
 
 	KUBECONFIG_FILE = "../../ipam/hpcg-kubeconfig"
 
@@ -89,18 +92,25 @@ const (
 	EXAMPLE_RESOURCE_FOLDER = "../example/resource"
 
 	EXAMPLE_CHECKPOINT = "../example/example-checkpoint"
+	EXAMPLE_TOPOLOGY   = "../example/example-topology.xml"
 
 	REQUEST_NUMBER = 2
 )
 
 var testEnv *envtest.Environment
 var scheme = runtime.NewScheme()
+var targetPod *v1.Pod
 
 var MASTER_INTERFACES []string = []string{"test-eth1", "test-eth2"}
 var MASTER_IPS = []string{"10.244.0.1/24", "10.244.1.1/24"}
 var MASTER_NETADDRESSES = []string{"10.244.0.0/24", "10.244.1.0/24"}
+var MASTER_PCIADDRESS = []string{"0000:08:00.0", "0000:0c:00.0"}
 var MASTER_VENDORS = []string{"1d0f", ""}
 var MASTER_PRODUCTS = []string{"efa1", ""}
+
+var GPU_BUS_MAP map[string]string = map[string]string{
+	"GPU-581b17ed-1c48-9b8c-6a9b-e2e6f99500dc": "0000:0c:05.0",
+}
 
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -108,20 +118,41 @@ func TestAPIs(t *testing.T) {
 }
 
 func setTestLatestInterfaces() {
-	latestInterfaceMap := map[string]di.InterfaceInfoType{}
 	for index, master := range MASTER_INTERFACES {
 		netAddress := MASTER_NETADDRESSES[index]
 		vendor := MASTER_VENDORS[index]
 		product := MASTER_PRODUCTS[index]
+		pciAddress := MASTER_PCIADDRESS[index]
 		iface := di.InterfaceInfoType{
 			InterfaceName: master,
 			NetAddress:    netAddress,
 			Vendor:        vendor,
 			Product:       product,
+			PciAddress:    pciAddress,
 		}
-		latestInterfaceMap[master] = iface
+		di.SetInterfaceInfoCache(master, iface)
 	}
-	di.LastestInterfaceMap = latestInterfaceMap
+	interfaceMap := di.GetInterfaceInfoCache()
+	Expect(len(interfaceMap)).To(Equal(2))
+}
+
+func replacePodUID(clientset *kubernetes.Clientset) {
+	var err error
+	// Get PodUID
+	targetPod, err = clientset.CoreV1().Pods(POD_NAMESPACE).Get(context.TODO(), POD_NAME, metav1.GetOptions{})
+	Expect(err).NotTo(HaveOccurred())
+	// Replace checkpoint file
+
+	// Read the file content
+	content, err := ioutil.ReadFile(EXAMPLE_CHECKPOINT)
+	Expect(err).NotTo(HaveOccurred())
+
+	// Perform text replacements
+	modifiedContent := strings.ReplaceAll(string(content), TO_REPLACE_POD_UID, string(targetPod.UID))
+
+	// Write the modified content back to the file
+	err = ioutil.WriteFile(EXAMPLE_CHECKPOINT, []byte(modifiedContent), 0644)
+	Expect(err).NotTo(HaveOccurred())
 }
 
 var _ = BeforeSuite(func() {
@@ -162,6 +193,7 @@ var _ = BeforeSuite(func() {
 
 	deployExamples(EXAMPLE_RESOURCE_FOLDER, false)
 	addMasterInterfaces()
+	replacePodUID(ds.K8sClientset)
 }, 60)
 
 var _ = AfterSuite(func() {
@@ -416,6 +448,57 @@ var _ = Describe("Test NIC Select", func() {
 		Expect(len(response.Masters)).To(Equal(1))
 		Expect(response.Masters[0]).To(Equal(MASTER_INTERFACES[0]))
 	})
+	It("Init NumaAwareSelector from topology file", func() {
+		selector := ds.InitNumaAwareSelector(EXAMPLE_TOPOLOGY, map[string]string{})
+		Expect(len(selector.NcclTopolgy.CPUs)).To(Equal(2))
+		Expect(len(selector.NumaMap)).To(BeNumerically(">", 0))
+	})
+	It("Init NumaAwareSelector from sysfs", func() {
+		selector := ds.InitNumaAwareSelector("", map[string]string{})
+		Expect(len(selector.NcclTopolgy.CPUs)).To(Equal(0))
+		Expect(len(selector.NumaMap)).To(BeNumerically(">", 0))
+	})
+	It("Get resource map", func() {
+		resourceMap, err := di.GetPodResourceMap(targetPod)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(len(resourceMap)).To(BeNumerically(">", 0))
+		_, ok := resourceMap[ds.GPUResourceName]
+		Expect(ok).To(Equal(true))
+	})
+	It("select nic by NumaAwareSelector (topology)", func() {
+		setTestLatestInterfaces()
+		ds.TopologyFilePath = EXAMPLE_TOPOLOGY
+		ds.GPUIdBusIdMap = GPU_BUS_MAP
+		di.CheckPointfile = EXAMPLE_CHECKPOINT
+		ds.NumaAwareSelectorInstance = ds.InitNumaAwareSelector(ds.TopologyFilePath, ds.GPUIdBusIdMap)
+		var response ds.NICSelectResponse
+
+		request := ds.NICSelectRequest{
+			PodName:          POD_NAME,
+			PodNamespace:     POD_NAMESPACE,
+			HostName:         HOST_NAME,
+			NetAttachDefName: TOPOLOGY_DEF_NAME,
+			MasterNetAddrs:   MASTER_NETADDRESSES, // fixed order before sort to avoid random pass
+			NicSet: ds.NicArgs{
+				NumOfInterfaces: 1,
+			},
+		}
+		jsonObj, err := json.Marshal(request)
+		Expect(err).NotTo(HaveOccurred())
+		req, err := http.NewRequest("PUT", NIC_SELECT_PATH, bytes.NewBuffer(jsonObj))
+		Expect(err).NotTo(HaveOccurred())
+		req.Header.Set("Content-Type", "application/json; charset=utf-8")
+		res := httptest.NewRecorder()
+		handler := http.HandlerFunc(SelectNic)
+		handler.ServeHTTP(res, req)
+		body, err := ioutil.ReadAll(res.Body)
+		Expect(err).NotTo(HaveOccurred())
+		err = json.Unmarshal(body, &response)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(len(response.Masters)).To(Equal(1))
+		// must select nic in numa 1
+		Expect(response.Masters[0]).To(Equal(MASTER_INTERFACES[1]))
+	})
 })
 
 func deployExamples(folder string, ignoreErr bool) {
@@ -435,6 +518,7 @@ func deployExamples(folder string, ignoreErr bool) {
 			Expect(err).NotTo(HaveOccurred())
 		}
 	}
+
 }
 
 func getDR(fileName string, ignoreErr bool) (*unstructured.Unstructured, dynamic.ResourceInterface) {

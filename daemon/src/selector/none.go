@@ -2,16 +2,17 @@
  * Copyright 2022- IBM Inc. All rights reserved
  * SPDX-License-Identifier: Apache2.0
  */
- 
+
 package selector
 
 import (
-	gnet "github.com/jaypipes/ghw/pkg/net"
-	"math"
 	"log"
+	"math"
+
+	gnet "github.com/jaypipes/ghw/pkg/net"
 )
 
-type DefaultSelector struct {}
+type DefaultSelector struct{}
 
 func getMasterNames(ifaceNameMap map[string]string, req NICSelectRequest) []string {
 	masters := []string{}
@@ -20,7 +21,7 @@ func getMasterNames(ifaceNameMap map[string]string, req NICSelectRequest) []stri
 			masters = append(masters, master)
 		}
 	} else {
-		for _, netAddress  := range req.MasterNetAddrs {
+		for _, netAddress := range req.MasterNetAddrs {
 			master := ifaceNameMap[netAddress]
 			masters = append(masters, master)
 		}
@@ -35,7 +36,7 @@ func getDeviceIDs(deviceMap map[string]*gnet.NIC, req NICSelectRequest) []string
 			deviceIDs = append(deviceIDs, *nic.PCIAddress)
 		}
 	} else {
-		for _, netAddress  := range req.MasterNetAddrs {
+		for _, netAddress := range req.MasterNetAddrs {
 			nic := deviceMap[netAddress]
 			deviceIDs = append(deviceIDs, *nic.PCIAddress)
 		}
@@ -44,7 +45,7 @@ func getDeviceIDs(deviceMap map[string]*gnet.NIC, req NICSelectRequest) []string
 }
 
 // DefaultSelector simply selects interface in order
-func (DefaultSelector) Select(req NICSelectRequest, interfaceNameMap map[string]string, nameNetMap map[string]string) []string {
+func (DefaultSelector) Select(req NICSelectRequest, interfaceNameMap map[string]string, nameNetMap map[string]string, resourceMap map[string][]string) []string {
 	selectedMaster := []string{}
 	maxSize := req.NicSet.NumOfInterfaces
 	fixedSet := req.NicSet.InterfaceNames
