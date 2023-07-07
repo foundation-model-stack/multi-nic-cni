@@ -102,7 +102,7 @@ namespaces| (optional) limit network definition application to list of namespace
   ```
 ##### by bundle with operator-sdk
   ```bash
-  operator-sdk run bundle ghcr.io/foundation-model-stack/multi-nic-cni-bundle:v1.1.0
+  operator-sdk run bundle ghcr.io/foundation-model-stack/multi-nic-cni-bundle:v1.2.0
   ```
 #### Deploy MultiNicNetwork resource
 1. Prepare `network.yaml` as shown in the [example](#multinicnetwork)
