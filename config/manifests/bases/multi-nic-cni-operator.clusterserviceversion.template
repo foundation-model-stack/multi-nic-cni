@@ -107,9 +107,9 @@ spec:
       deployments: null
     strategy: ""
   installModes:
-  - supported: false
+  - supported: true
     type: OwnNamespace
-  - supported: false
+  - supported: true
     type: SingleNamespace
   - supported: false
     type: MultiNamespace
@@ -131,4 +131,4 @@ spec:
   provider:
     name: Foundation Model Stack
   version: 0.0.0
-  replaces: multi-nic-cni-operator.v1.0.3
+  replaces: multi-nic-cni-operator.v1.0.4

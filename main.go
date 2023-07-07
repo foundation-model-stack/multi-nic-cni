@@ -9,6 +9,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"net/http"
 	"os"
 	"time"
 
@@ -23,7 +24,6 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	multinicv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
@@ -36,8 +36,9 @@ import (
 )
 
 var (
-	scheme   = runtime.NewScheme()
-	setupLog = ctrl.Log.WithName("setup")
+	scheme                           = runtime.NewScheme()
+	setupLog                         = ctrl.Log.WithName("setup")
+	MultiNicNetworkReconcilerPointer *controllers.MultiNicNetworkReconciler
 )
 
 func init() {
@@ -45,6 +46,22 @@ func init() {
 	utilruntime.Must(multinicv1.AddToScheme(scheme))
 	utilruntime.Must(netv1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
+}
+
+// Handler for the ready check endpoint
+func readyzHandler(r *http.Request) error {
+	if controllers.ConfigReady {
+		return nil
+	}
+	return fmt.Errorf("wait for config")
+}
+
+// Handler for the health check endpoint
+func healthzHandler(r *http.Request) error {
+	if MultiNicNetworkReconcilerPointer != nil && controllers.ConfigReady {
+		return MultiNicNetworkReconcilerPointer.CheckHealth()
+	}
+	return fmt.Errorf("initializing")
 }
 
 func main() {
@@ -160,7 +177,7 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "IPPool")
 		os.Exit(1)
 	}
-	MultiNicNetworkReconcilerPointer := &controllers.MultiNicNetworkReconciler{
+	MultiNicNetworkReconcilerPointer = &controllers.MultiNicNetworkReconciler{
 		Client:              mgr.GetClient(),
 		NetAttachDefHandler: defHandler,
 		CIDRHandler:         cidrHandler,
@@ -189,12 +206,11 @@ func main() {
 	}
 
 	//+kubebuilder:scaffold:builder
-
-	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
+	if err := mgr.AddHealthzCheck("healthz", healthzHandler); err != nil {
 		setupLog.Error(err, "unable to set up health check")
 		os.Exit(1)
 	}
-	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
+	if err := mgr.AddReadyzCheck("readyz", readyzHandler); err != nil {
 		setupLog.Error(err, "unable to set up ready check")
 		os.Exit(1)
 	}

@@ -53,17 +53,22 @@ type IPResponse struct {
 	VLANBlockSize string `json:"block"`
 }
 
+// // For NIC Selection
 // type NICSelectRequest struct {
 // 	PodName          string   `json:"pod"`
 // 	PodNamespace     string   `json:"namespace"`
 // 	HostName         string   `json:"host"`
 // 	NetAttachDefName string   `json:"def"`
+// 	MasterNetAddrs   []string `json:"masterNets"`
 // 	NicSet           NicArgs  `json:"args"`
 // }
 
+// // NicArgs defines additional specification in pod annotation
 // type NicArgs struct {
-// 	NumOfInterfaces int `json:"nics,omitempty"`
+// 	NumOfInterfaces int      `json:"nics,omitempty"`
 // 	InterfaceNames  []string `json:"masters,omitempty"`
+// 	Target          string   `json:"target,omitempty"`
+// 	DevClass        string   `json:"class,omitempty"`
 // }
 
 //	type NICSelectResponse struct {
@@ -71,6 +76,7 @@ type IPResponse struct {
 //	}
 var POOL_MASTER_NAMES = []string{"eth0", "eth1", "eth2"}
 var POOL_NETWORK_ADDRESSES = []string{"10.244.0.0/24", "10.244.1.0/24", "10.244.2.0/24"}
+var FULL_POOL_NETWORK_ADDRESSES = []string{"10.244.0.0/24", "10.244.1.0/24", "10.244.2.0/24", "10.244.3.0/24"} // contains non-overlap networks
 var POOL_IP_ADDRESSES = []string{"10.244.0.120/24", "10.244.1.5/24", "10.244.2.1/24"}
 
 var MASTER_NAMES = []string{"eth0", "eth1"}
@@ -416,6 +422,8 @@ var _ = Describe("Operations", func() {
 		ver := ver
 		masterNetsBytes, _ := json.Marshal(POOL_NETWORK_ADDRESSES)
 		masterNets := string(masterNetsBytes)
+		fullNetsBytes, _ := json.Marshal(FULL_POOL_NETWORK_ADDRESSES)
+		fullNets := string(fullNetsBytes)
 		singleNICIPAM := `"ipam": {
 			"type": "static",
 			"addresses": [{"address": "192.168.1.1/24"}]
@@ -433,6 +441,20 @@ var _ = Describe("Operations", func() {
 			"multiNICIPAM": true,
 			`, BRIDGE_HOST_IP, daemonPort)
 			conf := getConfig(ver, multiNICIPAM, masterNets)
+			multinicAddCheckDelTest(conf, "", originalNS, targetNS)
+			multinicDelWithoutDaemonTest(conf, "", originalNS, targetNS)
+		})
+		It(fmt.Sprintf("[%s] configures and deconfigures link with ADD/DEL (multi-nic IPAM) with non-overlap network addresses", ver), func() {
+			multiNICIPAM := fmt.Sprintf(`"ipam": {
+				"type": "multi-nic-ipam",
+				"hostBlock": 8,
+				"interfaceBlock": 2,
+				"daemonIP": "%s",
+				"daemonPort": %d
+				},
+			"multiNICIPAM": true,
+			`, BRIDGE_HOST_IP, daemonPort)
+			conf := getConfig(ver, multiNICIPAM, fullNets)
 			multinicAddCheckDelTest(conf, "", originalNS, targetNS)
 			multinicDelWithoutDaemonTest(conf, "", originalNS, targetNS)
 		})
@@ -499,10 +521,25 @@ func startDaemonServer(httpServerExitDone *sync.WaitGroup) *http.Server {
 	).Methods("POST")
 	router.HandleFunc("/"+NIC_SELECT_PATH,
 		func(w http.ResponseWriter, r *http.Request) {
-			ioutil.ReadAll(r.Body)
-			selectResponse := NICSelectResponse{
-				DeviceIDs: []string{},
-				Masters:   MASTER_NAMES,
+			reqBody, _ := ioutil.ReadAll(r.Body)
+			var req NICSelectRequest
+			var selectResponse NICSelectResponse
+			err := json.Unmarshal(reqBody, &req)
+			if err == nil {
+				masterNames := make([]string, len(req.MasterNetAddrs))
+				for index, masterName := range MASTER_NAMES {
+					masterNames[index] = masterName
+				}
+				selectResponse = NICSelectResponse{
+					DeviceIDs: []string{},
+					Masters:   masterNames,
+				}
+			} else {
+				log.Printf("failed to unmarshal: %s", string(reqBody))
+				selectResponse = NICSelectResponse{
+					DeviceIDs: []string{},
+					Masters:   []string{},
+				}
 			}
 			log.Printf("return responses: %v", selectResponse)
 			json.NewEncoder(w).Encode(selectResponse)
