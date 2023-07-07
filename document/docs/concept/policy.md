@@ -12,6 +12,7 @@ none (default)|Apply all NICs in the pool|implemented
 costOpt|provide target ideal bandwidth with minimum cost based on HostInterface spec and status|TODO
 perfOpt|provide target ideal bandwidth with most available NICs set based on HostInterface spec and status |TODO
 devClass|give preference for a specific class of NICs based on DeviceClass custom resource|implemented
+topology|give priority to NIC based on Numa affnity of GPU allocation|implemented
 
 Annotation (CNIArgs)|Description|Status
 ---|---|---

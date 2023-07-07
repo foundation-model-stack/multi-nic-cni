@@ -9,7 +9,7 @@ L3 Route configuration|&check;|X|X|&check;
 > **&check;:** beneficial<br>**\*:** optional (e.g., replacable by whereabout, aws-vpc-cni IPAM)<br>**X:** non-beneficial as using L2
 
 ## Operator Installation
-Currently, Multi-NIC CNI Operator v1.1.0 for supporting multi-cloud is under developing. The pre-release bundle is available on alpha channel on Openshift OKD OperatorHub.
+Currently, Multi-NIC CNI Operator v1.1.x for supporting multi-cloud is under developing. The pre-release bundle is available on beta channel on Openshift OKD OperatorHub.
 
 ![](../img/openshift-operatorhub.png)
 ![](../img/v1.1.0-1.png)
