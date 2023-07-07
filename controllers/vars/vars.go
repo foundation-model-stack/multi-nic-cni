@@ -23,29 +23,31 @@ const (
 	NodeNameKey       = "K8S_NODENAME"
 
 	// common constant
-	PodStatusField                           = "status.phase"
-	PodStatusRunning                         = "Running"
-	JoinLabelName                            = "multi-nicd-join"
-	HostNameLabel                            = "hostname"
-	DefNameLabel                             = "netname"
-	TestModeLabel                            = "test-mode"
-	DefaultDaemonPort                        = 11000
-	DeamonLabelKey                           = "app"
-	DaemonLabelValue                         = "multi-nicd"
-	ServiceAccountName                       = "multi-nic-cni-operator-controller-manager"
-	DefaultOperatorNamespace                 = "multi-nic-cni-operator-system"
-	DefaultCNIType                           = "multi-nic"
-	DefaultIPAMType                          = "multi-nic-ipam"
-	DefaultDaemonImage                       = "ghcr.io/foundation-model-stack/multi-nic-cni-daemon:v1.1.0"
-	DefaultJoinPath                          = "/join"
-	DefaultInterfacePath                     = "/interface"
-	DefaultAddRoutePath                      = "/addl3"
-	DefaultDeleteRoutePath                   = "/deletel3"
-	DefaultUrgentReconcileTime time.Duration = 5 * time.Second
-	DefaultNormalReconcileTime time.Duration = time.Minute
-	DefaultLongReconcileTime   time.Duration = 10 * time.Minute
-	DefaultContextTimeout      time.Duration = 2 * time.Minute
-	DefaultLogLevel                          = 4
+	PodStatusField                            = "status.phase"
+	PodStatusRunning                          = "Running"
+	JoinLabelName                             = "multi-nicd-join"
+	HostNameLabel                             = "hostname"
+	DefNameLabel                              = "netname"
+	TestModeLabel                             = "test-mode"
+	DefaultDaemonPort                         = 11000
+	DeamonLabelKey                            = "app"
+	DaemonLabelValue                          = "multi-nicd"
+	ServiceAccountName                        = "multi-nic-cni-operator-controller-manager"
+	DefaultOperatorNamespace                  = "multi-nic-cni-operator-system"
+	DefaultCNIType                            = "multi-nic"
+	DefaultIPAMType                           = "multi-nic-ipam"
+	DefaultDaemonImage                        = "ghcr.io/foundation-model-stack/multi-nic-cni-daemon:v1.1.0"
+	DefaultJoinPath                           = "/join"
+	DefaultInterfacePath                      = "/interface"
+	DefaultAddRoutePath                       = "/addl3"
+	DefaultDeleteRoutePath                    = "/deletel3"
+	DefaultUrgentReconcileTime  time.Duration = 5 * time.Second
+	DefaultNormalReconcileTime  time.Duration = time.Minute
+	DefaultLongReconcileTime    time.Duration = 10 * time.Minute
+	DefaultContextTimeout       time.Duration = 2 * time.Minute
+	DefaultLogLevel                           = 4
+	APIServerToleration                       = 5 // maximum retry if getting error from api server timeout
+	APIServerTolerationWaitTime time.Duration = 2 * time.Second
 
 	//	multus-related constants
 	MultusLabelKey     = "app"
@@ -56,6 +58,7 @@ const (
 	// errors
 	ConnectionRefusedError = "connection refused"
 	NotFoundError          = "not found"
+	ThrottlingError        = "throttling"
 )
 
 var (

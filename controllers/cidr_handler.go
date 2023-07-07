@@ -66,7 +66,8 @@ func NewCIDRHandler(client client.Client, config *rest.Config, hostInterfaceHand
 			SafeCache: InitSafeCache(),
 		},
 		MultiNicNetworkHandler: &MultiNicNetworkHandler{
-			Client: client,
+			Client:    client,
+			SafeCache: InitSafeCache(),
 		},
 		RouteHandler: RouteHandler{
 			DaemonConnector: DaemonConnector{
@@ -169,10 +170,10 @@ func (h *CIDRHandler) SyncAllPendingCustomCR(defHandler *plugin.NetAttachDefHand
 						}
 					}
 				}
-			}
-			_, err = h.MultiNicNetworkHandler.SyncAllStatus(name, cidr.Spec, multinicnetwork.Status.RouteStatus, daemonSize, infoAvailableSize, true)
-			if err != nil {
-				vars.CIDRLog.V(3).Info(fmt.Sprintf("Failed to SyncAllStatus: %v", err))
+				_, err = h.MultiNicNetworkHandler.SyncAllStatus(name, cidr.Spec, multinicnetwork.Status.RouteStatus, daemonSize, infoAvailableSize, true)
+				if err != nil {
+					vars.CIDRLog.V(3).Info(fmt.Sprintf("Failed to SyncAllStatus: %v", err))
+				}
 			}
 		}
 		h.SyncIPPoolWithActivePods(cidrMap, ippoolSnapshot)

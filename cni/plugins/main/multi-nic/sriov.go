@@ -46,6 +46,9 @@ func loadSRIOVConf(bytes []byte, ifName string, n *NetConf, ipConfigs []*current
 
 	// interfaces are orderly assigned from interface set
 	for index, deviceID := range n.DeviceIDs {
+		if deviceID == "" {
+			continue
+		}
 		// add config
 		singleConfig, err := copySRIOVconfig(configInSRIOV.MainPlugin)
 		if err != nil {

@@ -8,6 +8,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"time"
 
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -32,7 +33,7 @@ type DaemonWatcher struct {
 	*DaemonCacheHandler
 }
 
-func isContainerReady(pod v1.Pod) bool {
+func IsContainerReady(pod v1.Pod) bool {
 	if pod.Status.ContainerStatuses == nil {
 		return false
 	}
@@ -53,10 +54,19 @@ func NewDaemonWatcher(client client.Client, config *rest.Config, hostInterfaceHa
 		HostInterfaceHandler: hostInterfaceHandler,
 		DaemonCacheHandler:   daemonCacheHandler,
 	}
+
+	var err error
 	// add existing daemon pod to the process queue
-	err := watcher.UpdateCurrentList()
-	if err != nil {
-		vars.DaemonLog.V(4).Info(fmt.Sprintf("cannot UpdateCurrentList: %v", err))
+	retry := 0
+	for retry < vars.APIServerToleration {
+		err = watcher.UpdateCurrentList()
+		if err != nil {
+			vars.DaemonLog.V(4).Info(fmt.Sprintf("try %d cannot UpdateCurrentList: %v, wait", retry, err))
+			time.Sleep(vars.APIServerTolerationWaitTime)
+		} else {
+			break
+		}
+		retry += 1
 	}
 
 	vars.DaemonLog.V(7).Info("Init Informer")
@@ -72,8 +82,8 @@ func NewDaemonWatcher(client client.Client, config *rest.Config, hostInterfaceHa
 				return
 			}
 			if isDaemonPod(pod) {
-				if isContainerReady(*pod) {
-					if !isContainerReady(*prevPod) {
+				if IsContainerReady(*pod) {
+					if !IsContainerReady(*prevPod) {
 						// newly-created daemon pod, put to the process queue
 						watcher.PodQueue <- pod
 					} else {
@@ -116,6 +126,55 @@ func (w *DaemonWatcher) getDaemonPods() (*v1.PodList, error) {
 	return w.Clientset.CoreV1().Pods(DAEMON_NAMESPACE).List(ctx, listOptions)
 }
 
+// getDaemonPod returns daemon pod with specific nodeName
+func (w *DaemonWatcher) getDaemonPod(nodeName string) (v1.Pod, error) {
+	labels := fmt.Sprintf("%s=%s", vars.DeamonLabelKey, vars.DaemonLabelValue)
+	fieldSelector := fmt.Sprintf("spec.nodeName=%s", nodeName)
+	listOptions := metav1.ListOptions{
+		LabelSelector: labels,
+		FieldSelector: fieldSelector,
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), vars.ContextTimeout)
+	defer cancel()
+	podList, err := w.Clientset.CoreV1().Pods(DAEMON_NAMESPACE).List(ctx, listOptions)
+	if err == nil {
+		for _, existingDaemon := range podList.Items {
+			return existingDaemon, nil
+		}
+		err = fmt.Errorf(vars.NotFoundError)
+	}
+	return v1.Pod{}, err
+}
+
+// TryGetDaemonPod tries getting daemon pod from cache or API server
+func (w *DaemonWatcher) TryGetDaemonPod(nodeName string) (DaemonPod, error) {
+	daemonPod, err := w.DaemonCacheHandler.GetCache(nodeName)
+	if err != nil {
+		// daemonPod is not exists, try getting daemon
+		pod, getErr := w.getDaemonPod(nodeName)
+		if getErr != nil && getErr.Error() == vars.NotFoundError {
+			// no cache and daemon pod is not found via API.
+			return daemonPod, err
+		}
+		// daemon pod exists, or cannot confirm daemon pod status
+		err = nil
+		if getErr == nil {
+			if IsContainerReady(pod) {
+				nodeName := pod.Spec.NodeName
+				daemonPod = DaemonPod{
+					Name:      pod.Name,
+					Namespace: pod.Namespace,
+					HostIP:    pod.Status.HostIP,
+					NodeName:  nodeName,
+					Labels:    pod.Labels,
+				}
+				w.DaemonCacheHandler.SetCache(nodeName, daemonPod)
+			}
+		}
+	}
+	return daemonPod, err
+}
+
 // UpdateCurrentList puts existing daemon pods to the process queue
 func (w *DaemonWatcher) UpdateCurrentList() error {
 	initialList, err := w.getDaemonPods()
@@ -124,7 +183,7 @@ func (w *DaemonWatcher) UpdateCurrentList() error {
 	}
 	vars.DaemonLog.V(4).Info(fmt.Sprintf("Found %d daemons running", len(initialList.Items)))
 	for _, existingDaemon := range initialList.Items {
-		if isContainerReady(existingDaemon) {
+		if IsContainerReady(existingDaemon) {
 			// early add to the spec for CIDR check
 			nodeName := existingDaemon.Spec.NodeName
 			daemonPod := DaemonPod{

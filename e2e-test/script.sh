@@ -12,6 +12,8 @@ if [ -z ${CNI_STUB_IMG} ]; then
     CNI_STUB_IMG="e2e-test/cni-stub:latest"
 fi
 
+probe_port=8083
+
 get_controller() {
     kubectl get po -n ${OPERATOR_NAMESPACE}|grep multi-nic-cni-operator-controller-manager|awk '{print $1}'
 }
@@ -31,6 +33,8 @@ restart_controller() {
     do
         sleep 5
         echo "Wait for config to be ready..."
+        response=$(check_readyz)
+        echo "Readyz check: ${response}"
         ready=$(echo $(get_controller_log)|grep ConfigReady)
     done
     echo "Config Ready"
@@ -44,6 +48,8 @@ deploy_controller() {
     do
         sleep 5
         echo "Wait for config to be ready..."
+        response=$(check_readyz)
+        echo "Readyz check: ${response}"
         ready=$(echo $(get_controller_log)|grep ConfigReady)
     done
     echo "Config Ready"
@@ -76,6 +82,26 @@ delete_controller() {
     kubectl delete config.multinic --all
     kubectl wait --for=delete config.multinic/multi-nicd --timeout=60s
     kubectl delete -f deploy/controller/deployment.yaml
+}
+
+port_forward() {
+    controller=$(get_controller) 
+    kubectl port-forward ${controller} -n ${OPERATOR_NAMESPACE}  ${probe_port}:${probe_port} > /dev/null
+}
+
+stop_port_forward(){
+    port_forward_pid=$(pidof kubectl)
+    kill ${port_forward_pid} > /dev/null
+}
+
+check_healthz(){
+    port_forward & sleep 5 && curl -s localhost:${probe_port}/healthz
+    stop_port_forward
+}
+
+check_readyz(){
+    port_forward & sleep 5 && curl -s localhost:${probe_port}/readyz
+    stop_port_forward
 }
 
 wait_node() {
@@ -116,7 +142,7 @@ _delete_node() {
     export podname=multi-nicd-stub-$i
     kubectl delete pod ${podname} -n ${OPERATOR_NAMESPACE} > /dev/null 2>&1
     export nodename=kwok-node-$i
-    kubectl patch node ${nodename} -p '{"metadata":{"finalizers":null}}' --type=merge
+    kubectl patch node ${nodename} -p '{"metadata":{"finalizers":null}}' --type=merge > /dev/null 2>&1
     kubectl delete node ${nodename} > /dev/null 2>&1
     kubectl delete po --field-selector spec.nodeName=${nodename} -n ${OPERATOR_NAMESPACE} --grace-period=0 > /dev/null 2>&1
 }
@@ -180,9 +206,11 @@ log_failure() {
 wait_n() {
     n=$1
     cidrCount=$(kubectl get multinicnetwork -o 'jsonpath={..status.discovery.cidrProcessed}')
-    while [[ "$cidrCount" != "$n" ]]; do 
+    while [[ "$cidrCount" != "$n" ]]; do
         prevCount=$cidrCount
         sleep 10
+        response=$(check_healthz)
+        echo "Healthz check: ${response}"
         waitingInQueue=$(get_controller_log|grep "Add UpdateRequest"|tail -1|awk '{ print substr($6,2) }')
         cidrCount=$(kubectl get multinicnetwork -o 'jsonpath={..status.discovery.cidrProcessed}')
         existDaemon=$(kubectl get multinicnetwork -o 'jsonpath={..status.discovery.existDaemon}')

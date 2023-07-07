@@ -146,9 +146,14 @@ func (r *HostInterfaceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 func (r *HostInterfaceReconciler) UpdateInterfaces(instance multinicv1.HostInterface) error {
 	nodeName := instance.Spec.HostName
 	hifName := instance.GetName()
-	pod, err := r.DaemonWatcher.DaemonCacheHandler.GetCache(nodeName)
+	pod, err := r.DaemonWatcher.TryGetDaemonPod(nodeName)
 	if err == nil {
 		// daemon exists
+		if pod.Name == "" {
+			// cannot confirm pod status
+			vars.HifLog.V(4).Info(fmt.Sprintf("Hostinterface %s: cannot confirm daemon pod status", nodeName))
+			return fmt.Errorf(vars.ThrottlingError)
+		}
 		podAddress := GetDaemonAddressByPod(pod)
 		interfaces, err := r.DaemonWatcher.DaemonConnector.GetInterfaces(podAddress)
 		if err != nil {
