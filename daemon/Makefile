@@ -6,13 +6,15 @@ export DAEMON_REGISTRY ?= ghcr.io/foundation-model-stack
 
 # DAEMON_IMG defines the image:tag used for daemon
 IMAGE_TAG_BASE = $(DAEMON_REGISTRY)/multi-nic-cni
-IMAGE_VERSION ?= 1.1.0
+IMAGE_VERSION ?= 1.2.0
 DAEMON_IMG ?= $(IMAGE_TAG_BASE)-daemon:v$(IMAGE_VERSION)
 
 
 test-verbose:
 	$(MAKE) -C src test-verbose
 
+test-env:
+	$(MAKE) -C src test-env
 
 update-cni-local:
 ifeq ($(shell uname), Linux)
