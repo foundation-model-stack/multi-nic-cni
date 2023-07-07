@@ -24,6 +24,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	multinicv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
@@ -54,14 +55,6 @@ func readyzHandler(r *http.Request) error {
 		return nil
 	}
 	return fmt.Errorf("wait for config")
-}
-
-// Handler for the health check endpoint
-func healthzHandler(r *http.Request) error {
-	if MultiNicNetworkReconcilerPointer != nil && controllers.ConfigReady {
-		return MultiNicNetworkReconcilerPointer.CheckHealth()
-	}
-	return fmt.Errorf("initializing")
 }
 
 func main() {
@@ -206,7 +199,7 @@ func main() {
 	}
 
 	//+kubebuilder:scaffold:builder
-	if err := mgr.AddHealthzCheck("healthz", healthzHandler); err != nil {
+	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 		setupLog.Error(err, "unable to set up health check")
 		os.Exit(1)
 	}

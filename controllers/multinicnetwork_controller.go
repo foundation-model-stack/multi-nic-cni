@@ -273,25 +273,3 @@ func (r *MultiNicNetworkReconciler) callFinalizer(reqLogger logr.Logger, instanc
 	r.CIDRHandler.MultiNicNetworkHandler.SafeCache.UnsetCache(instance.Name)
 	return nil
 }
-
-func (h *MultiNicNetworkReconciler) CheckHealth() error {
-	statuses := h.CIDRHandler.MultiNicNetworkHandler.ListStatusCache()
-	for name, status := range statuses {
-		discoverStatus := status.DiscoverStatus
-		hostInterfaceLen := len(h.CIDRHandler.HostInterfaceHandler.ListCache())
-		if discoverStatus.ExistDaemon != hostInterfaceLen {
-			return fmt.Errorf("existDaemon (%d) != hostInterface (%d), some host interface is missing", discoverStatus.ExistDaemon, hostInterfaceLen)
-		}
-		_, err := h.CIDRHandler.GetCache(name)
-		if err == nil {
-			// consider only multi-nic-ipam
-			if discoverStatus.InterfaceInfoAvailable > discoverStatus.ExistDaemon {
-				return fmt.Errorf("existDaemon (%d) < infoAvailable (%d), some daemon is missing", discoverStatus.ExistDaemon, discoverStatus.InterfaceInfoAvailable)
-			}
-			if discoverStatus.InterfaceInfoAvailable != discoverStatus.CIDRProcessedHost {
-				return fmt.Errorf("infoAvailable (%d) != processed (%d), some host may not be processed yet", discoverStatus.InterfaceInfoAvailable, discoverStatus.CIDRProcessedHost)
-			}
-		}
-	}
-	return nil
-}
