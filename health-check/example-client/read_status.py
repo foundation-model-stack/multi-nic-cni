@@ -5,8 +5,11 @@ import os
 
 checker_path_env = "CHECKER_URL"
 checker_namespace_env = "CHECKER_NAMESPACE"
+checker_path_fullname_env = "MULTI_NIC_HEALTH_CHECKER_ENDPOINT"
+checker_timeout_fullname_env = "MULTI_NIC_HEALTH_CHECKER_TIMEOUT"
 
 default_checker_namespace = "openshift-operators"
+default_timeout = "10" # seconds
 checker_service_name = "multi-nic-cni-health-check"
 service_port = 8080
 service_path = "/status"
@@ -72,8 +75,8 @@ class HostCNIHealthStatus:
         if len(unconnect_net_addr) > 0:
             print_failed_status(self)
 
-def process_status_with_hostname(checker_service_path, hostname):
-    response = requests.get(checker_service_path, params={'host': hostname})
+def process_status_with_hostname(checker_service_path, hostname, timeout):
+    response = requests.get(checker_service_path, params={'host': hostname}, timeout=timeout)
     # Check the status code
     if response.status_code == requests.codes.ok:
         # Parse the JSON response
@@ -88,8 +91,8 @@ def process_status_with_hostname(checker_service_path, hostname):
         print("Request failed with status code:", response.status_code)
         print(response.text)
 
-def process_status(checker_service_path):
-    response = requests.get(checker_service_path)
+def process_status(checker_service_path, timeout):
+    response = requests.get(checker_service_path, timeout=timeout)
 
     # Check the status code
     if response.status_code == requests.codes.ok:
@@ -103,7 +106,6 @@ def process_status(checker_service_path):
         except Exception as err:
             print("Failed to process failure response: ", err)
             print(response.text)
-
         
 if __name__ == "__main__":
     checker_service_path = os.environ.get(checker_path_env, "")
@@ -112,14 +114,23 @@ if __name__ == "__main__":
         checker_namespace = os.environ.get(checker_namespace_env, default_checker_namespace)
         checker_service_path = "http://{}.{}.svc:{}/{}".format(checker_service_name, checker_namespace, service_port, service_path)
 
-        # may specify checker
+        # may specify checker by pod ip
         # checker_pod = <pod ip>
         # checker_service_path = "http://{}.{}.pod:{}/{}".format(checker_pod, checker_namespace, service_port, service_path)
 
-    if len(sys.argv) == 1:
-        # no hostname specified, get all status
-        process_status(checker_service_path)
-    else:
-        hostname = sys.argv[1]
-        process_status_with_hostname(checker_service_path, hostname)
+    # override if checker_path_fullname_env set
+    checker_service_path = os.environ.get(checker_path_fullname_env, checker_service_path)
 
+    if checker_service_path != "":
+        try: 
+            timeout = int(os.environ.get(checker_timeout_fullname_env, default_timeout))
+            if len(sys.argv) == 1:
+                # no hostname specified, get all status
+                process_status(checker_service_path, timeout=timeout)
+            else:
+                hostname = sys.argv[1]
+                process_status_with_hostname(checker_service_path, hostname, timeout=timeout)
+        except:
+            print("cannot request status from {}.".format(checker_service_path))
+    else:
+        print("checker_service_path is not set.")

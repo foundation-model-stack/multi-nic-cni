@@ -17,6 +17,9 @@ To test locally, follow the steps below.
     export CHECKER_URL=http://localhost:8080/status
     ```
 
+    - Default timeout is 10s. To, change timeout for large cluster, set `MULTI_NIC_HEALTH_CHECKER_TIMEOUT` environment variable.
+    - `CHECKER_URL` will be replaced by `MULTI_NIC_HEALTH_CHECKER_ENDPOINT` value if it is set. 
+
 3. run `python read_status.py`
 
     3.1. Get status of all hosts
