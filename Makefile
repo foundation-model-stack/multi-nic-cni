@@ -18,7 +18,7 @@ endif
 # - use environment variables to overwrite this value (e.g export VERSION=0.0.2)
 # VERSION ?= 0.0.1
 VERSION ?= 1.1.0
-export CHANNELS = "alpha,beta"
+export CHANNELS = "beta"
 export DEFAULT_CHANNEL = "beta"
 
 # CHANNELS define the bundle channels used in the bundle.
