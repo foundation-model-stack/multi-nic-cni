@@ -1,0 +1,14 @@
+apiVersion: multinic.fms.io/v1
+kind: MultiNicNetwork
+metadata:
+  name: multinic-mellanox-hostdevice
+spec:
+  subnet: ""
+  ipam: |
+      {
+        "type": "host-device-ipam"
+      }
+  multiNICIPAM: false
+  plugin:
+    cniVersion: "0.3.1"
+    type: mellanox

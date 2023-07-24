@@ -1,0 +1,12 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: mellanox-role-binding
+subjects:
+- kind: ServiceAccount
+  name: controller-manager
+  namespace: system
+roleRef:
+  kind: ClusterRole
+  name: mellanox-role
+  apiGroup: rbac.authorization.k8s.io

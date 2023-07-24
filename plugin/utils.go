@@ -8,6 +8,12 @@ package plugin
 import (
 	"fmt"
 	"strconv"
+	"strings"
+)
+
+const (
+	RESOURCE_ANNOTATION = "k8s.v1.cni.cncf.io/resourceName"
+	HOLDER_SUFFIX       = "-net"
 )
 
 func getInt(values map[string]string, key string) (int, error) {
@@ -22,4 +28,14 @@ func getBoolean(values map[string]string, key string) (bool, error) {
 		return strconv.ParseBool(value)
 	}
 	return false, fmt.Errorf("unset")
+}
+
+func ValidateResourceName(name string) string {
+	name = strings.ReplaceAll(name, ".", "")
+	name = strings.ReplaceAll(name, "-", "")
+	return name
+}
+
+func GetHolderNetName(name string) string {
+	return name + HOLDER_SUFFIX
 }

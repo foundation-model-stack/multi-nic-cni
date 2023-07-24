@@ -57,6 +57,7 @@ var hifList map[string]multinicv1.HostInterface = generateHostInterfaceList(node
 var ipvlanPlugin *plugin.IPVLANPlugin
 var macvlanPlugin *plugin.MACVLANPlugin
 var sriovPlugin *plugin.SriovPlugin
+var mellanoxPlugin *plugin.MellanoxPlugin
 
 var multinicnetworkReconciler *controllers.MultiNicNetworkReconciler
 var configReconciler *controllers.ConfigReconciler
@@ -270,9 +271,50 @@ var _ = BeforeSuite(func() {
 	plugin.SRIOV_MANIFEST_PATH = "../plugin/template/cni-config"
 	Expect(k8sClient.Create(context.TODO(), &sriovNamespace)).Should(Succeed())
 	err = sriovPlugin.Init(cfg)
-	if err != nil {
-		fmt.Printf("Failed to init SR-IoV Plugin: %v", err)
+	Expect(err).ToNot(HaveOccurred())
+
+	// Deploy mellanox dependency
+	mellanoxPlugin = &plugin.MellanoxPlugin{}
+	err = mellanoxPlugin.Init(cfg)
+	Expect(err).ToNot(HaveOccurred())
+	sriovResourceList := `
+		{
+			"resourceList": [
+				{
+					"resourcePrefix": "nvidia.com",
+					"resourceName": "host_dev",
+					"selectors": {
+						"vendors": ["15b3"],
+						"isRdma": true
+					}
+				}
+			]
+		}
+	`
+	nicClusterPolicy := plugin.NicClusterPolicy{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: plugin.MELLANOX_API_VERSION,
+			Kind:       plugin.MELLANOX_POLICY_KIND,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "nic-cluster-policy",
+		},
+		Spec: plugin.NicClusterPolicySpec{
+			SriovDevicePlugin: &plugin.DevicePluginSpec{
+				ImageSpecWithConfig: plugin.ImageSpecWithConfig{
+					Config: &sriovResourceList,
+					ImageSpec: plugin.ImageSpec{
+						Image:            "sriov-network-device-plugin",
+						Repository:       "ghcr.io/k8snetworkplumbingwg",
+						Version:          "v3.5.1",
+						ImagePullSecrets: []string{},
+					},
+				},
+			},
+		},
 	}
+	createdNicClusterPolicy := &plugin.NicClusterPolicy{}
+	Expect(mellanoxPlugin.MellanoxNicClusterPolicyHandler.Create(metav1.NamespaceAll, nicClusterPolicy, createdNicClusterPolicy)).Should(Succeed())
 }, 60)
 
 var _ = AfterSuite(func() {
@@ -346,6 +388,25 @@ func getMultiNicCNINetwork(name string, cniVersion string, cniType string, cniAr
 			Subnet:         globalSubnet,
 			IPAM:           multiNicIPAMConfig,
 			IsMultiNICIPAM: true,
+			MainPlugin: multinicv1.PluginSpec{
+				CNIVersion: cniVersion,
+				Type:       cniType,
+				CNIArgs:    cniArgs,
+			},
+		},
+	}
+}
+
+// getNonMultiIPAMNicCNINetwork returns MultiNicNetwork object without Multi-NIC IPAM
+func getNonMultiNicCNINetwork(name string, cniVersion string, cniType string, cniArgs map[string]string, ipam string) *multinicv1.MultiNicNetwork {
+	return &multinicv1.MultiNicNetwork{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Spec: multinicv1.MultiNicNetworkSpec{
+			Subnet:         "",
+			IPAM:           ipam,
+			IsMultiNICIPAM: false,
 			MainPlugin: multinicv1.PluginSpec{
 				CNIVersion: cniVersion,
 				Type:       cniType,

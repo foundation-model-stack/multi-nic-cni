@@ -8,6 +8,7 @@ package plugin
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -87,4 +88,22 @@ func (h *DynamicHandler) Get(name string, namespace string, result interface{}) 
 	}
 	err = json.Unmarshal(outbytes, result)
 	return err
+}
+
+func (h *DynamicHandler) GetFirst(namespace string, result interface{}) error {
+	options := metav1.ListOptions{}
+	ctx := context.TODO()
+	itemList, err := h.DYN.Resource(h.GVR).Namespace(namespace).List(ctx, options)
+	if err != nil {
+		return err
+	}
+	if len(itemList.Items) > 0 {
+		ures := itemList.Items[0]
+		outbytes, err := ures.MarshalJSON()
+		if err != nil {
+			return err
+		}
+		return json.Unmarshal(outbytes, result)
+	}
+	return fmt.Errorf("no item")
 }

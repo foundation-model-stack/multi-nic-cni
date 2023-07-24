@@ -14,5 +14,5 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 images:
 - name: multi-nic-cni-daemon
-  newName: ghcr.io/foundation-model-stack/multi-nic-cni-daemon
+  newName: ghcr.io/sunya-ch/multi-nic-cni-daemon
   newTag: v1.2.0

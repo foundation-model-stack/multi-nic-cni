@@ -52,6 +52,13 @@ func GetPluginMap(config *rest.Config) map[string]*PluginInterface {
 	pluginMap[plugin.AWS_IPVLAN_TYPE] = new(PluginInterface)
 	awsVpcCNIPlugin := &plugin.AwsVpcCNIPlugin{}
 	*pluginMap[plugin.AWS_IPVLAN_TYPE] = awsVpcCNIPlugin
+	mellanoxPlugin := &plugin.MellanoxPlugin{}
+	err = mellanoxPlugin.Init(config)
+	if err != nil {
+		vars.NetworkLog.V(2).Info("Failed to init Mellanox Plugin: %v", err)
+	}
+	pluginMap[plugin.MELLANOX_TYPE] = new(PluginInterface)
+	*pluginMap[plugin.MELLANOX_TYPE] = mellanoxPlugin
 	return pluginMap
 }
 

@@ -1,0 +1,17 @@
+# permissions for end users to edit multinicnetworks.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: mellanox-role
+rules:
+- apiGroups:
+  - mellanox.com
+  resources:
+  - hostdevicenetworks
+  - nicclusterpolicies
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - watch

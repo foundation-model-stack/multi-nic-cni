@@ -135,6 +135,8 @@ func cmdAdd(args *skel.CmdArgs) error {
 		confBytesArray, err = loadSRIOVConf(args.StdinData, args.IfName, n, result.IPs)
 	case "aws-ipvlan":
 		confBytesArray, err = loadAWSCNIConf(args.StdinData, args.IfName, n, result.IPs)
+	case "host-device":
+		confBytesArray, err = loadHostDeviceConf(args.StdinData, args.IfName, n, result.IPs)
 	default:
 		err = fmt.Errorf("unsupported device type: %s", deviceType)
 	}
@@ -225,6 +227,8 @@ func cmdDel(args *skel.CmdArgs) error {
 		confBytesArray, err = loadSRIOVConf(args.StdinData, args.IfName, n, ips)
 	case "aws-ipvlan":
 		confBytesArray, err = loadAWSCNIConf(args.StdinData, args.IfName, n, ips)
+	case "host-device":
+		confBytesArray, err = loadHostDeviceConf(args.StdinData, args.IfName, n, ips)
 	default:
 		err = fmt.Errorf("unsupported device type: %s", deviceType)
 	}
@@ -284,6 +288,8 @@ func cmdCheck(args *skel.CmdArgs) error {
 		confBytesArray, err = loadSRIOVConf(args.StdinData, args.IfName, n, result.IPs)
 	case "aws-ipvlan":
 		confBytesArray, err = loadAWSCNIConf(args.StdinData, args.IfName, n, result.IPs)
+	case "host-device":
+		confBytesArray, err = loadHostDeviceConf(args.StdinData, args.IfName, n, result.IPs)
 	default:
 		err = fmt.Errorf("unsupported device type: %s", deviceType)
 	}

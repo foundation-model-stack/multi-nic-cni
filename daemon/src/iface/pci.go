@@ -135,12 +135,17 @@ func GetDeviceMap(resourceMap map[string][]string, resourceName string) map[stri
 // reference: github.com/k8snetworkplumbingwg/sriov-cni/pkg/utils
 // GetPfName returns PF net device name of a given VF pci address
 func GetPfName(vf string) (string, error) {
-	pfSymLink := filepath.Join(SysBusPci, vf, "physfn", "net")
+	// check if physical
+	pfSymLink := filepath.Join(SysBusPci, vf, "net")
 	_, err := os.Lstat(pfSymLink)
 	if err != nil {
-		return "", err
+		// check for virtual
+		pfSymLink = filepath.Join(SysBusPci, vf, "physfn", "net")
+		_, err = os.Lstat(pfSymLink)
+		if err != nil {
+			return "", err
+		}
 	}
-
 	files, err := ioutil.ReadDir(pfSymLink)
 	if err != nil {
 		return "", err
