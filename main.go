@@ -9,7 +9,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"net/http"
 	"os"
 	"time"
 
@@ -47,14 +46,6 @@ func init() {
 	utilruntime.Must(multinicv1.AddToScheme(scheme))
 	utilruntime.Must(netv1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
-}
-
-// Handler for the ready check endpoint
-func readyzHandler(r *http.Request) error {
-	if controllers.ConfigReady {
-		return nil
-	}
-	return fmt.Errorf("wait for config")
 }
 
 func main() {
@@ -203,7 +194,7 @@ func main() {
 		setupLog.Error(err, "unable to set up health check")
 		os.Exit(1)
 	}
-	if err := mgr.AddReadyzCheck("readyz", readyzHandler); err != nil {
+	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
 		setupLog.Error(err, "unable to set up ready check")
 		os.Exit(1)
 	}
