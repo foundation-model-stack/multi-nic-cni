@@ -7,10 +7,10 @@ package plugin
 
 import (
 	"fmt"
-	"strings"
 
 	multinicv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
 	"github.com/foundation-model-stack/multi-nic-cni/controllers/vars"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
@@ -19,13 +19,11 @@ import (
 )
 
 const (
-	SRIOV_RESOURCE_ANNOTATION = "k8s.v1.cni.cncf.io/resourceName"
-	SRIOV_RESOURCE_PREFIX     = "openshift.io"
-	SRIOV_NAMESPACE           = "openshift-sriov-network-operator"
-	SRIOV_IB_KEY              = "ib"
-	SRIOV_TYPE                = "sriov"
-	SRIOV_DEFAULT_NUMVFS      = 1
-	SRIOV_NETWORK_SUBFIX      = "-net"
+	SRIOV_RESOURCE_PREFIX = "openshift.io"
+	SRIOV_NAMESPACE       = "openshift-sriov-network-operator"
+	SRIOV_IB_KEY          = "ib"
+	SRIOV_TYPE            = "sriov"
+	SRIOV_DEFAULT_NUMVFS  = 1
 
 	SRIOV_NETWORK_RESOURCE    = "sriovnetworks.v1.sriovnetwork.openshift.io"
 	SRIOV_POLICY_RESOURCE     = "sriovnetworknodepolicies.v1.sriovnetwork.openshift.io"
@@ -37,10 +35,6 @@ var SRIOV_NODE_SELECTOR map[string]string = map[string]string{
 }
 
 var SRIOV_MANIFEST_PATH string = "/template/cni-config"
-
-const (
-	RESOURCE_ANNOTATION = "k8s.v1.cni.cncf.io/resourceName"
-)
 
 type SriovPlugin struct {
 	SriovNetworkHandler           *DynamicHandler
@@ -72,7 +66,7 @@ func (p *SriovPlugin) GetConfig(net multinicv1.MultiNicNetwork, hifList map[stri
 	annotation := make(map[string]string)
 	name := net.GetName()
 	namespace := net.GetNamespace()
-	resourceName := p.ValidateResourceName(name) // default name
+	resourceName := ValidateResourceName(name) // default name
 	spec := net.Spec.MainPlugin
 	args := spec.CNIArgs
 	rootDevices := p.getRootDevices(net, hifList)
@@ -92,7 +86,7 @@ func (p *SriovPlugin) GetConfig(net multinicv1.MultiNicNetwork, hifList map[stri
 		return "", annotation, err
 	}
 	config := raw.Object["spec"].(map[string]interface{})["config"].(string)
-	annotation[SRIOV_RESOURCE_ANNOTATION] = SRIOV_RESOURCE_PREFIX + "/" + resourceName
+	annotation[RESOURCE_ANNOTATION] = SRIOV_RESOURCE_PREFIX + "/" + resourceName
 	return config, annotation, nil
 }
 
@@ -220,17 +214,14 @@ func (p *SriovPlugin) createSriovNetwork(name string, namespace string, args map
 	result := &SriovNetwork{}
 
 	err = p.SriovNetworkHandler.Create(SRIOV_NAMESPACE, sriovnet, result)
+	if k8serrors.IsAlreadyExists(err) {
+		return result, nil
+	}
 	return result, err
 }
 
-func (p *SriovPlugin) ValidateResourceName(name string) string {
-	name = strings.ReplaceAll(name, ".", "")
-	name = strings.ReplaceAll(name, "-", "")
-	return name
-}
-
 func (p *SriovPlugin) SriovnetworkName(name string) string {
-	return name + SRIOV_NETWORK_SUBFIX
+	return GetHolderNetName(name)
 }
 
 func (p *SriovPlugin) CleanUp(net multinicv1.MultiNicNetwork) error {

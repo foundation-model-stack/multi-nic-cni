@@ -145,13 +145,15 @@ func cmdCheck(args *skel.CmdArgs) error {
 		return fmt.Errorf("no ip allocated")
 	}
 
-	for _, ips := range result.IPs {
-		_, subnetNet, err := net.ParseCIDR(n.Subnet)
-		if err != nil {
-			return fmt.Errorf("cannot parse subnet %s", n.Subnet)
-		}
-		if !subnetNet.Contains(ips.Address.IP) {
-			return fmt.Errorf("allocated ip %s is not in designated subnet %s", ips.Address.IP, n.Subnet)
+	if n.Subnet != "" {
+		for _, ips := range result.IPs {
+			_, subnetNet, err := net.ParseCIDR(n.Subnet)
+			if err != nil {
+				return fmt.Errorf("cannot parse subnet %s", n.Subnet)
+			}
+			if !subnetNet.Contains(ips.Address.IP) {
+				return fmt.Errorf("allocated ip %s is not in designated subnet %s", ips.Address.IP, n.Subnet)
+			}
 		}
 	}
 

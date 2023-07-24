@@ -7,11 +7,13 @@ package main
 
 import (
 	"encoding/json"
+	"log"
 	"strings"
 
 	"fmt"
 
 	current "github.com/containernetworking/cni/pkg/types/100"
+	"github.com/vishvananda/netlink"
 )
 
 // getPodInfo extracts pod Name and Namespace from cniArgs
@@ -75,4 +77,24 @@ func injectMaster(inData []byte, selectedNetAddrs []string, selectedMasters []st
 	obj["deviceIDs"] = selectedDeviceIDs
 	outBytes, _ := json.Marshal(obj)
 	return outBytes
+}
+
+// getHostIPConfig returns IP of host for a specific devName
+func getHostIPConfig(index int, devName string) *current.IPConfig {
+	devLink, err := netlink.LinkByName(devName)
+	if err != nil {
+		log.Printf("cannot find link %s: %v", devName, err)
+		return nil
+	}
+	addrs, err := netlink.AddrList(devLink, netlink.FAMILY_V4)
+	if err != nil || len(addrs) == 0 {
+		log.Printf("cannot list address on %s: %v", devName, err)
+		return nil
+	}
+	addr := addrs[0].IPNet
+	ipConf := &current.IPConfig{
+		Address:   *addr,
+		Interface: current.Int(index),
+	}
+	return ipConf
 }
