@@ -31,9 +31,15 @@ Currently, Multi-NIC CNI Operator v1.1.x for supporting multi-cloud is under dev
 
 - [SR-IoV with Multi-NIC IPAM](https://github.com/foundation-model-stack/multi-nic-cni/tree/main/config/samples/multinicnetwork/sriov.yaml)
 
-
         kubectl apply -f config/samples/multinicnetwork/sriov.yaml
 
+- [Mellanox Host Device without IPAM](https://github.com/foundation-model-stack/multi-nic-cni/tree/main/config/samples/multinicnetwork/mellanox_hostdevice.yaml)
+
+        kubectl apply -f config/samples/multinicnetwork/mellanox_hostdevice.yaml
+
+- [IPVLAN L2 with unmanaged HostInterface](https://github.com/foundation-model-stack/multi-nic-cni/tree/main/config/samples/multinicnetwork/ipvlanl2_unmanaged.yaml)
+
+        kubectl apply -f config/samples/multinicnetwork/ipvlanl2_unmanaged.yaml
 
 ### AWS
 - [IPVLAN L2 with AWS-VPC-connecting IPAM](https://github.com/foundation-model-stack/multi-nic-cni/tree/main/config/samples/multinicnetwork/awsipvlan.yaml)

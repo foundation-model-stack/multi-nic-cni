@@ -117,6 +117,12 @@ func (r *HostInterfaceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 
 	hifName := instance.GetName()
+	if vars.IsUnmanaged(instance.ObjectMeta) {
+		// unmanaged hostinterface
+		r.HostInterfaceHandler.SetCache(hifName, *instance.DeepCopy())
+		return ctrl.Result{}, nil
+	}
+
 	if !r.HostInterfaceHandler.SafeCache.Contains(hifName) && len(instance.Spec.Interfaces) > 0 {
 		r.HostInterfaceHandler.SetCache(hifName, *instance.DeepCopy())
 	}
@@ -144,6 +150,9 @@ func (r *HostInterfaceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 func (r *HostInterfaceReconciler) UpdateInterfaces(instance multinicv1.HostInterface) error {
+	if vars.IsUnmanaged(instance.ObjectMeta) {
+		return nil
+	}
 	nodeName := instance.Spec.HostName
 	hifName := instance.GetName()
 	pod, err := r.DaemonWatcher.TryGetDaemonPod(nodeName)
