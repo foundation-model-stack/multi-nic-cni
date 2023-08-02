@@ -2,7 +2,6 @@ apiVersion: multinic.fms.io/v1
 kind: MultiNicNetwork
 metadata:
   name: multinic-ipvlanl2
-  namespace: default
 spec:
   subnet: ""
   ipam: |
