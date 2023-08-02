@@ -11,6 +11,7 @@ import (
 
 	"github.com/containernetworking/cni/pkg/types"
 	current "github.com/containernetworking/cni/pkg/types/100"
+	"github.com/vishvananda/netlink"
 )
 
 // MACVLANNetConfig defines macvlan net config
@@ -27,12 +28,13 @@ type MACVLANTypeNetConf struct {
 }
 
 // loadMACVLANConf unmarshals to MACVLANNetConfig and returns a list of MACVLAN configs
-func loadMACVLANConf(bytes []byte, ifName string, n *NetConf, ipConfigs []*current.IPConfig) ([][]byte, error) {
-	confBytesArray := [][]byte{}
+func loadMACVLANConf(bytes []byte, ifName string, n *NetConf, ipConfigs []*current.IPConfig) (confBytesArray [][]byte, multiPathRoutes map[string][]*netlink.NexthopInfo, loadError error) {
+	confBytesArray = [][]byte{}
 
 	configInMACVLAN := &MACVLANNetConfig{}
 	if err := json.Unmarshal(bytes, configInMACVLAN); err != nil {
-		return confBytesArray, err
+		loadError = err
+		return
 	}
 
 	// Interfaces are orderly assigned from the interface set
@@ -44,7 +46,8 @@ func loadMACVLANConf(bytes []byte, ifName string, n *NetConf, ipConfigs []*curre
 		// Add config
 		singleConfig, err := copyMACVLANConfig(configInMACVLAN.MainPlugin)
 		if err != nil {
-			return confBytesArray, err
+			loadError = err
+			return
 		}
 		if singleConfig.CNIVersion == "" {
 			singleConfig.CNIVersion = n.CNIVersion
@@ -53,19 +56,20 @@ func loadMACVLANConf(bytes []byte, ifName string, n *NetConf, ipConfigs []*curre
 		singleConfig.Master = masterName
 		confBytes, err := json.Marshal(singleConfig)
 		if err != nil {
-			return confBytesArray, err
+			loadError = err
+			return
 		}
 
 		if n.IsMultiNICIPAM {
 			// Multi-NIC IPAM config
-			confBytes = injectMultiNicIPAM(confBytes, ipConfigs, index)
+			confBytes, multiPathRoutes = injectMultiNicIPAM(confBytes, bytes, ipConfigs, index)
 		} else {
 			// Single-NIC IPAM config
-			confBytes = injectSingleNicIPAM(confBytes, bytes)
+			confBytes, multiPathRoutes = injectSingleNicIPAM(confBytes, bytes)
 		}
 		confBytesArray = append(confBytesArray, confBytes)
 	}
-	return confBytesArray, nil
+	return
 }
 
 // copyMACVLANConfig makes a copy of the base MACVLAN config

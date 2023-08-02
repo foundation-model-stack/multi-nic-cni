@@ -87,6 +87,11 @@ var BRIDGE_CONTAINER_IP = "172.168.17.1"
 var BRIDGE_HOST_IP = "172.168.17.2"
 var daemonPort int
 
+var MULTIPATH_DST = "192.168.0.0/24"
+var MULTIPATH_GWS = []string{"10.0.0.254", "10.1.0.254"}
+
+var MULTIPATH_ROUTES = fmt.Sprintf(`"routes": [{"dst": "%s","gw": "%s"}, {"dst": "%s","gw": "%s"}]`, MULTIPATH_DST, MULTIPATH_GWS[0], MULTIPATH_DST, MULTIPATH_GWS[1])
+
 const (
 	ALLOCATE_PATH   = "allocate"
 	DEALLOCATE_PATH = "deallocate"
@@ -261,6 +266,31 @@ func multinicDelWithoutDaemonTest(conf, masterName string, originalNS, targetNS 
 	result := multinicAddTest(conf, masterName, originalNS, targetNS)
 	confWithoutDaemon := strings.ReplaceAll(conf, BRIDGE_HOST_IP, "")
 	multinicCheckDelTest(confWithoutDaemon, masterName, originalNS, targetNS, result)
+}
+
+func multiPathTest(ver, ipamValue, masterNets string, masters []string) {
+	log.Printf("multiPathTest")
+	podIP := "192.168.0.1/24"
+	_, ipnet, err := net.ParseCIDR(podIP)
+	podIPConfig := &types100.IPConfig{Address: *ipnet}
+	Expect(err).NotTo(HaveOccurred())
+	conf := getConfig(ver, ipamValue, masterNets)
+	n := &NetConf{}
+	err = json.Unmarshal([]byte(conf), &n)
+	n.Masters = masters
+	Expect(err).NotTo(HaveOccurred())
+	_, multiPathRoutes, err := loadIPVANConf([]byte(conf), "net1", n, []*types100.IPConfig{podIPConfig})
+	log.Printf("multipath config: %s", conf)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(len(multiPathRoutes)).To(Equal(1))
+	nexthops, ok := multiPathRoutes[MULTIPATH_DST]
+	Expect(ok).To(Equal(true))
+	Expect(len(nexthops)).To(Equal(2))
+	nexthopList := []string{}
+	for _, nexthop := range nexthops {
+		nexthopList = append(nexthopList, nexthop.Gw.To4().String())
+	}
+	Expect(nexthopList).To(ConsistOf(MULTIPATH_GWS))
 }
 
 type tester interface {
@@ -472,7 +502,7 @@ var _ = Describe("Operations", func() {
 			nodeIP := getHostIP("eth0")
 			log.Printf("Host IP: %s", nodeIP.String())
 			podIPConfig := &types100.IPConfig{Address: *ipnet}
-			confBytesArray, err := loadAWSCNIConf(conf, "net1", n, []*types100.IPConfig{podIPConfig})
+			confBytesArray, _, err := loadAWSCNIConf(conf, "net1", n, []*types100.IPConfig{podIPConfig})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(len(confBytesArray)).NotTo(Equal(0))
 			log.Printf("%s", string(confBytesArray[0]))
@@ -481,6 +511,28 @@ var _ = Describe("Operations", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(confObj.PodIP).To(Equal(ipVal.String()))
 		})
+
+		It(fmt.Sprintf("[%s] check multipath routes", ver), func() {
+			multiNICIPAMWithMultiPath := fmt.Sprintf(`"ipam": {
+				"type": "multi-nic-ipam",
+				"hostBlock": 0,
+				"interfaceBlock": 0,
+				%s,
+				"daemonIP": "%s",
+				"daemonPort": %d
+				},
+			"multiNICIPAM": true,
+			`, MULTIPATH_ROUTES, BRIDGE_HOST_IP, daemonPort)
+			multiPathTest(ver, multiNICIPAMWithMultiPath, fullNets, POOL_MASTER_NAMES)
+			singleNICIPAMWithMultiPath := fmt.Sprintf(`"ipam": {
+				"type": "static",
+				%s,
+				"addresses": [{"address": "192.168.1.1/24"}]
+			},
+			"multiNICIPAM": false,`, MULTIPATH_ROUTES)
+			multiPathTest(ver, singleNICIPAMWithMultiPath, fullNets, POOL_MASTER_NAMES)
+		})
+
 	}
 })
 
