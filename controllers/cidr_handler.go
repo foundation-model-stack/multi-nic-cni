@@ -388,6 +388,12 @@ func (h *CIDRHandler) UpdateEntries(cidrSpec multinicv1.CIDRSpec, excludes []com
 		excludesInStr = append(excludesInStr, exclude.Address)
 	}
 
+	// initCheckInterfaceMap
+	checkInterfaceMap := make(map[string]bool)
+	for _, netAddr := range def.MasterNetAddrs {
+		checkInterfaceMap[netAddr] = true
+	}
+
 	// maxHostIndex = 2^(host bits) - 1
 	maxHostIndex := int(math.Pow(2, float64(def.HostBlock)) - 1)
 
@@ -399,6 +405,11 @@ func (h *CIDRHandler) UpdateEntries(cidrSpec multinicv1.CIDRSpec, excludes []com
 		// assign interface index to each host
 		for _, iface := range ifaces {
 			interfaceNetAddress := iface.NetAddress
+			if len(def.MasterNetAddrs) > 0 {
+				if _, found := checkInterfaceMap[interfaceNetAddress]; !found {
+					continue
+				}
+			}
 			interfaceName := iface.InterfaceName
 			hostIP := iface.HostIP
 			success, entry := h.getInterfaceEntry(def, entriesMap, interfaceNetAddress)

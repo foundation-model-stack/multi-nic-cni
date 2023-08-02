@@ -393,6 +393,7 @@ func getMultiNicCNINetwork(name string, cniVersion string, cniType string, cniAr
 				Type:       cniType,
 				CNIArgs:    cniArgs,
 			},
+			MasterNetAddrs: networkAddresses,
 		},
 	}
 }
