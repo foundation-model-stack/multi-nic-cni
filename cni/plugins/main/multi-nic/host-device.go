@@ -11,6 +11,7 @@ import (
 
 	"github.com/containernetworking/cni/pkg/types"
 	current "github.com/containernetworking/cni/pkg/types/100"
+	"github.com/vishvananda/netlink"
 )
 
 const (
@@ -38,12 +39,13 @@ type HostDeviceNetConf struct {
 }
 
 // loadHostDeviceConf unmarshal to HostDeviceNetConf and returns list of SR-IOV configs
-func loadHostDeviceConf(bytes []byte, ifName string, n *NetConf, ipConfigs []*current.IPConfig) ([][]byte, error) {
-	confBytesArray := [][]byte{}
+func loadHostDeviceConf(bytes []byte, ifName string, n *NetConf, ipConfigs []*current.IPConfig) (confBytesArray [][]byte, multiPathRoutes map[string][]*netlink.NexthopInfo, loadError error) {
+	confBytesArray = [][]byte{}
 
 	configInHostDevice := HostDeviceTypeNetConf{}
 	if err := json.Unmarshal(bytes, &configInHostDevice); err != nil {
-		return confBytesArray, err
+		loadError = err
+		return
 	}
 
 	// interfaces are orderly assigned from interface set
@@ -54,7 +56,8 @@ func loadHostDeviceConf(bytes []byte, ifName string, n *NetConf, ipConfigs []*cu
 		// add config
 		singleConfig, err := copyHostDeviceConfig(configInHostDevice.MainPlugin)
 		if err != nil {
-			return confBytesArray, err
+			loadError = err
+			return
 		}
 		if singleConfig.CNIVersion == "" {
 			singleConfig.CNIVersion = n.CNIVersion
@@ -65,23 +68,24 @@ func loadHostDeviceConf(bytes []byte, ifName string, n *NetConf, ipConfigs []*cu
 		}
 		confBytes, err := json.Marshal(singleConfig)
 		if err != nil {
-			return confBytesArray, err
+			loadError = err
+			return
 		}
 		if n.IPAM.Type == HostDeviceIPAMType {
 			ipConfig := getHostIPConfig(index, n.Masters[index])
 			if ipConfig == nil {
 				continue
 			}
-			confBytes = replaceMultiNicIPAM(confBytes, ipConfig)
+			confBytes, multiPathRoutes = replaceMultiNicIPAM(confBytes, bytes, ipConfig)
 		} else if n.IsMultiNICIPAM {
 			// multi-NIC IPAM config
-			confBytes = injectMultiNicIPAM(confBytes, ipConfigs, index)
+			confBytes, multiPathRoutes = injectMultiNicIPAM(confBytes, bytes, ipConfigs, index)
 		} else {
-			confBytes = injectSingleNicIPAM(confBytes, bytes)
+			confBytes, multiPathRoutes = injectSingleNicIPAM(confBytes, bytes)
 		}
 		confBytesArray = append(confBytesArray, confBytes)
 	}
-	return confBytesArray, nil
+	return
 }
 
 // copyHostDeviceConfig makes a copy of base host-device config

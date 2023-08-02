@@ -8,10 +8,12 @@ package main
 import (
 	"encoding/json"
 	"log"
+	"net"
 	"strings"
 
 	"fmt"
 
+	"github.com/containernetworking/cni/pkg/types"
 	current "github.com/containernetworking/cni/pkg/types/100"
 	"github.com/vishvananda/netlink"
 )
@@ -32,15 +34,15 @@ func getPodInfo(cniArgs string) (string, string) {
 }
 
 // injectIPAM injects ipam bytes to config
-
-func injectMultiNicIPAM(singleNicConfBytes []byte, ipConfigs []*current.IPConfig, ipIndex int) []byte {
+func injectMultiNicIPAM(singleNicConfBytes, multiNicConfBytes []byte, ipConfigs []*current.IPConfig, ipIndex int) ([]byte, map[string][]*netlink.NexthopInfo) {
 	var ipConfig *current.IPConfig
 	if ipIndex < len(ipConfigs) {
 		ipConfig = ipConfigs[ipIndex]
 	}
-	return replaceMultiNicIPAM(singleNicConfBytes, ipConfig)
+	return replaceMultiNicIPAM(singleNicConfBytes, multiNicConfBytes, ipConfig)
 }
-func injectSingleNicIPAM(singleNicConfBytes []byte, multiNicConfBytes []byte) []byte {
+
+func injectSingleNicIPAM(singleNicConfBytes []byte, multiNicConfBytes []byte) ([]byte, map[string][]*netlink.NexthopInfo) {
 	return replaceSingleNicIPAM(singleNicConfBytes, multiNicConfBytes)
 }
 
@@ -48,24 +50,73 @@ type IPAMExtract struct {
 	IPAM map[string]interface{} `json:"ipam"`
 }
 
-func replaceSingleNicIPAM(singleNicConfBytes []byte, multiNicConfBytes []byte) []byte {
+func replaceSingleNicIPAM(singleNicConfBytes, multiNicConfBytes []byte) ([]byte, map[string][]*netlink.NexthopInfo) {
 	confStr := string(singleNicConfBytes)
 	ipamObject := &IPAMExtract{}
-	json.Unmarshal(multiNicConfBytes, ipamObject)
-	ipamBytes, _ := json.Marshal(ipamObject.IPAM)
-	singleIPAM := fmt.Sprintf("\"ipam\":%s", string(ipamBytes))
-	injectedStr := strings.ReplaceAll(confStr, "\"ipam\":{}", singleIPAM)
-	return []byte(injectedStr)
+	err := json.Unmarshal(multiNicConfBytes, ipamObject)
+	if err == nil {
+		nonMultiPathRoutes, multiPathRoutes := getRoutesFromIPAM(ipamObject)
+		if nonMultiPathRoutes != nil {
+			ipamObject.IPAM["routes"] = nonMultiPathRoutes
+		}
+
+		ipamBytes, _ := json.Marshal(ipamObject.IPAM)
+		singleIPAM := fmt.Sprintf("\"ipam\":%s", string(ipamBytes))
+		injectedStr := strings.ReplaceAll(confStr, "\"ipam\":{}", singleIPAM)
+		return []byte(injectedStr), multiPathRoutes
+	}
+	return singleNicConfBytes, nil
 }
 
-func replaceMultiNicIPAM(singleNicConfBytes []byte, ipConfig *current.IPConfig) []byte {
+func replaceMultiNicIPAM(singleNicConfBytes, multiNicConfBytes []byte, ipConfig *current.IPConfig) ([]byte, map[string][]*netlink.NexthopInfo) {
 	confStr := string(singleNicConfBytes)
-	singleIPAM := "\"ipam\":{\"type\":\"static\",\"addresses\":[]}" // empty ipam
+	ipamObject := &IPAMExtract{}
+	singleIPAMObject := make(map[string]interface{})
+	singleIPAMObject["type"] = "static"
 	if ipConfig != nil {
-		singleIPAM = fmt.Sprintf("\"ipam\":{\"type\":\"static\",\"addresses\":[{\"address\":\"%s\"}]}", ipConfig.Address.String())
+		singleIPAMObject["addresses"] = []map[string]string{
+			map[string]string{"address": ipConfig.Address.String()},
+		}
+	} else {
+		singleIPAMObject["addresses"] = []map[string]string{}
 	}
+	var multiPathRoutes map[string][]*netlink.NexthopInfo
+	err := json.Unmarshal(multiNicConfBytes, ipamObject)
+	if err == nil {
+		var nonMultiPathRoutes []*types.Route
+		nonMultiPathRoutes, multiPathRoutes = getRoutesFromIPAM(ipamObject)
+		if nonMultiPathRoutes != nil {
+			singleIPAMObject["routes"] = nonMultiPathRoutes
+		}
+	}
+	ipamBytes, _ := json.Marshal(singleIPAMObject)
+	singleIPAM := fmt.Sprintf("\"ipam\":%s", string(ipamBytes))
 	injectedStr := strings.ReplaceAll(confStr, "\"ipam\":{}", singleIPAM)
-	return []byte(injectedStr)
+	log.Printf("conf: %s -> injectedStr: %s", singleNicConfBytes, injectedStr)
+	return []byte(injectedStr), multiPathRoutes
+}
+
+func getRoutesFromIPAM(ipamObject *IPAMExtract) (nonMultiPathRoutes []*types.Route, multiPathRoutes map[string][]*netlink.NexthopInfo) {
+	routes := []*types.Route{}
+	if routesInterface, found := ipamObject.IPAM["routes"]; found {
+		for _, routeInterface := range routesInterface.([]interface{}) {
+			routeMap := routeInterface.(map[string]interface{})
+			if dstStr, ok := routeMap["dst"]; ok {
+				_, dst, _ := net.ParseCIDR(dstStr.(string))
+				if gwStr, ok := routeMap["gw"]; ok {
+					gwIP := net.ParseIP(gwStr.(string))
+					route := &types.Route{
+						Dst: *dst,
+						GW:  gwIP,
+					}
+					routes = append(routes, route)
+				}
+			}
+		}
+		multiPathRoutes, nonMultiPathRoutes = separateMultiPathRoutes(routes)
+		return
+	}
+	return
 }
 
 // injectMaster replaces original pool with selected master network addresses
