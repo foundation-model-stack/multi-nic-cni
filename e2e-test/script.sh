@@ -1,7 +1,7 @@
 #!/bin/bash
 # yq 
 if [ -z ${OPERATOR_NAMESPACE} ]; then
-    OPERATOR_NAMESPACE="multi-nic-cni-operator-system"
+    OPERATOR_NAMESPACE="multi-nic-cni-operator"
 fi
 
 if [ -z ${DAEMON_STUB_IMG} ]; then

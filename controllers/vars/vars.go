@@ -33,7 +33,7 @@ const (
 	DeamonLabelKey                            = "app"
 	DaemonLabelValue                          = "multi-nicd"
 	ServiceAccountName                        = "multi-nic-cni-operator-controller-manager"
-	DefaultOperatorNamespace                  = "multi-nic-cni-operator-system"
+	DefaultOperatorNamespace                  = "multi-nic-cni-operator"
 	DefaultCNIType                            = "multi-nic"
 	DefaultIPAMType                           = "multi-nic-ipam"
 	DefaultDaemonImage                        = "ghcr.io/foundation-model-stack/multi-nic-cni-daemon:v1.2.0"

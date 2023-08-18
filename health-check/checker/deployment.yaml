@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: multi-nic-cni-health-checker
-  namespace: openshift-operators
+  namespace: multi-nic-cni-operator
 spec:
   replicas: 1
   selector:
@@ -19,7 +19,7 @@ spec:
       serviceAccountName: multi-nic-cni-health-checker-sa
       containers:
         - name: checker
-          image: ghcr.io/foundation-model-stack/multi-nic-cni-health-checker:v1.0.3
+          image: ghcr.io/foundation-model-stack/multi-nic-cni-health-checker:v1.0.5
           imagePullPolicy: Always
           ports:
             - containerPort: 8080

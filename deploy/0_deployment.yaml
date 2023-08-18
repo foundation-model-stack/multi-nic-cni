@@ -3,7 +3,7 @@ kind: Namespace
 metadata:
   labels:
     control-plane: controller-manager
-  name: multi-nic-cni-operator-system
+  name: multi-nic-cni-operator
 ---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
@@ -1069,13 +1069,13 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: multi-nic-cni-operator-controller-manager
-  namespace: multi-nic-cni-operator-system
+  namespace: multi-nic-cni-operator
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: multi-nic-cni-operator-leader-election-role
-  namespace: multi-nic-cni-operator-system
+  namespace: multi-nic-cni-operator
 rules:
 - apiGroups:
   - ""
@@ -1348,7 +1348,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: multi-nic-cni-operator-leader-election-rolebinding
-  namespace: multi-nic-cni-operator-system
+  namespace: multi-nic-cni-operator
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -1356,7 +1356,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: multi-nic-cni-operator-controller-manager
-  namespace: multi-nic-cni-operator-system
+  namespace: multi-nic-cni-operator
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -1369,7 +1369,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: multi-nic-cni-operator-controller-manager
-  namespace: multi-nic-cni-operator-system
+  namespace: multi-nic-cni-operator
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -1382,7 +1382,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: multi-nic-cni-operator-controller-manager
-  namespace: multi-nic-cni-operator-system
+  namespace: multi-nic-cni-operator
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -1395,7 +1395,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: multi-nic-cni-operator-controller-manager
-  namespace: multi-nic-cni-operator-system
+  namespace: multi-nic-cni-operator
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -1408,7 +1408,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: multi-nic-cni-operator-controller-manager
-  namespace: multi-nic-cni-operator-system
+  namespace: multi-nic-cni-operator
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -1421,7 +1421,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: multi-nic-cni-operator-controller-manager
-  namespace: multi-nic-cni-operator-system
+  namespace: multi-nic-cni-operator
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -1434,7 +1434,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: multi-nic-cni-operator-controller-manager
-  namespace: multi-nic-cni-operator-system
+  namespace: multi-nic-cni-operator
 ---
 apiVersion: v1
 data:
@@ -1453,7 +1453,7 @@ data:
 kind: ConfigMap
 metadata:
   name: multi-nic-cni-operator-manager-config
-  namespace: multi-nic-cni-operator-system
+  namespace: multi-nic-cni-operator
 ---
 apiVersion: v1
 kind: Service
@@ -1461,7 +1461,7 @@ metadata:
   labels:
     control-plane: controller-manager
   name: multi-nic-cni-operator-controller-manager-metrics-service
-  namespace: multi-nic-cni-operator-system
+  namespace: multi-nic-cni-operator
 spec:
   ports:
   - name: https
@@ -1476,7 +1476,7 @@ metadata:
   labels:
     control-plane: controller-manager
   name: multi-nic-cni-operator-controller-manager
-  namespace: multi-nic-cni-operator-system
+  namespace: multi-nic-cni-operator
 spec:
   replicas: 1
   selector:
@@ -1513,7 +1513,7 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
-        image: ghcr.io/foundation-model-stack/multi-nic-cni-controller:v1.0.2
+        image: ghcr.io/foundation-model-stack/multi-nic-cni-controller:v1.0.5
         imagePullPolicy: Always
         livenessProbe:
           httpGet:

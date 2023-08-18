@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [ -z ${OPERATOR_NAMESPACE} ]; then
-    OPERATOR_NAMESPACE=openshift-operators
+    OPERATOR_NAMESPACE=multi-nic-cni-operator
 fi
 
 if [ -z ${CLUSTER_NAME} ]; then
@@ -12,7 +12,7 @@ fi
 # utility functions
 
 get_netname() {
-    kubectl get multinicnetwork -ojson|jq .items| jq '.[].metadata.name'| tr -d '"'
+    kubectl get multinicnetwork -ojson|jq .items| jq '.[].metadata.name'| tr -d '"' | head -n 1
 }
 
 get_controller() {
