@@ -1,6 +1,6 @@
 # User Guide
 ## Requirements
-- Secondary interfaces attached to worker nodes, check terraform script [here](./terraform/)
+- Secondary interfaces attached to worker nodes, check terraform script [here](https://github.com/foundation-model-stack/multi-nic-cni/tree/main/terraform).
 - Multus CNI installation; compatible with networkAttachmentDefinition and pod annotation in multus-cni v3.8
 - For IPVLAN L3 CNI, the following configurations are additionally required
     * enable allowing IP spoofing for each attached interface
@@ -24,7 +24,7 @@ kubectl apply -f deploy/
 **by bundle with operator-sdk**
 
 ```bash
-operator-sdk run bundle ghcr.io/foundation-model-stack/multi-nic-cni-bundle:v1.0.4
+operator-sdk run bundle ghcr.io/foundation-model-stack/multi-nic-cni-bundle:v1.0.5
 ```
 ## Deploy MultiNicNetwork resource
 

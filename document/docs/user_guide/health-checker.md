@@ -18,8 +18,8 @@
 
 ```bash
 # port-forward checker pod on one terminal
-checker=$(kubectl get po -n openshift-operators|grep multi-nic-cni-health-checker|awk '{ print $1 }')
-kubectl port-forward ${checker} -n openshift-operators 8080:8080
+checker=$(kubectl get po -n multi-nic-cni-operator|grep multi-nic-cni-health-checker|awk '{ print $1 }')
+kubectl port-forward ${checker} -n multi-nic-cni-operator 8080:8080
 
 # request status on specific node
 export FAILED_NODE= # failed node name

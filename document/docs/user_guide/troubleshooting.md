@@ -5,7 +5,7 @@ export FAILED_POD= # pod that fails to run
 export FAILED_POD_NAMESPACE= # namespace where the failed pod is supposed to run
 export FAILED_NODE= # node where pod is deployed
 export FAILED_NODE_IP = # IP of FAILED_NODE
-export MULTI_NIC_NAMESPACE= # namespace where multi-nic cni operator is deployed, default=openshift-operators
+export MULTI_NIC_NAMESPACE= # namespace where multi-nic cni operator is deployed, default=multi-nic-cni-operator
 ```
 ## Issues
 ### Pod failed to start
