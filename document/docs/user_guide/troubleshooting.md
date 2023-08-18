@@ -96,7 +96,7 @@ kubectl get ds multi-nicd -n $MULTI_NIC_NAMESPACE -oyaml
 
             kubectl get nodes $FAILED_NODE -o json|jq -r .spec.taints
 
-        To tolerate the [taint]((https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/)), add the tolerate manually to the multi-nicd DaemonSet.
+        To tolerate the [taint](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration), add the tolerate manually to the multi-nicd DaemonSet.
 
             kubectl edit $(kubectl get po -owide -A|grep multi-nicd\
                 |grep $FAILED_NODE|awk '{printf "%s -n %s", $2, $1}')

@@ -101,8 +101,11 @@
 ## v1.0.5
 
 **Improvements:**
-* add handler for healthz and readyz
 
-**Bug fixes:**
+* allow own namespace and single namespace
+  
+**Bug fixes**
 
-* try getting daemon pod if cache not found when calling interface update
+* unavailability of unrelated subnet [Issue #117](https://github.com/foundation-model-stack/multi-nic-cni/issues/117)
+* try getting daemon pod if cache not found when calling interface update [Issue #118](https://github.com/foundation-model-stack/multi-nic-cni/issues/118)
+* continue after net-attach-def create/udpate error in [PR #114](https://github.com/foundation-model-stack/multi-nic-cni/pull/114)

@@ -73,7 +73,7 @@ namespaces|list of namespaces to apply the network definitions (i.e., to create 
 
         kubectl apply -f network.yaml
 
-    After deployment, the operator will create *NetworkAttachmentDefinition* of [Multus CNI](multus) from *MultiNicNetwork* as well as dependent resource such as *SriovNetworkNodePolicy*, *SriovNetwork* for sriov plugin.
+    After deployment, the operator will create *NetworkAttachmentDefinition* of [Multus CNI](https://github.com/k8snetworkplumbingwg/multus-cni) from *MultiNicNetwork* as well as dependent resource such as *SriovNetworkNodePolicy*, *SriovNetwork* for sriov plugin.
 
 3. Annotate the pod with the network name to attach additional interfaces. 
 
