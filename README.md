@@ -130,7 +130,7 @@ Recommended to deploy in the same default namespace for [health check service](.
     ```
 
 #### Check connections
-##### Peer-to-peer - *quick test*
+##### One-time peer-to-peer - *quick test*
 1. Set target peer
    
     ```bash
@@ -168,7 +168,7 @@ Recommended to deploy in the same default namespace for [health check service](.
     # pod "multi-nic-iperf3-server" deleted
     ```
 
-##### All-to-all  - *recommended for small cluster (<10 HostInterfaces)*
+##### One-time all-to-all  - *recommended for small cluster (<10 HostInterfaces)*
 1. Run 
 
     ```bash
@@ -223,6 +223,9 @@ Recommended to deploy in the same default namespace for [health check service](.
    ```bash
     make clean-concheck
     ```
+##### Health checker service
+
+Deploy health check and agents to the cluster to serve a functional and connetion checking on-demand and periodically exporting to Prometheus metric server. See [more detail](./health-check/).
 
 #### Uninstallation
 1. Clean all CRs

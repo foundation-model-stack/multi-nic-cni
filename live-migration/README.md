@@ -12,7 +12,7 @@ To reinstall/upgrade multi-nic-cni-operator without affecting workloads running 
     cd multi-nic-cni/live_migration
     chmod +x ./live_migrate.sh
     ```
-2. If operator is not installed in the `openshift-operators` namespace, run
+2. If operator is not installed in the `multi-nic-cni-operator` namespace, run
     ```bash
     export OPERATOR_NAMESPACE=<deployed-namespace>
     ```
@@ -135,8 +135,8 @@ To reinstall/upgrade multi-nic-cni-operator without affecting workloads running 
 
     ```
     # forward port on one terminal
-    checker=$(kubectl get po -n openshift-operators|grep multi-nic-cni-health-checker|awk '{ print $1 }')
-    kubectl port-forward ${checker} -n openshift-operators 8080:8080
+    checker=$(kubectl get po -n multi-nic-cni-operator|grep multi-nic-cni-health-checker|awk '{ print $1 }')
+    kubectl port-forward ${checker} -n multi-nic-cni-operator 8080:8080
 
     # request the status check on another terminal. This request will activate the health check signal at the request time.
     curl localhost:8080/status|jq

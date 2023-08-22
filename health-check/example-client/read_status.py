@@ -8,7 +8,7 @@ checker_namespace_env = "CHECKER_NAMESPACE"
 checker_path_fullname_env = "MULTI_NIC_HEALTH_CHECKER_ENDPOINT"
 checker_timeout_fullname_env = "MULTI_NIC_HEALTH_CHECKER_TIMEOUT"
 
-default_checker_namespace = "openshift-operators"
+default_checker_namespace = "multi-nic-cni-operator"
 default_timeout = "10" # seconds
 checker_service_name = "multi-nic-cni-health-check"
 service_port = 8080

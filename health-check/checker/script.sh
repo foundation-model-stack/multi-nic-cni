@@ -1,11 +1,11 @@
 #!/bin/bash
 
-if [ -z ${OPERATOR_NAMESPACE} ]; then
-    OPERATOR_NAMESPACE=openshift-operators
-fi
+# ./script.sh deploy or
+# ./script.sh deploy <network name>
 
+# get first name
 get_netname() {
-    kubectl get multinicnetwork -ojson|jq .items| jq -r '.[].metadata.name'
+    kubectl get multinicnetwork -ojson|jq .items| jq -r '.[].metadata.name'|head -n 1
 }
 
 apply() {

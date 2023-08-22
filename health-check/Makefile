@@ -4,6 +4,7 @@
 #
 
 export IMAGE_REGISTRY ?= ghcr.io/foundation-model-stack
+export OPERATOR_NAMESPACE ?= multi-nic-cni-operator
 
 IMAGE_TAG_BASE = $(IMAGE_REGISTRY)/multi-nic-cni
 IMAGE_VERSION ?= 1.0.0
@@ -36,7 +37,7 @@ test-checker: docker-build-checker
 	@docker run -i --privileged ${CHECKER_IMG} /bin/bash -c "make test"
 
 patch-sidecar:
-	@kubectl patch daemonset multi-nicd --type merge -n openshift-operators --patch-file ./sidecar/patch.yaml
+	@kubectl patch daemonset multi-nicd --type merge -patch-file ./sidecar/patch.yaml -n ${OPERATOR_NAMESPACE}
 
 deploy-agent:
 	@kubectl apply -f ./sidecar/manifest.yaml

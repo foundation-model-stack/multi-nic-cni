@@ -7,8 +7,8 @@ To test locally, follow the steps below.
 1. forward checker port
 
     ```bash
-    checker=$(kubectl get po -n openshift-operators|grep multi-nic-cni-health-checker|awk '{ print $1 }')
-    kubectl port-forward ${checker} -n openshift-operators 8080:8080
+    checker=$(kubectl get po -n multi-nic-cni-operator|grep multi-nic-cni-health-checker|awk '{ print $1 }')
+    kubectl port-forward ${checker} -n multi-nic-cni-operator 8080:8080
     ```
 
 2. set local /status path, `CHECKER_URL`

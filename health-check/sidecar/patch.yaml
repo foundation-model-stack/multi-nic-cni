@@ -2,38 +2,11 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: multi-nicd
-  namespace: openshift-operators
 spec:
   template:
     spec:
       containers:
-      - env:
-        - name: DAEMON_PORT
-          value: "11000"
-        - name: RT_TABLE_PATH
-          value: /opt/rt_tables
-        image: ghcr.io/foundation-model-stack/multi-nic-cni-daemon:v1.0.3
-        imagePullPolicy: IfNotPresent
-        name: multi-nicd
-        ports:
-        - containerPort: 11000
-          hostPort: 11000
-          protocol: TCP
-        resources:
-          requests:
-            cpu: 100m
-            memory: 50Mi
-        securityContext:
-          privileged: true
-        terminationMessagePath: /dev/termination-log
-        terminationMessagePolicy: File
-        volumeMounts:
-        - mountPath: /host/opt/cni/bin
-          name: cnibin
-        - mountPath: /var/lib/kubelet/device-plugins
-          name: device-plugin
-        - mountPath: /opt/rt_tables
-          name: rt-tables
+      - name: multi-nicd
       - env:
         - name: SIDECAR_PORT
           value: "11001"

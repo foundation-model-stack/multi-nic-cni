@@ -1,5 +1,12 @@
 # Multi-NIC CNI Health Check
 
+Default namespace is `multi-nic-cni-operator`. If the namespace is not created, please run
+
+```bash
+kubectl create ns multi-nic-cni-operator
+```
+
+
 ## Deployment Steps
 1. Set security policy to allow TCP communication on port `11001` on Host Primary Network 
 2. Clone this repository and move to health-check directory
@@ -36,7 +43,7 @@
 4. Check whether the health-checker and health-check-agent are running.
 
     ```bash
-    kubectl get po -n openshift-operators
+    kubectl get po -n multi-nic-cni-operator
     ```
 
     ```bash
@@ -50,8 +57,8 @@
 
     ```bash
     # forward port on one terminal
-    checker=$(kubectl get po -n openshift-operators|grep multi-nic-cni-health-checker|awk '{ print $1 }')
-    kubectl port-forward ${checker} -n openshift-operators 8080:8080
+    checker=$(kubectl get po -n multi-nic-cni-operator|grep multi-nic-cni-health-checker|awk '{ print $1 }')
+    kubectl port-forward ${checker} -n multi-nic-cni-operator 8080:8080
 
     # request the status check on another terminal. This request will activate the health check signal at the request time.
     curl localhost:8080/status

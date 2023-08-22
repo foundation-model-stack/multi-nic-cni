@@ -63,6 +63,10 @@ func (h *IperfHandler) getName(cidrName string, hostName string, labelValue stri
 	lengthOver := len(name) - MAX_NAME_LENGTH
 	if lengthOver > 0 {
 		name = name[lengthOver : len(name)-1]
+		// remove first character if it is hyphen
+		if name[0] == '-' {
+			name = name[1:len(name)]
+		}
 	}
 	return name
 }
