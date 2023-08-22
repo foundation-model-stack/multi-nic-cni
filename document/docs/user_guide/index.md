@@ -16,6 +16,12 @@
     * Search for `multi-nic-cni-operator` in OperatorHub
     ![](../img/openshift-operatorhub.png)
 
+Recommended to deploy in the same default namespace for [health check service](https://operatorhub.io/operator/multi-nic-cni-operator/health-check), which is `multi-nic-cni-operator`. 
+
+![](../img/specify-ns.png)
+
+(available version >= v1.0.5)
+
 **by manifests with kubectl**
 
 ```bash
@@ -24,7 +30,7 @@ kubectl apply -f deploy/
 **by bundle with operator-sdk**
 
 ```bash
-operator-sdk run bundle ghcr.io/foundation-model-stack/multi-nic-cni-bundle:v1.0.5
+operator-sdk run bundle ghcr.io/foundation-model-stack/multi-nic-cni-bundle:v1.0.5 -n multi-nic-cni-operator
 ```
 ## Deploy MultiNicNetwork resource
 
@@ -178,5 +184,5 @@ kubectl delete -f deploy/
 ```
 **installed by bundle with operator-sdk**
 ```
-operator-sdk cleanup multi-nic-cni-operator
+operator-sdk cleanup multi-nic-cni-operator -n multi-nic-cni-operator
 ```
