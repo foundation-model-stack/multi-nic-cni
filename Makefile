@@ -17,7 +17,7 @@ endif
 # - use the VERSION as arg of the bundle target (e.g make bundle VERSION=0.0.2)
 # - use environment variables to overwrite this value (e.g export VERSION=0.0.2)
 # VERSION ?= 0.0.1
-VERSION ?= 1.2.0
+VERSION ?= 1.2.1
 export CHANNELS = "alpha"
 
 # CHANNELS define the bundle channels used in the bundle.
@@ -166,8 +166,8 @@ daemon-secret: ## Modify kustomization files for image pull secret of daemon
 concheck: 
 	@kubectl create -f connection-check/concheck.yaml 
 	@echo "Wait for job/multi-nic-concheck to complete"
-	@kubectl wait --for=condition=complete job/multi-nic-concheck --timeout=3000s
-	@kubectl logs job/multi-nic-concheck
+	@kubectl wait --for=condition=complete job/multi-nic-concheck -n default --timeout=3000s
+	@kubectl logs job/multi-nic-concheck -n default
 
 clean-concheck:
 	@kubectl delete -f connection-check/concheck.yaml
