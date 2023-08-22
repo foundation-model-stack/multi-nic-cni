@@ -16,7 +16,7 @@ With this blocking range of IP, the L3 routes on each host and interface can be 
 
 
 ## Common NAT-bypassing network solution
-The built-in Multi-NIC IPAM and L3 route auto-configuration performs by collaboration of the controller with [Multi-NIC CNI](../cni/) and [Multi-NIC daemon](../daemon/). 
+The built-in Multi-NIC IPAM and L3 route auto-configuration performs by collaboration of the controller with [Multi-NIC CNI](https://github.com/foundation-model-stack/multi-nic-cni/tree/main/cni) and [Multi-NIC daemon](https://github.com/foundation-model-stack/multi-nic-cni/tree/main/daemon). 
 
 The CNI uses orchrestrator storage to keep data synchronize by defining new three custom resources: 
 ```bash

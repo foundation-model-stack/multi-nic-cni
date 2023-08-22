@@ -14,8 +14,11 @@ Clean up:
 make clean
 ```
 
-Expected output:
+Expected output (for *n* server):
 ```bash
+... 
+<timestamp> <n>/<n> servers successfully created
+...
 ###########################################
 ## Connection Check: multinic-sample
 ###########################################
@@ -52,3 +55,7 @@ gpu-dallas-d5l8c-worker-3-rfrs4 gpu-dallas-d5l8c-worker-2-47lzt  0/2            
 gpu-dallas-d5l8c-worker-3-rfrs4 gpu-dallas-d5l8c-worker-2-4czvd  0/2             [192.168.0.67 192.168.64.67]   []
 ###########################################
 ```
+
+> For larget cluster, you may observe the following lines waiting for server pods or client jobs <br>
+> \<timestamp\> \<node-x\>-server: Pending  <br>
+> \<timestamp\> Some job is still running: \<node-x\>-client

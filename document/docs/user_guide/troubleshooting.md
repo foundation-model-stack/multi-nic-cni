@@ -5,7 +5,7 @@ export FAILED_POD= # pod that fails to run
 export FAILED_POD_NAMESPACE= # namespace where the failed pod is supposed to run
 export FAILED_NODE= # node where pod is deployed
 export FAILED_NODE_IP = # IP of FAILED_NODE
-export MULTI_NIC_NAMESPACE= # namespace where multi-nic cni operator is deployed, default=openshift-operators
+export MULTI_NIC_NAMESPACE= # namespace where multi-nic cni operator is deployed, default=multi-nic-cni-operator
 ```
 ## Issues
 ### Pod failed to start
@@ -96,7 +96,7 @@ kubectl get ds multi-nicd -n $MULTI_NIC_NAMESPACE -oyaml
 
             kubectl get nodes $FAILED_NODE -o json|jq -r .spec.taints
 
-        To tolerate the [taint]((https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/)), add the tolerate manually to the multi-nicd DaemonSet.
+        To tolerate the [taint](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration), add the tolerate manually to the multi-nicd DaemonSet.
 
             kubectl edit $(kubectl get po -owide -A|grep multi-nicd\
                 |grep $FAILED_NODE|awk '{printf "%s -n %s", $2, $1}')
