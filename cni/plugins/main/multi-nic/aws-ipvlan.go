@@ -46,12 +46,13 @@ type AWSIPVLANNetConf struct {
 }
 
 // loadAWSCNIConf unmarshal to AWSCNINetConfig and returns list of AWSCNI configs
-func loadAWSCNIConf(bytes []byte, ifName string, n *NetConf, ipConfigs []*current.IPConfig) ([][]byte, error) {
-	confBytesArray := [][]byte{}
+func loadAWSCNIConf(bytes []byte, ifName string, n *NetConf, ipConfigs []*current.IPConfig) (confBytesArray [][]byte, multiPathRoutes map[string][]*netlink.NexthopInfo, loadError error) {
+	confBytesArray = [][]byte{}
 
 	configInAWSIPVLAN := &AWSIPVLANNetConfig{}
 	if err := json.Unmarshal(bytes, configInAWSIPVLAN); err != nil {
-		return confBytesArray, fmt.Errorf("unmarshal AWSIPVLANNetConfig: %v", err)
+		loadError = fmt.Errorf("unmarshal AWSIPVLANNetConfig: %v", err)
+		return
 	}
 
 	// interfaces are orderly assigned from interface set
@@ -59,7 +60,8 @@ func loadAWSCNIConf(bytes []byte, ifName string, n *NetConf, ipConfigs []*curren
 		// add config
 		singleConfig, err := copyAWSIPVLANConfig(configInAWSIPVLAN.MainPlugin)
 		if err != nil {
-			return confBytesArray, fmt.Errorf("copyAWSIPVLANConfig: %v", err)
+			loadError = fmt.Errorf("copyAWSIPVLANConfig: %v", err)
+			return
 		}
 		if singleConfig.CNIVersion == "" {
 			singleConfig.CNIVersion = n.CNIVersion
@@ -68,7 +70,8 @@ func loadAWSCNIConf(bytes []byte, ifName string, n *NetConf, ipConfigs []*curren
 		singleConfig.Master = masterName
 		confBytes, err := json.Marshal(singleConfig)
 		if err != nil {
-			return confBytesArray, fmt.Errorf("Marshal confBytes: %v", err)
+			loadError = fmt.Errorf("Marshal confBytes: %v", err)
+			return
 		}
 		// add primary IP value
 		nodeIP := getHostIP(masterName)
@@ -77,7 +80,7 @@ func loadAWSCNIConf(bytes []byte, ifName string, n *NetConf, ipConfigs []*curren
 		if n.IsMultiNICIPAM {
 			// multi-NIC IPAM config
 			if index < len(ipConfigs) {
-				confBytes = injectMultiNicIPAM(confBytes, ipConfigs, index)
+				confBytes, multiPathRoutes = injectMultiNicIPAM(confBytes, bytes, ipConfigs, index)
 				podIP := ipConfigs[index].Address.IP.String()
 				// add pod IP value
 				confBytes = injectPodIP(confBytes, podIP)
@@ -86,12 +89,12 @@ func loadAWSCNIConf(bytes []byte, ifName string, n *NetConf, ipConfigs []*curren
 				utils.Logger.Debug(fmt.Sprintf("index not match config %d, %v", index, ipConfigs))
 			}
 		} else {
-			confBytes = injectSingleNicIPAM(confBytes, bytes)
+			confBytes, multiPathRoutes = injectSingleNicIPAM(confBytes, bytes)
 			confBytesArray = append(confBytesArray, confBytes)
 			// TO-DO: get IP and inject podIP
 		}
 	}
-	return confBytesArray, nil
+	return
 }
 
 func injectPodIP(confBytes []byte, podIP string) []byte {

@@ -15,6 +15,7 @@ import (
 	"github.com/containernetworking/cni/pkg/types"
 	current "github.com/containernetworking/cni/pkg/types/100"
 	"github.com/containernetworking/cni/pkg/version"
+	"github.com/vishvananda/netlink"
 
 	"github.com/containernetworking/plugins/pkg/ipam"
 	"github.com/containernetworking/plugins/pkg/ns"
@@ -128,15 +129,16 @@ func cmdAdd(args *skel.CmdArgs) error {
 
 	// get device config and apply
 	confBytesArray := [][]byte{}
+	var multiPathRoutes map[string][]*netlink.NexthopInfo
 	switch deviceType {
 	case "ipvlan":
-		confBytesArray, err = loadIPVANConf(args.StdinData, args.IfName, n, result.IPs)
+		confBytesArray, multiPathRoutes, err = loadIPVANConf(args.StdinData, args.IfName, n, result.IPs)
 	case "sriov":
-		confBytesArray, err = loadSRIOVConf(args.StdinData, args.IfName, n, result.IPs)
+		confBytesArray, multiPathRoutes, err = loadSRIOVConf(args.StdinData, args.IfName, n, result.IPs)
 	case "aws-ipvlan":
-		confBytesArray, err = loadAWSCNIConf(args.StdinData, args.IfName, n, result.IPs)
+		confBytesArray, multiPathRoutes, err = loadAWSCNIConf(args.StdinData, args.IfName, n, result.IPs)
 	case "host-device":
-		confBytesArray, err = loadHostDeviceConf(args.StdinData, args.IfName, n, result.IPs)
+		confBytesArray, multiPathRoutes, err = loadHostDeviceConf(args.StdinData, args.IfName, n, result.IPs)
 	default:
 		err = fmt.Errorf("unsupported device type: %s", deviceType)
 	}
@@ -169,6 +171,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 			}
 			interfaceItem.Mac = link.HardwareAddr.String()
 			interfaceItem.Sandbox = netns.Path()
+			addMultiPathRoutes(link, multiPathRoutes)
 			return nil
 		})
 		result.Interfaces = append(result.Interfaces, interfaceItem)
@@ -220,15 +223,16 @@ func cmdDel(args *skel.CmdArgs) error {
 
 	// get device config and apply
 	confBytesArray := [][]byte{}
+	var multiPathRoutes map[string][]*netlink.NexthopInfo
 	switch deviceType {
 	case "ipvlan":
-		confBytesArray, err = loadIPVANConf(args.StdinData, args.IfName, n, ips)
+		confBytesArray, multiPathRoutes, err = loadIPVANConf(args.StdinData, args.IfName, n, ips)
 	case "sriov":
-		confBytesArray, err = loadSRIOVConf(args.StdinData, args.IfName, n, ips)
+		confBytesArray, multiPathRoutes, err = loadSRIOVConf(args.StdinData, args.IfName, n, ips)
 	case "aws-ipvlan":
-		confBytesArray, err = loadAWSCNIConf(args.StdinData, args.IfName, n, ips)
+		confBytesArray, multiPathRoutes, err = loadAWSCNIConf(args.StdinData, args.IfName, n, ips)
 	case "host-device":
-		confBytesArray, err = loadHostDeviceConf(args.StdinData, args.IfName, n, ips)
+		confBytesArray, multiPathRoutes, err = loadHostDeviceConf(args.StdinData, args.IfName, n, ips)
 	default:
 		err = fmt.Errorf("unsupported device type: %s", deviceType)
 	}
@@ -239,9 +243,28 @@ func cmdDel(args *skel.CmdArgs) error {
 		utils.Logger.Debug(fmt.Sprintf("zero config on cmdDel: %v (%d)", string(args.StdinData), len(n.Masters)))
 	}
 
+	// open specified network namespace
+	netns, netNsErr := ns.GetNS(args.Netns)
+	if netNsErr != nil {
+		utils.Logger.Debug(fmt.Sprintf("failed to open netns %q: %v", args.Netns, err))
+	} else {
+		defer netns.Close()
+	}
+
 	for index, confBytes := range confBytesArray {
 		command := "DEL"
 		ifName := fmt.Sprintf("%s-%d", args.IfName, index)
+		if netNsErr == nil {
+			err = netns.Do(func(_ ns.NetNS) error {
+				link, err := net.InterfaceByName(ifName)
+				if err != nil {
+					return err
+				}
+				delMultiPathRoutes(link, multiPathRoutes)
+				return nil
+			})
+		}
+
 		utils.Logger.Debug(fmt.Sprintf("Exec %s %s: %s", command, ifName, string(confBytes)))
 		_, err := execPlugin(deviceType, command, confBytes, args, ifName, false)
 		if err != nil {
@@ -283,13 +306,13 @@ func cmdCheck(args *skel.CmdArgs) error {
 	confBytesArray := [][]byte{}
 	switch deviceType {
 	case "ipvlan":
-		confBytesArray, err = loadIPVANConf(args.StdinData, args.IfName, n, result.IPs)
+		confBytesArray, _, err = loadIPVANConf(args.StdinData, args.IfName, n, result.IPs)
 	case "sriov":
-		confBytesArray, err = loadSRIOVConf(args.StdinData, args.IfName, n, result.IPs)
+		confBytesArray, _, err = loadSRIOVConf(args.StdinData, args.IfName, n, result.IPs)
 	case "aws-ipvlan":
-		confBytesArray, err = loadAWSCNIConf(args.StdinData, args.IfName, n, result.IPs)
+		confBytesArray, _, err = loadAWSCNIConf(args.StdinData, args.IfName, n, result.IPs)
 	case "host-device":
-		confBytesArray, err = loadHostDeviceConf(args.StdinData, args.IfName, n, result.IPs)
+		confBytesArray, _, err = loadHostDeviceConf(args.StdinData, args.IfName, n, result.IPs)
 	default:
 		err = fmt.Errorf("unsupported device type: %s", deviceType)
 	}

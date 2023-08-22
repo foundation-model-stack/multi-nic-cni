@@ -2,7 +2,6 @@ apiVersion: multinic.fms.io/v1
 kind: MultiNicNetwork
 metadata:
   name: multinic-ipvlanl2
-  namespace: default
 spec:
   subnet: "172.31.49.0/24"
   ipam: |
@@ -13,5 +12,3 @@ spec:
     type: ipvlan
     args: 
       mode: l2
-  masterNets:
-    - "172.31.32.0/20"

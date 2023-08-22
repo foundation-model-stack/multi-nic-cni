@@ -767,6 +767,10 @@ func (h *CIDRHandler) getCurrentAllocationMap(cidrMap map[string]multinicv1.CIDR
 
 // addNewHost finds new available host index
 func (h *CIDRHandler) addNewHost(hosts []multinicv1.HostInterfaceInfo, maxHostIndex int, vlanCIDR string, nodeBlock int, excludes []string) (string, int, error) {
+	if maxHostIndex == 0 {
+		// pods use the same cidr with vlan
+		return vlanCIDR, 0, nil
+	}
 	nodeIndex := 0
 	// excludedIndexes = previously-assigned host indexes
 	excludedIndexes := []int{}
@@ -944,9 +948,12 @@ func (h *CIDRHandler) GenerateCIDRFromHostSubnet(def multinicv1.PluginConfig) (m
 	vlanIndexMap := make(map[string]int)
 	entryMap := make(map[string]multinicv1.CIDREntry)
 	lastIndex := 0
+	maxHostIndex := 0
 
-	// maxHostIndex = 2^(host bits) - 1
-	maxHostIndex := int(math.Pow(2, float64(def.HostBlock)) - 1)
+	if def.HostBlock > 0 {
+		// maxHostIndex = 2^(host bits) - 1
+		maxHostIndex = int(math.Pow(2, float64(def.HostBlock)) - 1)
+	}
 
 	snapshot := h.HostInterfaceHandler.ListCache()
 	for hostName, hif := range snapshot {

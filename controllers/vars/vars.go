@@ -8,9 +8,11 @@ package vars
 import (
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -26,6 +28,7 @@ const (
 	PodStatusField                            = "status.phase"
 	PodStatusRunning                          = "Running"
 	JoinLabelName                             = "multi-nicd-join"
+	UnmanagedLabelName                        = "multi-nic-unmanaged"
 	HostNameLabel                             = "hostname"
 	DefNameLabel                              = "netname"
 	TestModeLabel                             = "test-mode"
@@ -111,4 +114,10 @@ func SetLog() {
 	NetworkLog = ctrl.Log.WithName("controllers").WithName("MultiNicNetwork")
 	ConfigLog = ctrl.Log.WithName("controllers").WithName("Config")
 	SyncLog = ctrl.Log.WithName("controllers").WithName("Synchronizer")
+}
+
+func IsUnmanaged(metadata metav1.ObjectMeta) bool {
+	labels := metadata.Labels
+	unmanaged, found := labels[UnmanagedLabelName]
+	return found && (strings.ToLower(unmanaged) == "true")
 }
