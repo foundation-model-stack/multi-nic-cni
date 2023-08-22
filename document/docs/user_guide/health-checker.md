@@ -1,4 +1,6 @@
-# Troubleshooting with Multi-NIC CNI Health Checker
+# Troubleshooting with Multi-NIC CNI Health Checker Service
+
+See [installation steps and usage](https://github.com/foundation-model-stack/multi-nic-cni/tree/main/health-check).
 
 |StatusCode |Message        |Potential causes                           |Actions|
 |---        |---            |---                                        |---|
