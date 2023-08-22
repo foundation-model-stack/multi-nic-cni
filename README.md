@@ -92,17 +92,27 @@ namespaces| (optional) limit network definition application to list of namespace
 ##### by OperatorHub
 - Kubernetes with OLM:
   - check [multi-nic-cni-operator on OperatorHub.io](https://operatorhub.io/operator/multi-nic-cni-operator)
+
     ![](./document/docs/img/k8s-operatorhub.png)
+
 - Openshift Container Platform:
   - Search for `multi-nic-cni-operator` in OperatorHub
+
     ![](./document/docs/img/openshift-operatorhub.png)
+
+Recommended to deploy in the same default namespace for [health check service](./health-check/), which is `multi-nic-cni-operator`. 
+
+![](./document/docs/img/specify-ns.png)
+
+(available after v1.0.5)
+
 ##### by manifests with kubectl
   ```bash
   kubectl apply -f deploy/
   ```
 ##### by bundle with operator-sdk
   ```bash
-  operator-sdk run bundle ghcr.io/foundation-model-stack/multi-nic-cni-bundle:v1.2.0
+  operator-sdk run bundle ghcr.io/foundation-model-stack/multi-nic-cni-bundle:v1.2.0 -n multi-nic-cni-operator
   ```
 #### Deploy MultiNicNetwork resource
 1. Prepare `network.yaml` as shown in the [example](#multinicnetwork)
@@ -231,5 +241,5 @@ namespaces| (optional) limit network definition application to list of namespace
     For installation by bundle with operator-sdk:
 
     ```bash
-    operator-sdk cleanup multi-nic-cni-operator --delete-all
+    operator-sdk cleanup multi-nic-cni-operator --delete-all -n multi-nic-cni-operator
     ```
