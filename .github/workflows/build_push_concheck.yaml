@@ -3,7 +3,6 @@ name: Build and push connection check image
 on:
   push:
     branches:
-      - main
       - v1.2.0
     paths:
       - connection-check/**
@@ -36,6 +35,5 @@ jobs:
           context: connection-check
           push: true
           tags: |
-            ${{ env.IMAGE_NAME }}:latest
             ${{ env.IMAGE_NAME }}:v${{ env.IMAGE_VERSION }}
           file: ./connection-check/Dockerfile

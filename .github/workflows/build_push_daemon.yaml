@@ -3,7 +3,6 @@ name: Build and push daemon image
 on:
   push:
     branches:
-      - main
       - v1.2.0
     paths:
       - daemon/**
@@ -42,6 +41,5 @@ jobs:
           push: true
           tags: |
             ${{ env.IMAGE_NAME }}:${{ github.sha }}-${{ github.run_number }}
-            ${{ env.IMAGE_NAME }}:latest
             ${{ env.IMAGE_NAME }}:v${{ env.IMAGE_VERSION }}
           file: ./daemon/dockerfiles/Dockerfile
