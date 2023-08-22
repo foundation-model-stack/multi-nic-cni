@@ -3,7 +3,7 @@ name: Perform unittest for daemon
 on:
   pull_request:
     branches:
-      - main
+      - v1.2.0
   push:
     paths:
       - daemon/**
