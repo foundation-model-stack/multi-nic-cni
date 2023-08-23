@@ -3,7 +3,6 @@ name: Perform unittest for controller
 on:
   pull_request:
     branches:
-      - main
       - v1.1.0
   push:
     paths:
