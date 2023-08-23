@@ -2,6 +2,8 @@
 
 **official document:** https://foundation-model-stack.github.io/multi-nic-cni.
 
+<!-- TOC tocDepth:1..5 chapterDepth:1..6 -->
+
 - [Multi-NIC CNI](#multi-nic-cni)
   - [MultiNicNetwork](#multinicnetwork)
   - [Usage](#usage)
@@ -12,9 +14,12 @@
         - [by bundle with operator-sdk](#by-bundle-with-operator-sdk)
       - [Deploy MultiNicNetwork resource](#deploy-multinicnetwork-resource)
       - [Check connections](#check-connections)
-        - [Peer-to-peer - *quick test*](#peer-to-peer---quick-test)
-        - [All-to-all  - *recommended for small cluster (\<10 HostInterfaces)*](#all-to-all----recommended-for-small-cluster-10-hostinterfaces)
+        - [One-time peer-to-peer - *quick test*](#one-time-peer-to-peer---quick-test)
+        - [One-time all-to-all  - *recommended for small cluster (<10 HostInterfaces)*](#one-time-all-to-all---recommended-for-small-cluster-10-hostinterfaces)
+        - [Health checker service](#health-checker-service)
       - [Uninstallation](#uninstallation)
+
+<!-- /TOC -->
 
 # Multi-NIC CNI
 Attaching secondary network interfaces that is linked to different network interfaces on host (NIC) to pod provides benefits of network segmentation and top-up network bandwidth in the containerization system. 
