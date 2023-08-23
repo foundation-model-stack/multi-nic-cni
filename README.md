@@ -34,15 +34,15 @@ ii) **Common NAT-bypassing network solution**: All secondary NICs on each host c
   2) **L3 Host Route Configuration**: configure L3 routes (next hop via dev) in host route table according to the computed CIDR.
   3) **Distributed IP Allocation Management**: manage IP allocation/deallocation distributedly via the communication between CNI program and daemon at each host.
 
-[read more](./document/docs/Concept/multi-nic-ipam.md) 
+[read more](https://foundation-model-stack.github.io/multi-nic-cni/concept/multi-nic-ipam) 
 
 iii) **Policy-based secondary network attachment**: Instead of statically set the desired host's master interface name one by one, user can define a policy on attaching multiple secondary network interfaces such as specifying only the number of desired interfaces, filtering only highspeed NICs. 
 
-[read more](./document/docs/Concept/policy.md)
+[read more](https://foundation-model-stack.github.io/multi-nic-cni/concept/policy)
 
 ![](./document/docs/img/commonstack.png)
 
-The Multi-NIC CNI architecture can be found [here](./document/docs/Developer%20Guide/architecture.md).
+The Multi-NIC CNI architecture can be found [here](https://foundation-model-stack.github.io/multi-nic-cni/developer_guide/architecture).
 
 ## MultiNicNetwork
 The Multi-NIC operator operates over a custom resource named *MultiNicNetwork* defined by users.
@@ -78,10 +78,10 @@ Argument|Description|Value|Remarks
 ---|---|---|---
 subnet|cluster-wide subnet for all hosts and pods|CIDR range|currently support only v4
 hostBlock|number of address bits for host indexing| int (n) | the number of assignable host = 2^n
-ipam|ipam plugin config| string | ipam can be single-NIC IPAM (e.g., whereabouts, VPC-native IPAM) or multi-NIC IPAM (e.g., [Multi-NIC IPAM Plugin](./document/docs/Concept/multi-nic-ipam.md#ipam-configuration))
+ipam|ipam plugin config| string | ipam can be single-NIC IPAM (e.g., whereabouts, VPC-native IPAM) or multi-NIC IPAM (e.g., [Multi-NIC IPAM Plugin](https://foundation-model-stack.github.io/multi-nic-cni/concept/multi-nic-ipam/#ipam-configuration))
 multiNicIPAM| indicator of ipam type | bool | **true** if ipam returns multiple IPs from *masters* key of NetworkAttachmentDefinition config at once, **false** if ipam returns only single IP from static config in ipam block
 plugin|main plugin config|[NetConf](https://pkg.go.dev/github.com/containernetworking/cni/pkg/types#NetConf) + plugin-specific arguments | main plugin integration must implement [Plugin](./plugin/plugin.go) with GetConfig function
-attachPolicy|attachment policy|policy|[strategy](./document/docs/Concept/policy.md) with corresponding arguments to select host NICs to be master of secondary interfaces on Pod
+attachPolicy|attachment policy|policy|[strategy](https://foundation-model-stack.github.io/multi-nic-cni/concept/policy/) with corresponding arguments to select host NICs to be master of secondary interfaces on Pod
 namespaces| (optional) limit network definition application to list of namespaces (i.e., to create NetworkAttachmentDefinition resource)|[]string|if not specified, network definitions will be applied to all namespaces. new item can be added to the list by `kubectl edit` to create new NetworkAttachmentDefinition. the created NetworkAttachmentDefinition must be deleted manually if needed.
 
 
