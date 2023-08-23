@@ -1,28 +1,63 @@
 # Alpha Channel
 
-## v1.2.0
+## v1.2.1
 
-**Major feature update:**
+**Improvements:**
 
-* Topology-aware NIC Selection
-* RoCE GDR-support CNI (NVIDIA MOFED operator) - `mellanox`
-    - Host-device CNI support
-    - NICClusterPolicy aware
+* Unmanaged HostNetworkInterface for IP-less network device 
+    - zero host block/zero interface block
 
             apiVersion: multinic.fms.io/v1
             kind: MultiNicNetwork
             metadata:
-            name: multinic-mellanox-hostdevice
+                name: multinic-unmanaged
             spec:
                 ipam: |
                     {
-                        "type": "host-device-ipam"
+                    "type": "multi-nic-ipam",
+                    "hostBlock": 0, 
+                    "interfaceBlock": 0,
+                    "vlanMode": "l2"
                     }
-                multiNICIPAM: false
+                multiNICIPAM: true
                 plugin:
-                    cniVersion: "0.3.1"
-                    type: mellanox
+                    cniVersion: "0.3.0"
+                    type: ipvlan
+                    args: 
+                        mode: l2
 
-    
-* Unmanaged HostNetworkInterface for IP-less network device
+    - specify static cidr of each host
+
+            apiVersion: multinic.fms.io/v1
+            kind: HostInterface
+            metadata:
+                name: node-1
+                labels:
+                  unmanaged: true
+            hostName: node-1
+            interfaces:
+            -   hostIP: ""
+                interfaceName: eth1
+                netAddress: 192.168.0.0/24
+            -   hostIP: ""
+                interfaceName: eth2
+                netAddress: 192.168.1.0/24
+                
 * Multi-gateway route configuration support
+
+        apiVersion: multinic.fms.io/v1
+        kind: MultiNicNetwork
+        metadata:
+            name: multinic-multi-gateway
+        spec:
+            ipam: |
+                {
+                "type": "multi-nic-ipam",
+                ...
+                "routes": [{"dst": "10.0.0.0/24","gw": "1.1.1.1"}, {"dst": "10.0.0.0/24","gw": "2.2.2.2"}]
+                }
+            multiNICIPAM: true
+
+    The above definition will generate the following route on pod:
+    
+    `10.0.0.0/24 nexthop via 1.1.1.1 nexthop via 2.2.2.2`
