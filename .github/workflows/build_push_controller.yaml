@@ -26,8 +26,7 @@ jobs:
     needs: build-push-controller
     env:
       IMAGE_NAME: ghcr.io/${{ github.repository }}-bundle
-      CHANNELS: stable
-      DEFAULT_CHANNEL: stable
+      CHANNELS: beta
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
@@ -61,7 +60,6 @@ jobs:
           context: .
           push: true
           tags: |
-            ${{ env.IMAGE_NAME }}:latest
             ${{ env.IMAGE_NAME }}:v${{ env.VERSION }}
           file: ./bundle.Dockerfile
          
@@ -93,6 +91,5 @@ jobs:
           push: true
           tags: |
             ${{ env.IMAGE_NAME }}:${{ github.sha }}-${{ github.run_number }}
-            ${{ env.IMAGE_NAME }}:latest
             ${{ env.IMAGE_NAME }}:v${{ env.VERSION }}
           file: ./Dockerfile
