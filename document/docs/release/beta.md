@@ -4,7 +4,7 @@
 
 **Major feature update:**
 
-* Topology-aware NIC Selection
+* [Topology-aware NIC Selection](../concept/policy.md#topology-strategy)
 * RoCE GDR-support CNI (NVIDIA MOFED operator) - `mellanox`
     - Host-device CNI support
     - NICClusterPolicy aware
