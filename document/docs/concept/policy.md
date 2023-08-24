@@ -29,11 +29,23 @@ spec:
   attachPolicy:
     strategy: none
 ```
+
+To limit the secondary interfaces, the list of subnets can be specified in `.spec.masterNets`.
+
+```yaml
+# MultiNicNetwork 
+spec:
+  masterNets:
+  - 10.0.0.0/16
+  - 10.1.0.0/16
+```
+
 However, pod can be further annotated to apply only a subset of secondary interfaces with a specific number or name list.
 
 For example, 
 - attach only one secondary interface
 ```yaml
+# Pod
 metadata:
   annotations:
       k8s.v1.cni.cncf.io/networks: |
@@ -46,6 +58,7 @@ metadata:
 ```
 - attach with the secondary interface name eth1
 ```yaml
+# Pod
 metadata:
   annotations:
       k8s.v1.cni.cncf.io/networks: |
@@ -58,7 +71,15 @@ metadata:
 ```
 If both arguments (nics and master) are applied at the same time, the master argument will be applied.
 #### DeviceClass Strategy (devClass)
-When `devClass` strategy is, the Multi-NIC daemon will be additionally aware of class argument specifed in the pod annotation as a filter.
+When `devClass` strategy is set, the Multi-NIC daemon will be additionally aware of class argument specifed in the pod annotation as a filter.
+
+```yaml
+# MultiNicNetwork 
+spec:
+  attachPolicy:
+    strategy: devClass
+```
+
 ```yaml
 # Pod
 metadata:
@@ -91,3 +112,32 @@ spec:
     - "efa0"
     - "efa1"
 ```
+
+#### Topology Strategy 
+
+When `topology` strategy is set and the number of NICs to select is set lower than availability, Multi-NIC daemon will prioritize the network device by the weight of NUMA where it is located.  
+
+```yaml
+# MultiNicNetwork 
+spec:
+  attachPolicy:
+    strategy: topology
+```
+
+```yaml
+# Pod
+metadata:
+  annotations:
+      k8s.v1.cni.cncf.io/networks: |
+          [{
+            "name": "multi-nic-sample",
+            "cni-args": {
+                "nics": 1
+            }
+          }]
+```
+
+Weight is the number of GPU devices located on the NUMA that is assigned to the pod by the nvidia device plugin. 
+
+If no topology file is provided in `/var/run/nvidia-topologyd/virtualTopology.xml`, the daemon will parse the topology from `/sys/devices`. 
+
