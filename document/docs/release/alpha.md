@@ -1,5 +1,7 @@
 # Alpha Channel
 
+![](../img/alpha-release.png)
+
 ## v1.2.1
 
 **Improvements:**

@@ -1,4 +1,6 @@
-# Stable Channel
+# Stable Channel (default)
+
+![](../img/stable-release.png)
 
 ## v1.0.5
 
