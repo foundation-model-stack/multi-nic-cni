@@ -1,5 +1,7 @@
 # Beta Channel
 
+![](../img/beta-release.png)
+
 ## v1.2.0
 
 **Major feature update:**
