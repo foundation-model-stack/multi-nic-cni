@@ -1,28 +1,28 @@
 /*
  * Copyright 2022- IBM Inc. All rights reserved
- * SPDX-License-Identifier: Apache2.0
+ * SPDX-License-Identifier: Apache-2.0
  */
 
- package router
+package router
 
- import (
-	 "testing"
+import (
+	"testing"
 
-	 . "github.com/onsi/ginkgo"
-	 . "github.com/onsi/gomega"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 
-	 "github.com/vishvananda/netlink"
-	 "fmt"
-	 "os"
- )
+	"fmt"
+	"github.com/vishvananda/netlink"
+	"os"
+)
 
- func TestRouter(t *testing.T) {
+func TestRouter(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Router Test Suite")
 }
 
 const (
-	LOCAL_TABLE_ID = 255
+	LOCAL_TABLE_ID   = 255
 	LOCAL_TABLE_NAME = "local"
 
 	NEW_TABLE_NAME = "newtable"
@@ -39,7 +39,7 @@ var _ = Describe("Test Path", func() {
 		Expect(RT_TABLE_PATH).To(Equal(POD_RT_PATH))
 		os.Unsetenv("RT_TABLE_PATH")
 		SetRTTablePath()
-		Expect(RT_TABLE_PATH).To(Equal(DEFAULT_RT_TABLE_PATH))	
+		Expect(RT_TABLE_PATH).To(Equal(DEFAULT_RT_TABLE_PATH))
 	})
 })
 
