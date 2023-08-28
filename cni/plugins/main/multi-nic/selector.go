@@ -1,8 +1,8 @@
 /*
  * Copyright 2022- IBM Inc. All rights reserved
- * SPDX-License-Identifier: Apache2.0
+ * SPDX-License-Identifier: Apache-2.0
  */
- 
+
 package main
 
 import (
@@ -18,7 +18,7 @@ import (
 const (
 	NIC_SELECT_PATH     = "select"
 	DEFAULT_DAEMON_PORT = 11000
-	DEFAULT_DAEMON_IP = "localhost"
+	DEFAULT_DAEMON_IP   = "localhost"
 )
 
 type NICSelectRequest struct {
@@ -26,13 +26,13 @@ type NICSelectRequest struct {
 	PodNamespace     string   `json:"namespace"`
 	HostName         string   `json:"host"`
 	NetAttachDefName string   `json:"def"`
-	MasterNetAddrs []string   `json:"masterNets"`
+	MasterNetAddrs   []string `json:"masterNets"`
 	NicSet           NicArgs  `json:"args"`
 }
 
 type NICSelectResponse struct {
-	DeviceIDs      []string   `json:"deviceIDs"`
-	Masters 	   []string   `json:"masters"`
+	DeviceIDs []string `json:"deviceIDs"`
+	Masters   []string `json:"masters"`
 }
 
 func selectNICs(daemonIP string, daemonPort int, podName string, podNamespace string, hostName string, defName string, nicSet NicArgs, masterNets []string) (NICSelectResponse, error) {
@@ -77,4 +77,3 @@ func selectNICs(daemonIP string, daemonPort int, podName string, podNamespace st
 		return response, err
 	}
 }
-

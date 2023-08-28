@@ -1,6 +1,6 @@
 /*
  * Copyright 2022- IBM Inc. All rights reserved
- * SPDX-License-Identifier: Apache2.0
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 package allocator
@@ -10,8 +10,8 @@ import (
 	. "github.com/onsi/gomega"
 	"testing"
 
-	"time"
 	"github.com/foundation-model-stack/multi-nic-cni/daemon/backend"
+	"time"
 )
 
 func TestAllocator(t *testing.T) {
