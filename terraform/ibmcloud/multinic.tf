@@ -4,6 +4,7 @@ variable "zone" {}
 variable "resource_group" {}
 variable "podnet" { default = "192.168.0.0/16" }
 variable "daemonport" { default = 11000 }
+variable "worker_names" { default = [] }
 
 variable "main_iface_sg_name" {}
 
@@ -59,6 +60,11 @@ resource "ibm_is_security_group_rule" "podnet_outbound_rule_all" {
   remote    = var.podnet
 }
 
+data "ibm_is_instance" "workers" {
+  count = length(var.worker_names)
+  name = var.worker_names[count.index]
+}
+
 # create new subnets
 resource "ibm_is_subnet" "subnets" {
   count = var.subnet_count
@@ -67,4 +73,26 @@ resource "ibm_is_subnet" "subnets" {
   zone = var.zone
   total_ipv4_address_count = 256
   resource_group = data.ibm_resource_group.rg.id
+}
+
+# generate pair of worker and interface
+locals {
+  worker_subnets = distinct(flatten([
+    for worker in  data.ibm_is_instance.workers: [
+      for subnet in ibm_is_subnet.subnets : {
+        worker = worker.id
+        subnet = subnet.id
+      }
+    ]
+  ]))
+}
+
+# attach secondary interfaces
+resource "ibm_is_instance_network_interface" "worker_ifaces" {
+  for_each      = { for idx, entry in local.worker_subnets: idx => entry }
+  instance = each.value.worker
+  subnet = each.value.subnet
+  allow_ip_spoofing = true
+  name = "eth${each.key}"
+  security_groups = [ibm_is_security_group.sg.id]
 }
