@@ -30,7 +30,7 @@ import (
 )
 
 type IPAMInfo struct {
-	HIFList []di.InterfaceInfoType `json:"hifs"`
+	HIFList []backend.InterfaceInfoType `json:"hifs"`
 }
 
 const (
@@ -248,6 +248,7 @@ func InitClient() *rest.Config {
 	ds.DeviceClassHandler = backend.NewDeviceClassHandler(config)
 	da.K8sClientset, _ = kubernetes.NewForConfig(config)
 	ds.K8sClientset, _ = kubernetes.NewForConfig(config)
+	di.HostInterfaceHandler = backend.NewHostInterfaceHandler(config, hostName)
 	return config
 
 }
@@ -266,8 +267,8 @@ func initHostName() {
 }
 
 func main() {
-	InitClient()
 	initHostName()
+	InitClient()
 	setDaemonPort, found := os.LookupEnv("DAEMON_PORT")
 	if found && setDaemonPort != "" {
 		setDaemonPortInt, err := strconv.Atoi(setDaemonPort)

@@ -91,6 +91,14 @@ func (r *HostInterfaceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{RequeueAfter: vars.UrgentReconcileTime}, nil
 	}
 
+	hifName := instance.GetName()
+	if vars.IsUnmanaged(instance.ObjectMeta) {
+		// unmanaged hostinterface
+		r.HostInterfaceHandler.SetCache(hifName, *instance.DeepCopy())
+		r.CIDRHandler.UpdateCIDRs()
+		return ctrl.Result{}, nil
+	}
+
 	// Add finalizer to instance
 	if !controllerutil.ContainsFinalizer(instance, hifFinalizer) {
 		controllerutil.AddFinalizer(instance, hifFinalizer)
@@ -113,13 +121,6 @@ func (r *HostInterfaceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 				return ctrl.Result{}, err
 			}
 		}
-		return ctrl.Result{}, nil
-	}
-
-	hifName := instance.GetName()
-	if vars.IsUnmanaged(instance.ObjectMeta) {
-		// unmanaged hostinterface
-		r.HostInterfaceHandler.SetCache(hifName, *instance.DeepCopy())
 		return ctrl.Result{}, nil
 	}
 
@@ -151,6 +152,7 @@ func (r *HostInterfaceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 func (r *HostInterfaceReconciler) UpdateInterfaces(instance multinicv1.HostInterface) error {
 	if vars.IsUnmanaged(instance.ObjectMeta) {
+		r.CIDRHandler.UpdateCIDRs()
 		return nil
 	}
 	nodeName := instance.Spec.HostName
