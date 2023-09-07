@@ -123,7 +123,7 @@ func setTestLatestInterfaces() {
 		vendor := MASTER_VENDORS[index]
 		product := MASTER_PRODUCTS[index]
 		pciAddress := MASTER_PCIADDRESS[index]
-		iface := di.InterfaceInfoType{
+		iface := backend.InterfaceInfoType{
 			InterfaceName: master,
 			NetAddress:    netAddress,
 			Vendor:        vendor,
@@ -190,6 +190,7 @@ var _ = BeforeSuite(func() {
 	ds.DeviceClassHandler = backend.NewDeviceClassHandler(cfg)
 	da.K8sClientset, _ = kubernetes.NewForConfig(cfg)
 	ds.K8sClientset, _ = kubernetes.NewForConfig(cfg)
+	di.HostInterfaceHandler = backend.NewHostInterfaceHandler(cfg, hostName)
 
 	deployExamples(EXAMPLE_RESOURCE_FOLDER, false)
 	addMasterInterfaces()
@@ -257,7 +258,7 @@ var _ = Describe("Test Get Interfaces", func() {
 		handler.ServeHTTP(res, req)
 		body, err := ioutil.ReadAll(res.Body)
 		Expect(err).NotTo(HaveOccurred())
-		var response []di.InterfaceInfoType
+		var response []backend.InterfaceInfoType
 		json.Unmarshal(body, &response)
 		log.Printf("TestUpdateInterface: %v", response)
 	})
