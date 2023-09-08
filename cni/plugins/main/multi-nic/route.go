@@ -52,14 +52,13 @@ func separateMultiPathRoutes(ipamRoutes []*types.Route) (multiPathRoutes map[str
 	return
 }
 
-func addMultiPathRoutes(iface *net.Interface, multiPathRoutes map[string][]*netlink.NexthopInfo) error {
+func addMultiPathRoutes(multiPathRoutes map[string][]*netlink.NexthopInfo) error {
 	if multiPathRoutes != nil {
 		for dst, nexthops := range multiPathRoutes {
 			_, destIPNet, err := net.ParseCIDR(dst)
 			if err == nil {
 				multipathRoute := &netlink.Route{
 					Dst:       destIPNet,
-					LinkIndex: iface.Index,
 					MultiPath: nexthops,
 				}
 
@@ -72,14 +71,13 @@ func addMultiPathRoutes(iface *net.Interface, multiPathRoutes map[string][]*netl
 	return nil
 }
 
-func delMultiPathRoutes(iface *net.Interface, multiPathRoutes map[string][]*netlink.NexthopInfo) {
+func delMultiPathRoutes(multiPathRoutes map[string][]*netlink.NexthopInfo) {
 	if multiPathRoutes != nil {
 		for dst, nexthops := range multiPathRoutes {
 			_, destIPNet, err := net.ParseCIDR(dst)
 			if err == nil {
 				multipathRoute := &netlink.Route{
 					Dst:       destIPNet,
-					LinkIndex: iface.Index,
 					MultiPath: nexthops,
 				}
 				if err := netlink.RouteDel(multipathRoute); err != nil {

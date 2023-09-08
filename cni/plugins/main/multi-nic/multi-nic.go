@@ -171,7 +171,6 @@ func cmdAdd(args *skel.CmdArgs) error {
 			}
 			interfaceItem.Mac = link.HardwareAddr.String()
 			interfaceItem.Sandbox = netns.Path()
-			addMultiPathRoutes(link, multiPathRoutes)
 			return nil
 		})
 		result.Interfaces = append(result.Interfaces, interfaceItem)
@@ -181,6 +180,18 @@ func cmdAdd(args *skel.CmdArgs) error {
 			ips = append(ips, ipConf)
 		}
 	}
+
+	err = netns.Do(func(_ ns.NetNS) error {
+		if err != nil {
+			return err
+		}
+		addMultiPathRoutes(multiPathRoutes)
+		return nil
+	})
+	if err != nil {
+		utils.Logger.Debug(fmt.Sprintf("fail to add multipath routes: %v", err))
+	}
+
 	result.IPs = ips
 	utils.Logger.Debug(fmt.Sprintf("Result: %v", result))
 	return types.PrintResult(result, n.CNIVersion)
@@ -251,19 +262,20 @@ func cmdDel(args *skel.CmdArgs) error {
 		defer netns.Close()
 	}
 
+	err = netns.Do(func(_ ns.NetNS) error {
+		if err != nil {
+			return err
+		}
+		delMultiPathRoutes(multiPathRoutes)
+		return nil
+	})
+	if err != nil {
+		utils.Logger.Debug(fmt.Sprintf("fail to delete multipath routes: %v", err))
+	}
+
 	for index, confBytes := range confBytesArray {
 		command := "DEL"
 		ifName := fmt.Sprintf("%s-%d", args.IfName, index)
-		if netNsErr == nil {
-			err = netns.Do(func(_ ns.NetNS) error {
-				link, err := net.InterfaceByName(ifName)
-				if err != nil {
-					return err
-				}
-				delMultiPathRoutes(link, multiPathRoutes)
-				return nil
-			})
-		}
 
 		utils.Logger.Debug(fmt.Sprintf("Exec %s %s: %s", command, ifName, string(confBytes)))
 		_, err := execPlugin(deviceType, command, confBytes, args, ifName, false)
@@ -271,6 +283,7 @@ func cmdDel(args *skel.CmdArgs) error {
 			utils.Logger.Debug(fmt.Sprintf("Fail execPlugin %v: %v", string(confBytes), err))
 		}
 	}
+
 	return nil
 }
 
