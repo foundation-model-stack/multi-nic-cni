@@ -26,6 +26,8 @@ const (
 
 var CheckPointfile string = "/var/lib/kubelet/device-plugins/kubelet_internal_checkpoint"
 
+var deviceMapCache = InitSafeCache()
+
 // modify from https://github.com/k8snetworkplumbingwg/multus-cni/blob/9b45d4b211728aa0db44a1624aac8e61843390cf/pkg/checkpoint/checkpoint.go#L72
 // DeviceIDs can map[string]string or []string
 type PodDevicesEntry struct {
@@ -121,10 +123,32 @@ func GetDeviceMap(resourceMap map[string][]string, resourceName string) map[stri
 
 	if deviceIDs, exist := resourceMap[resourceName]; exist {
 		for _, deviceID := range deviceIDs {
-			masterName, err := GetPfName(deviceID)
-			if err == nil {
-				if netAddress, exist := nameNetMap[masterName]; exist {
+			var masterName string
+			deviceNameInterface := deviceMapCache.GetCache(deviceID)
+			if deviceNameInterface != nil {
+				masterName = deviceNameInterface.(string)
+			} else {
+				var err error
+				masterName, err = GetPfName(deviceID)
+				if err != nil {
+					log.Printf("cannot get physical device %s: %v\n", deviceID, err)
+				} else {
+					log.Printf("set deviceMapCache %s=%s\n", deviceID, masterName)
+					deviceMapCache.SetCache(deviceID, masterName)
+				}
+			}
+			if netAddress, exist := nameNetMap[masterName]; exist {
+				deviceMap[netAddress] = deviceID
+			} else {
+				netAddress, err := getNetAddressFromDevice(masterName)
+				if err != nil {
+					log.Printf("cannot get network address of device %s: %v\n", masterName, err)
+				} else {
 					deviceMap[netAddress] = deviceID
+					// found new device, update interfaces
+					GetInterfaces()
+					nameNetMap = GetNameNetMap()
+					log.Printf("updated nameNetMap map: %v\n", nameNetMap)
 				}
 			}
 		}

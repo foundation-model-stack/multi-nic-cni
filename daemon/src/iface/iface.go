@@ -164,3 +164,28 @@ func GetInterfaces() []backend.InterfaceInfoType {
 	}
 	return interfaces
 }
+
+func getNetAddressFromDevice(devName string) (string, error) {
+	devLink, err := netlink.LinkByName(devName)
+	if err != nil {
+		log.Printf("cannot find link %s: %v", devName, err)
+		return "", err
+	}
+	addrs, err := netlink.AddrList(devLink, netlink.FAMILY_V4)
+	if err != nil || len(addrs) == 0 {
+		log.Printf("cannot list address on %s: %v", devName, err)
+		return "", err
+	}
+	addr := addrs[0].IPNet
+	if addr == nil {
+		log.Printf("no address set on %s", devName)
+		return "", err
+	}
+	if devLink.Attrs().Flags&net.FlagUp == 0 {
+		// interface down
+		log.Printf("%s down", devName)
+		return "", err
+	}
+	netAddress := getNetAddress(addr)
+	return netAddress, nil
+}

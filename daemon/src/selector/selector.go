@@ -71,8 +71,6 @@ func getDefaultResponse(req NICSelectRequest, masterNameMap map[string]string, n
 }
 
 func Select(req NICSelectRequest) NICSelectResponse {
-	masterNameMap := iface.GetInterfaceNameMap()
-	nameNetMap := iface.GetNameNetMap()
 	deviceMap := make(map[string]string)
 	resourceMap := make(map[string][]string)
 
@@ -93,6 +91,8 @@ func Select(req NICSelectRequest) NICSelectResponse {
 		log.Printf("Cannot get pod: %v\n", err)
 	}
 
+	masterNameMap := iface.GetInterfaceNameMap()
+	nameNetMap := iface.GetNameNetMap()
 	netSpec, err := MultinicnetHandler.Get(req.NetAttachDefName, req.PodNamespace)
 	if err != nil {
 		return getDefaultResponse(req, masterNameMap, nameNetMap, deviceMap, resourceMap)
