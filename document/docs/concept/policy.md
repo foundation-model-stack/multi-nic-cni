@@ -17,7 +17,7 @@ topology|give priority to NIC based on Numa affnity of GPU allocation|implemente
 Annotation (CNIArgs)|Description|Status
 ---|---|---
 nics|fixed number of interfaces (none, DeviceClass strategy)|implemented
-master|fixed interface names (none strategy)|implemented
+masters|fixed interface names (none strategy)|implemented
 target|overridden target bandwidth (CostOpt, PerfOpt strategy)|TODO
 class|preferred device class (DeviceClass strategy)|implemented
 
