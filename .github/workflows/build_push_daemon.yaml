@@ -4,14 +4,14 @@ on:
   push:
     branches:
       - main
-      - v1.2.1
+      - v1.2.2
     paths:
       - daemon/**
       - cni/**
       - Makefile
       
 env:
-  IMAGE_VERSION: '1.2.1'
+  IMAGE_VERSION: '1.2.2'
   DAEMON_REGISTRY: ghcr.io/${{ github.repository_owner }}
 
 jobs:
