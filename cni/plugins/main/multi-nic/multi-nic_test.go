@@ -533,6 +533,71 @@ var _ = Describe("Operations", func() {
 			multiPathTest(ver, singleNICIPAMWithMultiPath, fullNets, POOL_MASTER_NAMES)
 		})
 
+		It(fmt.Sprintf("[%s] check multi-config IPAM", ver), func() {
+			conf, n := getSampleMultiIPAMConfig(ver, POOL_MASTER_NAMES, masterNets)
+			confBytesArray, _, err := loadIPVANConf([]byte(conf), "net1", n, []*types100.IPConfig{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(len(confBytesArray)).To(Equal(len(POOL_MASTER_NAMES)))
+			for index, confBytes := range confBytesArray {
+				log.Printf("%s", confBytes)
+				confObj := &IPVLANTypeNetConf{}
+				err = json.Unmarshal(confBytes, confObj)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(confObj.IPAM.Type).To(Equal("whereabouts"))
+				ipamObject := &IPAMExtract{}
+				err = json.Unmarshal(confBytes, ipamObject)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(ipamObject.IPAM["range"].(string)).To(Equal(POOL_IP_ADDRESSES[index]))
+				Expect(ipamObject.IPAM["network_name"].(string)).To(Equal(POOL_MASTER_NAMES[index]))
+			}
+		})
+
+		It(fmt.Sprintf("[%s] check multi-config IPAM with static IP", ver), func() {
+			var ips []*types100.IPConfig
+			for _, podIP := range POOL_IP_ADDRESSES {
+				ipVal, ipnet, err := net.ParseCIDR(podIP)
+				ipnet.IP = ipVal
+				Expect(err).NotTo(HaveOccurred())
+				podIPConfig := &types100.IPConfig{Address: *ipnet}
+				ips = append(ips, podIPConfig)
+			}
+			conf, n := getSampleMultiIPAMConfig(ver, POOL_MASTER_NAMES, masterNets)
+			confBytesArray, _, err := loadIPVANConf([]byte(conf), "net1", n, ips)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(len(confBytesArray)).To(Equal(len(POOL_MASTER_NAMES)))
+			for index, confBytes := range confBytesArray {
+				log.Printf("%s", confBytes)
+				confObj := &IPVLANTypeNetConf{}
+				err = json.Unmarshal(confBytes, confObj)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(confObj.IPAM.Type).To(Equal("static"))
+				ipamObject := &IPAMExtract{}
+				err = json.Unmarshal(confBytes, ipamObject)
+				Expect(err).NotTo(HaveOccurred())
+				addresses := ipamObject.IPAM["addresses"].([]interface{})
+				Expect(len(addresses)).To(Equal(1))
+				addressMap := addresses[0].(map[string]interface{})
+				Expect(addressMap["address"].(string)).To(Equal(POOL_IP_ADDRESSES[index]))
+			}
+		})
+
+		It(fmt.Sprintf("[%s] check getStaticIPs", ver), func() {
+			var ips []string
+			joinedIPs := strings.Join(POOL_IP_ADDRESSES, ",")
+			argStr := fmt.Sprintf("POD_NAME=a;IP=%s", joinedIPs)
+			ips, argStr = getStaticIPs(argStr)
+			for index, podIP := range ips {
+				Expect(podIP).To(Equal(POOL_IP_ADDRESSES[index]))
+			}
+			Expect(argStr).To(Equal("POD_NAME=a"))
+
+			argStr = fmt.Sprintf("POD_NAME=a;IP=%s;SOME_ARG=b", joinedIPs)
+			ips, argStr = getStaticIPs(argStr)
+			for index, podIP := range ips {
+				Expect(podIP).To(Equal(POOL_IP_ADDRESSES[index]))
+			}
+			Expect(argStr).To(Equal("POD_NAME=a;SOME_ARG=b"))
+		})
 	}
 })
 
@@ -580,6 +645,48 @@ func getAwsIpvlanConfig(ver, masterNets string) ([]byte, *NetConf) {
 	Expect(err).NotTo(HaveOccurred())
 	n.DeviceIDs = POOL_MASTER_NAMES[0:1]
 	n.Masters = POOL_MASTER_NAMES[0:1]
+	return conf, n
+}
+
+func getSampleMultiIPAMConfig(ver string, masterNames []string, masterNets string) ([]byte, *NetConf) {
+	ipamArgs := ""
+	for index, masterName := range masterNames {
+		if index > 0 {
+			ipamArgs += ","
+		}
+		ipamArgs += fmt.Sprintf(`
+		"%s": {"range": "%s"}
+		`, masterName, POOL_IP_ADDRESSES[index])
+	}
+	confStr := fmt.Sprintf(`{ 
+		"cniVersion": "%s", 
+		"name": "multi-nic-sample",
+		"type": "multi-nic",
+		"plugin": {
+			"cniVersion": "0.3.0",
+			"type": "ipvlan",
+			"mode": "l2"
+		},
+		"vlanMode": "l2",
+		"ipam": {
+			"type": "multi-config",
+			"ipam_type": "whereabouts",
+			"args": { 
+				%s
+			}
+		},
+		"daemonIP": "%s",
+		"daemonPort": %d,
+		"subnet": "192.168.0.0/16",
+		"masterNets": %s
+		}`, ver, ipamArgs, BRIDGE_HOST_IP, daemonPort, masterNets)
+	log.Printf("%s", confStr)
+	conf := []byte(confStr)
+	n := &NetConf{}
+	err := json.Unmarshal(conf, n)
+	Expect(err).NotTo(HaveOccurred())
+	n.DeviceIDs = POOL_MASTER_NAMES
+	n.Masters = POOL_MASTER_NAMES
 	return conf, n
 }
 

@@ -11,6 +11,7 @@ import (
 
 	"github.com/containernetworking/cni/pkg/types"
 	current "github.com/containernetworking/cni/pkg/types/100"
+	"github.com/containernetworking/plugins/pkg/utils"
 	"github.com/vishvananda/netlink"
 )
 
@@ -40,6 +41,17 @@ func loadIPVANConf(bytes []byte, ifName string, n *NetConf, ipConfigs []*current
 		return
 	}
 
+	var ipamMap map[string][]byte
+
+	if n.IPAM.Type == MultiConfigIPAMType {
+		var err error
+		ipamMap, err = getMultiIPAMConfigBytes(bytes)
+		if err != nil {
+			ipamMap = nil
+			utils.Logger.Debug(fmt.Sprintf("getMultiIPAMConfigBytes failed: %v", err))
+		}
+	}
+
 	// interfaces are orderly assigned from interface set
 	for index, masterName := range n.Masters {
 		if masterName == "" {
@@ -62,9 +74,16 @@ func loadIPVANConf(bytes []byte, ifName string, n *NetConf, ipConfigs []*current
 			return
 		}
 
-		if n.IsMultiNICIPAM {
-			// multi-NIC IPAM config
+		if len(ipConfigs) > 0 {
+			// no need to call ipam due to static ip
 			confBytes, multiPathRoutes = injectMultiNicIPAM(confBytes, bytes, ipConfigs, index)
+		} else if ipamMap != nil {
+			if ipamBytes, found := ipamMap[masterName]; found {
+				confBytes, multiPathRoutes = replaceSingleNicIPAMWithMultiConfig(confBytes, bytes, ipamBytes)
+			} else {
+				utils.Logger.Debug(fmt.Sprintf("Multi-config IPAM has no definition of %s", masterName))
+				continue
+			}
 		} else {
 			confBytes, multiPathRoutes = injectSingleNicIPAM(confBytes, bytes)
 		}

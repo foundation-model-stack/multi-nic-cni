@@ -1,0 +1,25 @@
+apiVersion: multinic.fms.io/v1
+kind: MultiNicNetwork
+metadata:
+  name: multinic-multiconfig
+spec:
+  subnet: ""
+  ipam: |
+    {
+      "type": "multi-config",
+      "ipam_type": "whereabouts",
+      "args": {
+        "p0": {
+          "range": "192.168.0.0/18"
+        },
+        "p1": {
+          "range": "192.168.64.0/18"
+        }
+      }
+    }
+  multiNICIPAM: false
+  plugin:
+    cniVersion: "0.3.0"
+    type: ipvlan
+    args: 
+      mode: l2
