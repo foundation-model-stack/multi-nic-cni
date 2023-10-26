@@ -3,7 +3,6 @@ name: Build and push controller and its bundle image
 on:
   push:
     branches:
-      - main
       - v1.2.1
     paths:
       - controllers/**
@@ -61,7 +60,6 @@ jobs:
           context: .
           push: true
           tags: |
-            ${{ env.IMAGE_NAME }}:latest
             ${{ env.IMAGE_NAME }}:v${{ env.VERSION }}
           file: ./bundle.Dockerfile
          
@@ -93,6 +91,5 @@ jobs:
           push: true
           tags: |
             ${{ env.IMAGE_NAME }}:${{ github.sha }}-${{ github.run_number }}
-            ${{ env.IMAGE_NAME }}:latest
             ${{ env.IMAGE_NAME }}:v${{ env.VERSION }}
           file: ./Dockerfile
