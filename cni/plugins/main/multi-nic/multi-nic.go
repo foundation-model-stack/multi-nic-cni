@@ -125,6 +125,30 @@ func cmdAdd(args *skel.CmdArgs) error {
 		if len(result.IPs) == 0 {
 			return fmt.Errorf("IPAM plugin returned missing IP config %v", string(injectedStdIn))
 		}
+	} else if !haveResult && n.IPAM.Type == MultiConfigIPAMType {
+		var ips []string
+		ips, args.Args = getStaticIPs(args.Args)
+		for index, ipnet := range ips {
+			ipVal, reservedIP, err := net.ParseCIDR(ipnet)
+			if err != nil {
+				utils.Logger.Debug(fmt.Sprintf("failed to parse static IP %s: %v", ipnet, err))
+				return err
+			}
+			reservedIP.IP = ipVal
+			ipConf := &current.IPConfig{
+				Address:   *reservedIP,
+				Interface: current.Int(index),
+			}
+			result.IPs = append(result.IPs, ipConf)
+		}
+		if len(n.Masters) == 0 {
+			ipamObject, err := getMultiIPAMConfig(args.StdinData)
+			if err == nil && ipamObject.IPAM.Args != nil {
+				for masterName, _ := range ipamObject.IPAM.Args {
+					n.Masters = append(n.Masters, masterName)
+				}
+			}
+		}
 	}
 
 	// get device config and apply
