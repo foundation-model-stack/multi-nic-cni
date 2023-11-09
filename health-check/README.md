@@ -16,7 +16,14 @@ kubectl create ns multi-nic-cni-operator
     cd multi-nic-cni/health-check
     chmod +x ./checker/script.sh
     ```
-3. Run 
+
+3. Add `openshift.io/cluster-monitoring` label to multi-nic-cni-operator namespace
+
+    ```bash
+    kubectl label ns multi-nic-cni-operator openshift.io/cluster-monitoring=true
+    ```
+
+4. Run 
 
     ```bash
     make deploy
@@ -40,7 +47,7 @@ kubectl create ns multi-nic-cni-operator
     deployment.apps/multi-nic-cni-health-checker created
     ```
 
-4. Check whether the health-checker and health-check-agent are running.
+5. Check whether the health-checker and health-check-agent are running.
 
     ```bash
     kubectl get po -n multi-nic-cni-operator
@@ -53,7 +60,7 @@ kubectl create ns multi-nic-cni-operator
     multi-nic-cni-health-checker-zz                              1/1     Running   0          
     ```
 
-5. Test status service with port forward
+6. Test status service with port forward
 
     ```bash
     # forward port on one terminal
@@ -79,7 +86,7 @@ kubectl create ns multi-nic-cni-operator
         > {"Info":{"HostName":"hostD","Connectivity":{"192.168.0.0/18":false,"192.168.64.0/18":false},"Allocability":0,"StatusCode":...,"Status":...,"Message":...},"CheckTime":"...","Checker":"checkerX"}
         ```
 
-6. Reload prometheus configuration
+7. Reload prometheus configuration
 
     For OpenShift cluster with prometheus operator deployed in openshift-monitoring,
 
