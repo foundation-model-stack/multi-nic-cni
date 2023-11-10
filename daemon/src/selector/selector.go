@@ -132,10 +132,11 @@ func Select(req NICSelectRequest) NICSelectResponse {
 	log.Printf("masterNets %v, %v, %v\n", selectedMasterNetAddrs, filteredMasterNameMap, nameNetMap)
 	for _, netAddress := range selectedMasterNetAddrs {
 		deviceID := deviceMap[netAddress]
-		master := filteredMasterNameMap[netAddress]
-		log.Printf("masterNets %s,%s\n", deviceID, master)
-		selectedDeviceIDs = append(selectedDeviceIDs, deviceID)
-		selectedMasters = append(selectedMasters, master)
+		if master, ok := filteredMasterNameMap[netAddress]; ok && master != "" {
+			log.Printf("masterNets %s,%s\n", deviceID, master)
+			selectedDeviceIDs = append(selectedDeviceIDs, deviceID)
+			selectedMasters = append(selectedMasters, master)
+		}
 	}
 
 	return NICSelectResponse{
