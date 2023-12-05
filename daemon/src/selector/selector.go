@@ -57,6 +57,7 @@ func getDefaultResponse(req NICSelectRequest, masterNameMap map[string]string, n
 	selectedMasterNetAddrs := selector.Select(req, masterNameMap, nameNetMap, resourceMap)
 	selectedMasters := []string{}
 	selectedDeviceIDs := []string{}
+	log.Printf("masterNets %v, %v, %v\n", selectedMasterNetAddrs, masterNameMap, nameNetMap)
 	for _, netAddress := range selectedMasterNetAddrs {
 		deviceID := deviceMap[netAddress]
 		master := masterNameMap[netAddress]
@@ -93,11 +94,7 @@ func Select(req NICSelectRequest) NICSelectResponse {
 
 	masterNameMap := iface.GetInterfaceNameMap()
 	nameNetMap := iface.GetNameNetMap()
-	netSpec, err := MultinicnetHandler.Get(req.NetAttachDefName, req.PodNamespace)
-	if err != nil {
-		return getDefaultResponse(req, masterNameMap, nameNetMap, deviceMap, resourceMap)
-	}
-	policy := netSpec.Policy
+	netSpec, err := MultinicnetHandler.Get(req.NetAttachDefName, metav1.NamespaceAll)
 
 	var filteredMasterNameMap map[string]string
 	if len(deviceMap) > 0 {
@@ -109,6 +106,12 @@ func Select(req NICSelectRequest) NICSelectResponse {
 	} else {
 		filteredMasterNameMap = masterNameMap
 	}
+
+	if err != nil {
+		log.Printf("Failed to get MultiNicNetwork (%s), use default response\n", err.Error())
+		return getDefaultResponse(req, filteredMasterNameMap, nameNetMap, deviceMap, resourceMap)
+	}
+	policy := netSpec.Policy
 
 	var selector Selector
 	strategy := Strategy(policy.Strategy)

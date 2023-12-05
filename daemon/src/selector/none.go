@@ -54,6 +54,10 @@ func (DefaultSelector) Select(req NICSelectRequest, interfaceNameMap map[string]
 		for _, devName := range fixedSet {
 			if netAddress, exists := nameNetMap[devName]; exists {
 				selectedMaster = append(selectedMaster, netAddress)
+			} else {
+				// replaced with empty network address
+				interfaceNameMap[devName] = devName
+				selectedMaster = append(selectedMaster, devName)
 			}
 		}
 	} else {
@@ -65,7 +69,11 @@ func (DefaultSelector) Select(req NICSelectRequest, interfaceNameMap map[string]
 	}
 	if len(selectedMaster) == 0 {
 		// apply all network addresses
-		for netAddress, _ := range interfaceNameMap {
+		for netAddress, devName := range interfaceNameMap {
+			if netAddress == devName {
+				// skip device without network address
+				continue
+			}
 			log.Printf("select %s", netAddress)
 			selectedMaster = append(selectedMaster, netAddress)
 		}
