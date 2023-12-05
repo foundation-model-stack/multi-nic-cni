@@ -396,6 +396,10 @@ func loadConf(args *skel.CmdArgs) (*NetConf, string, error) {
 	}
 	selectResponse, err := selectNICs(n.DaemonIP, n.DaemonPort, podName, podNamespace, hostName, n.Name, nicSet, n.MasterNetAddrs)
 	if err != nil {
+		if n.IPAM.Type == MultiConfigIPAMType {
+			// allow to have empty Masters
+			err = nil
+		}
 		return n, deviceType, err
 	}
 	n.Masters = selectResponse.Masters

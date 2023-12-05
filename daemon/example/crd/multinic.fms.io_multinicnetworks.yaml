@@ -14,7 +14,7 @@ spec:
     listKind: MultiNicNetworkList
     plural: multinicnetworks
     singular: multinicnetwork
-  scope: Namespaced
+  scope: Cluster
   versions:
   - name: v1
     schema:
@@ -60,6 +60,10 @@ spec:
                 type: array
               multiNICIPAM:
                 type: boolean
+              namespaces:
+                items:
+                  type: string
+                type: array
               plugin:
                 description: 'reference: github.com/containernetworking/cni/pkg/types'
                 properties:
@@ -106,14 +110,47 @@ spec:
           status:
             description: MultiNicNetworkStatus defines the observed state of MultiNicNetwork
             properties:
-              defs:
-                description: Definitions lists NetworkAttachmentDefinition created
-                  by the MultiNicNetwork
+              computeResults:
                 items:
-                  type: string
+                  properties:
+                    netAddress:
+                      type: string
+                    numOfHosts:
+                      type: integer
+                  required:
+                  - netAddress
+                  - numOfHosts
+                  type: object
                 type: array
+              configStatus:
+                type: string
+              discovery:
+                properties:
+                  cidrProcessed:
+                    type: integer
+                  existDaemon:
+                    type: integer
+                  infoAvailable:
+                    type: integer
+                required:
+                - cidrProcessed
+                - existDaemon
+                - infoAvailable
+                type: object
+              lastSyncTime:
+                format: date-time
+                type: string
+              message:
+                type: string
+              routeStatus:
+                type: string
             required:
-            - defs
+            - computeResults
+            - configStatus
+            - discovery
+            - lastSyncTime
+            - message
+            - routeStatus
             type: object
         type: object
     served: true
