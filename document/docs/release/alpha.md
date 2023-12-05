@@ -67,15 +67,16 @@
             metadata:
                 name: node-1
                 labels:
-                  unmanaged: true
-            hostName: node-1
-            interfaces:
-            -   hostIP: ""
-                interfaceName: eth1
-                netAddress: 192.168.0.0/24
-            -   hostIP: ""
-                interfaceName: eth2
-                netAddress: 192.168.1.0/24
+                  multi-nic-unmanaged: "true"
+            spec:
+                hostName: node-1
+                interfaces:
+                -   hostIP: ""
+                    interfaceName: eth1
+                    netAddress: 192.168.0.0/24
+                -   hostIP: ""
+                    interfaceName: eth2
+                    netAddress: 192.168.1.0/24
                 
 * Multi-gateway route configuration support
 
