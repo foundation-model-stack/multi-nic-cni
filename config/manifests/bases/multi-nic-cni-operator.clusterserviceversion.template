@@ -131,4 +131,4 @@ spec:
   provider:
     name: Foundation Model Stack
   version: 0.0.0
-  replaces: multi-nic-cni-operator.v1.0.2
+  replaces: multi-nic-cni-operator.v1.2.1
