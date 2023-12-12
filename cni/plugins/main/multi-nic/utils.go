@@ -7,12 +7,12 @@ package main
 
 import (
 	"encoding/json"
-	"log"
 	"strings"
 
 	"fmt"
 
 	current "github.com/containernetworking/cni/pkg/types/100"
+	"github.com/containernetworking/plugins/pkg/utils"
 	"github.com/vishvananda/netlink"
 )
 
@@ -68,6 +68,12 @@ func replaceMultiNicIPAM(singleNicConfBytes []byte, ipConfig *current.IPConfig) 
 	return []byte(injectedStr)
 }
 
+func replaceEmptyIPAM(singleNicConfBytes []byte) []byte {
+	confStr := string(singleNicConfBytes)
+	injectedStr := strings.ReplaceAll(confStr, "\"ipam\":{}", "\"ipam\":{\"type\":\"static\",\"addresses\":[]}")
+	return []byte(injectedStr)
+}
+
 // injectMaster replaces original pool with selected master network addresses
 func injectMaster(inData []byte, selectedNetAddrs []string, selectedMasters []string, selectedDeviceIDs []string) []byte {
 	var obj map[string]interface{}
@@ -83,12 +89,12 @@ func injectMaster(inData []byte, selectedNetAddrs []string, selectedMasters []st
 func getHostIPConfig(index int, devName string) *current.IPConfig {
 	devLink, err := netlink.LinkByName(devName)
 	if err != nil {
-		log.Printf("cannot find link %s: %v", devName, err)
+		utils.Logger.Debug(fmt.Sprintf("cannot find link %s: %v", devName, err))
 		return nil
 	}
 	addrs, err := netlink.AddrList(devLink, netlink.FAMILY_V4)
 	if err != nil || len(addrs) == 0 {
-		log.Printf("cannot list address on %s: %v", devName, err)
+		utils.Logger.Debug(fmt.Sprintf("cannot list address on %s: %v", devName, err))
 		return nil
 	}
 	addr := addrs[0].IPNet

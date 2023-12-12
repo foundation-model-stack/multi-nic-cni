@@ -11,6 +11,7 @@ import (
 
 	"github.com/containernetworking/cni/pkg/types"
 	current "github.com/containernetworking/cni/pkg/types/100"
+	"github.com/containernetworking/plugins/pkg/utils"
 )
 
 const (
@@ -49,6 +50,7 @@ func loadHostDeviceConf(bytes []byte, ifName string, n *NetConf, ipConfigs []*cu
 	// interfaces are orderly assigned from interface set
 	for index, deviceID := range n.DeviceIDs {
 		if deviceID == "" {
+			utils.Logger.Debug(fmt.Sprintf("skip %d: no device ID", index))
 			continue
 		}
 		// add config
@@ -70,7 +72,8 @@ func loadHostDeviceConf(bytes []byte, ifName string, n *NetConf, ipConfigs []*cu
 		if n.IPAM.Type == HostDeviceIPAMType {
 			ipConfig := getHostIPConfig(index, n.Masters[index])
 			if ipConfig == nil {
-				continue
+				utils.Logger.Debug(fmt.Sprintf("skip %d: no host IP", index))
+				confBytes = replaceEmptyIPAM(confBytes)
 			}
 			confBytes = replaceMultiNicIPAM(confBytes, ipConfig)
 		} else if n.IsMultiNICIPAM {

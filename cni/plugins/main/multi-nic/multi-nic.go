@@ -198,8 +198,10 @@ func cmdDel(args *skel.CmdArgs) error {
 	if n.IPAM.Type != "" {
 		injectedStdIn := injectMaster(args.StdinData, n.MasterNetAddrs, n.Masters, n.DeviceIDs)
 		if n.IPAM.Type != "multi-nic-ipam" {
-			err = ipam.ExecDel(n.IPAM.Type, injectedStdIn)
-			utils.Logger.Debug(fmt.Sprintf("Failed ipam.ExecDel %s: %v", err, string(injectedStdIn)))
+			if n.IPAM.Type != HostDeviceIPAMType {
+				err = ipam.ExecDel(n.IPAM.Type, injectedStdIn)
+				utils.Logger.Debug(fmt.Sprintf("Failed ipam.ExecDel %s: %v", err, string(injectedStdIn)))
+			}
 		} else {
 			r, err := ipam.ExecDelWithResult(n.IPAM.Type, injectedStdIn)
 			if err != nil {
