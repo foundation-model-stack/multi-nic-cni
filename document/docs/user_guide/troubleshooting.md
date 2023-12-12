@@ -154,6 +154,36 @@ If yes, try [restarting multi-nic-cni controller node](#restart-controller) to f
 ## Actions
 
 ### Get CNI log (available after v1.0.3)
+To make CNI log available on the daemon pod, you may mount the the host log path to the daemon pod:
+
+- Run 
+
+```bash
+kubectl edit config.multinic multi-nicd
+```
+
+- Add the following mount items
+
+```yaml
+# config/multi-nicd
+spec:
+  daemon:
+    mounts:
+    ...
+    - hostpath: /var/log/multi-nic-cni.log
+      name: cni-log
+      podpath: /host/var/log/multi-nic-cni.log
+    - hostpath: /var/log/multi-nic-ipam.log
+      name: ipam-log
+      podpath: /host/var/log/multi-nic-ipam.log
+    # For AWS-IPVLAN main plugin log also add the following lines:
+    # - hostpath: /var/log/multi-nic-aws-ipvlan.log
+    #   name: ipam-log
+    #   podpath: /host/var/log/multi-nic-aws-ipvlan.log
+```
+
+Then, you can get CNI log from the following commands:
+
 ```bash
 # default main plugin
 kubectl exec $(kubectl get po -owide -A|grep multi-nicd\
@@ -163,7 +193,7 @@ kubectl exec $(kubectl get po -owide -A|grep multi-nicd\
 # multi-nic on aws main plugin
 kubectl exec $(kubectl get po -owide -A|grep multi-nicd\
 |grep $FAILED_NODE|awk '{printf "%s -n %s", $2, $1}')\
--- cat /var/log/multi-nic-aws-ipvlan.log
+-- cat /host/var/log/multi-nic-aws-ipvlan.log
 
 # IPAM plugin
 kubectl exec $(kubectl get po -owide -A|grep multi-nicd\
