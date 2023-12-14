@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: multi-nic-cni-health-checker-cfg
+  namespace: multi-nic-cni-operator
+data: {}
+  # agentSelector: |
+  #   target=true

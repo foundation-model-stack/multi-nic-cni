@@ -18,22 +18,29 @@ spec:
       serviceAccount: multi-nic-cni-health-checker-sa
       serviceAccountName: multi-nic-cni-health-checker-sa
       containers:
-        - name: checker
-          image: ghcr.io/foundation-model-stack/multi-nic-cni-health-checker:v1.0.5
-          imagePullPolicy: Always
-          ports:
-            - containerPort: 8080
-              name: http
-          env:
-            - name: CHECKER_NAME
-              valueFrom:
+      - name: checker
+        image: ghcr.io/foundation-model-stack/multi-nic-cni-health-checker:v1.0.5
+        imagePullPolicy: Always
+        ports:
+          - containerPort: 8080
+            name: http
+        env:
+          - name: CHECKER_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          - name: CHECKER_NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+          - name: TARGET_NETWORK
+            valueFrom:
                 fieldRef:
-                  fieldPath: metadata.name
-            - name: CHECKER_NAMESPACE
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.namespace
-            - name: TARGET_NETWORK
-              valueFrom:
-                  fieldRef:
-                    fieldPath: metadata.annotations['k8s.v1.cni.cncf.io/networks']
+                  fieldPath: metadata.annotations['k8s.v1.cni.cncf.io/networks']
+        volumeMounts:
+        - name: checker-config
+          mountPath: /etc/config
+      volumes:
+      - name: checker-config
+        configMap:
+          name: multi-nic-cni-health-checker-cfg
