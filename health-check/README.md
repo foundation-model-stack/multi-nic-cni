@@ -23,11 +23,29 @@ kubectl create ns multi-nic-cni-operator
     kubectl label ns multi-nic-cni-operator openshift.io/cluster-monitoring=true
     ```
 
-4. Run 
+4. Install health-check agents and checker 
 
-    ```bash
-    make deploy
-    ```
+    4.1. (optional) specify node (agent) selector
+    
+    - Modify `agentSelector` in `./checker/configmap.yaml`
+
+    4.2. run deploy script
+
+    - Cluster with only single multinicnetwork
+        ```bash
+        make deploy
+        ```
+
+    - Cluster with multiple multinicnetworks
+
+        ```bash
+        # deploy health-check agents (used for all multinicnetwork)
+        make deploy-agent
+
+        # deploy checker (one deployment per multinicnetwork)
+        export NETWORK_NAME=<target multinicnetwork name>
+        ./checker/script.sh deploy ${NETWORK_NAME}
+        ``` 
 
     ```bash
     # expected output
@@ -119,4 +137,3 @@ kubectl create ns multi-nic-cni-operator
     ```
 
     ![](./img/health-check-prom.png)
-
