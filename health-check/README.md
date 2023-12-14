@@ -28,6 +28,7 @@ kubectl create ns multi-nic-cni-operator
     4.1. (optional) specify node (agent) selector
     
     - Modify `agentSelector` in `./checker/configmap.yaml`
+    - Add the same selector for `.spec.template.spec.nodeSelector` in `./checker/deployment.yaml`
 
     4.2. run deploy script
 
