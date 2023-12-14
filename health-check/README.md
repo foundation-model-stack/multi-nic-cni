@@ -16,11 +16,36 @@ kubectl create ns multi-nic-cni-operator
     cd multi-nic-cni/health-check
     chmod +x ./checker/script.sh
     ```
-3. Run 
+
+3. Add `openshift.io/cluster-monitoring` label to multi-nic-cni-operator namespace
 
     ```bash
-    make deploy
+    kubectl label ns multi-nic-cni-operator openshift.io/cluster-monitoring=true
     ```
+
+4. Run 
+
+    4.1. (optional) specify node (agent) selector
+    
+    - Modify `agentSelector` in `./checker/configmap.yaml`
+
+    4.2. run deploy script
+
+    - Cluster with only single multinicnetwork
+        ```bash
+        make deploy
+        ```
+
+    - Cluster with multiple multinicnetworks
+
+        ```bash
+        # deploy health-check agents (used for all multinicnetwork)
+        make deploy-agent
+
+        # deploy checker (one deployment per multinicnetwork)
+        export NETWORK_NAME=<target multinicnetwork name>
+        ./checker/script.sh deploy ${NETWORK_NAME}
+        ``` 
 
     ```bash
     # expected output
@@ -40,7 +65,7 @@ kubectl create ns multi-nic-cni-operator
     deployment.apps/multi-nic-cni-health-checker created
     ```
 
-4. Check whether the health-checker and health-check-agent are running.
+5. Check whether the health-checker and health-check-agent are running.
 
     ```bash
     kubectl get po -n multi-nic-cni-operator
@@ -53,7 +78,7 @@ kubectl create ns multi-nic-cni-operator
     multi-nic-cni-health-checker-zz                              1/1     Running   0          
     ```
 
-5. Test status service with port forward
+6. Test status service with port forward
 
     ```bash
     # forward port on one terminal
@@ -79,7 +104,7 @@ kubectl create ns multi-nic-cni-operator
         > {"Info":{"HostName":"hostD","Connectivity":{"192.168.0.0/18":false,"192.168.64.0/18":false},"Allocability":0,"StatusCode":...,"Status":...,"Message":...},"CheckTime":"...","Checker":"checkerX"}
         ```
 
-6. Reload prometheus configuration
+7. Reload prometheus configuration
 
     For OpenShift cluster with prometheus operator deployed in openshift-monitoring,
 
@@ -112,4 +137,3 @@ kubectl create ns multi-nic-cni-operator
     ```
 
     ![](./img/health-check-prom.png)
-

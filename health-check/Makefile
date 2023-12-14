@@ -7,7 +7,7 @@ export IMAGE_REGISTRY ?= ghcr.io/foundation-model-stack
 export OPERATOR_NAMESPACE ?= multi-nic-cni-operator
 
 IMAGE_TAG_BASE = $(IMAGE_REGISTRY)/multi-nic-cni
-IMAGE_VERSION ?= 1.0.0
+IMAGE_VERSION ?= 1.0.5
 SIDECAR_IMG ?= $(IMAGE_TAG_BASE)-health-check-sidecar:v$(IMAGE_VERSION)
 CHECKER_IMG ?= $(IMAGE_TAG_BASE)-health-checker:v$(IMAGE_VERSION)
 
@@ -47,5 +47,6 @@ deploy: deploy-agent
 
 clean:
 	@kubectl delete -f ./checker/deployment.yaml  && echo "Completely delete checkers" || echo "Failed to clean checkers"  
+	@kubectl delete -f ./checker/configmap.yaml && echo "Completely delete configmap of checkers" || echo "Failed to clean configmap of checkers"  
 	@kubectl delete -f ./checker/rbac.yaml && echo "Completely delete RBAC resource of checkers" || echo "Failed to clean RBAC resource of checkers"  
 	@kubectl delete -f ./sidecar/manifest.yaml && echo "Completely delete agents" || echo "Failed to clean agents"  
