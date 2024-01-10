@@ -14,6 +14,7 @@ import (
 	"github.com/containernetworking/cni/pkg/types"
 	multinicv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
 	"github.com/foundation-model-stack/multi-nic-cni/controllers/vars"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -147,7 +148,9 @@ func (h *NetAttachDefHandler) getNamespace(net *multinicv1.MultiNicNetwork) ([]s
 		namespaceList, err := h.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
 		if err == nil {
 			for _, ns := range namespaceList.Items {
-				namespaces = append(namespaces, ns.Name)
+				if ns.Status.Phase == v1.NamespaceActive {
+					namespaces = append(namespaces, ns.Name)
+				}
 			}
 		} else {
 			return namespaces, err
