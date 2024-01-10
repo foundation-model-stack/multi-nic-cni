@@ -67,7 +67,7 @@ apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
   name: multi-nic-cni-health-check
-  namespace: openshift-monitoring
+  namespace: multi-nic-cni-operator
 spec:
   endpoints:
   - interval: 10s
@@ -160,7 +160,7 @@ metadata:
     multi-nic-cni-component: health-checker
     app: multi-nic-cni
   name: multi-nic-cni-health-checker-rules
-  namespace: openshift-monitoring
+  namespace: multi-nic-cni-operator
 spec:
   groups:
   - name: MultiNICFailure

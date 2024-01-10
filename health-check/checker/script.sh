@@ -21,6 +21,7 @@ create_replacement() {
 }
 
 deploy() {
+    kubectl apply -f ./checker/configmap.yaml
     kubectl apply -f ./checker/rbac.yaml
     NETWORK_NAME=$1
     if [ -z $1 ]; then

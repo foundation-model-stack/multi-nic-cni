@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: multi-nicd
+  namespace: multi-nic-cni-operator
 spec:
   template:
     spec:
