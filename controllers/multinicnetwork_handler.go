@@ -128,7 +128,6 @@ func (h *MultiNicNetworkHandler) UpdateNetConfigStatus(instance *multinicv1.Mult
 	if instance.Status.ComputeResults == nil {
 		instance.Status.ComputeResults = []multinicv1.NicNetworkResult{}
 	}
-	instance.Status.LastSyncTime = metav1.Now()
 	instance.Status.NetConfigStatus = netConfigStatus
 	err := h.Client.Status().Update(context.Background(), instance)
 	if err != nil {
