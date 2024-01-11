@@ -134,7 +134,7 @@ func (h *NetAttachDefHandler) CreateOrUpdate(net *multinicv1.MultiNicNetwork, pl
 		}
 	}
 	if errMsg != "" {
-		return fmt.Errorf(errMsg)
+		vars.NetworkLog.V(2).Info(errMsg)
 	}
 	return nil
 }

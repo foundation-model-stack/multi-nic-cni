@@ -184,14 +184,18 @@ func (r *MultiNicNetworkReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 				vars.NetworkLog.V(3).Info(fmt.Sprintf("CIDR %s successfully applied", multinicnetworkName))
 			}
 		}
-	} else if !instance.Spec.IsMultiNICIPAM && routeStatus == multinicv1.RouteNoApplied {
+	} else if !instance.Spec.IsMultiNICIPAM && (routeStatus == "" || routeStatus == multinicv1.RouteNoApplied) {
 		// not related to L3
+		instance.Status.Message = ""
+		instance.Status.RouteStatus = multinicv1.RouteNoApplied
+		vars.NetworkLog.V(3).Info(fmt.Sprintf("Update %s status (Non-MultiNICIPAM, RouteNoApplied)", multinicnetworkName))
 		err = r.CIDRHandler.MultiNicNetworkHandler.UpdateNetConfigStatus(instance, multinicv1.ConfigComplete, "")
 		if err != nil {
 			vars.NetworkLog.V(3).Info(fmt.Sprintf("Failed to UpdateNetConfigStatus %s for non-L3: %v", instance.Name, err))
 		}
 	} else if routeStatus != multinicv1.AllRouteApplied {
 		// some route still fails
+		vars.NetworkLog.V(3).Info(fmt.Sprintf("Update %s status (waiting for route configuration)", multinicnetworkName))
 		err = r.CIDRHandler.MultiNicNetworkHandler.UpdateNetConfigStatus(instance, multinicv1.WaitForConfig, "")
 		if err != nil {
 			vars.NetworkLog.V(3).Info(fmt.Sprintf("Failed to UpdateNetConfigStatus %s at route failure: %v", instance.Name, err))
@@ -234,12 +238,16 @@ func (r *MultiNicNetworkReconciler) GetIPAMConfig(instance *multinicv1.MultiNicN
 		ipamConfig.MasterNetAddrs = instance.Spec.MasterNetAddrs
 		return ipamConfig, nil
 	}
-	return nil, fmt.Errorf("non-MultiNicIPAM")
+	vars.NetworkLog.V(3).Info("non-MultiNicIPAM")
+	return nil, nil
 }
 
 // HandleMultiNicIPAM handles ipam if target type
 func (r *MultiNicNetworkReconciler) HandleMultiNicIPAM(instance *multinicv1.MultiNicNetwork) error {
 	ipamConfig, err := r.GetIPAMConfig(instance)
+	if ipamConfig == nil {
+		return err
+	}
 	if err == nil {
 		cidrName := instance.GetName()
 		_, err := r.CIDRHandler.GetCIDR(cidrName)
