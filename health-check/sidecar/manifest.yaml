@@ -59,7 +59,7 @@ spec:
           valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
-        image: ghcr.io/foundation-model-stack/multi-nic-cni-health-check-sidecar:v1.0.3
+        image: ghcr.io/foundation-model-stack/multi-nic-cni-health-check-sidecar:v1.0.5
         imagePullPolicy: Always
         name: health-check-agent
         ports:
@@ -70,6 +70,9 @@ spec:
           requests:
             cpu: 100m
             memory: 50Mi
+          limits:
+            cpu: 200m
+            memory: 100Mi
         securityContext:
           privileged: true
         terminationMessagePath: /dev/termination-log
