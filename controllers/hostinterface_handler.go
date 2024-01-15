@@ -61,7 +61,9 @@ func (h *HostInterfaceHandler) initHostInterface(hostName string, interfaces []m
 // CreateHostInterface creates new HostInterface from an interface list get from daemon pods
 func (h *HostInterfaceHandler) CreateHostInterface(hostName string, interfaces []multinicv1.InterfaceInfoType) error {
 	newHif := h.initHostInterface(hostName, interfaces)
-	return h.Client.Create(context.TODO(), newHif)
+	ctx, cancel := context.WithTimeout(context.Background(), vars.ContextTimeout)
+	defer cancel()
+	return h.Client.Create(ctx, newHif)
 }
 
 // UpdateHostInterface updates HostInterface
@@ -73,7 +75,9 @@ func (h *HostInterfaceHandler) UpdateHostInterface(oldObj multinicv1.HostInterfa
 			Interfaces: interfaces,
 		},
 	}
-	return updateHif, h.Client.Update(context.TODO(), updateHif)
+	ctx, cancel := context.WithTimeout(context.Background(), vars.ContextTimeout)
+	defer cancel()
+	return updateHif, h.Client.Update(ctx, updateHif)
 }
 
 // GetHostInterface gets HostInterface from hostname
@@ -83,7 +87,9 @@ func (h *HostInterfaceHandler) GetHostInterface(name string) (*multinicv1.HostIn
 		Name:      name,
 		Namespace: metav1.NamespaceAll,
 	}
-	err := h.Client.Get(context.TODO(), namespacedName, instance)
+	ctx, cancel := context.WithTimeout(context.Background(), vars.ContextTimeout)
+	defer cancel()
+	err := h.Client.Get(ctx, namespacedName, instance)
 	return instance, err
 }
 
@@ -107,7 +113,9 @@ func (h *HostInterfaceHandler) ListHostInterface() (map[string]multinicv1.HostIn
 func (h *HostInterfaceHandler) DeleteHostInterface(name string) error {
 	instance, err := h.GetHostInterface(name)
 	if err == nil {
-		err = h.Client.Delete(context.TODO(), instance)
+		ctx, cancel := context.WithTimeout(context.Background(), vars.ContextTimeout)
+		defer cancel()
+		err = h.Client.Delete(ctx, instance)
 	}
 	return err
 }

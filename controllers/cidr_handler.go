@@ -201,7 +201,9 @@ func (h *CIDRHandler) DeleteCIDR(cidr multinicv1.CIDR) error {
 	}
 	instance, err := h.GetCIDR(name)
 	if err == nil {
-		err = h.Client.Delete(context.Background(), instance)
+		ctx, cancel := context.WithTimeout(context.Background(), vars.ContextTimeout)
+		defer cancel()
+		err = h.Client.Delete(ctx, instance)
 	}
 	if err != nil {
 		errorMsg = errorMsg + fmt.Sprintf("%v,", err)
@@ -525,14 +527,18 @@ func (h *CIDRHandler) updateCIDR(cidrSpec multinicv1.CIDRSpec, new bool) (bool, 
 		if err == nil {
 			updatedCIDR := existCIDR.DeepCopy()
 			updatedCIDR.Spec = spec
-			err = h.Client.Update(context.TODO(), updatedCIDR)
+			ctx, cancel := context.WithTimeout(context.Background(), vars.ContextTimeout)
+			defer cancel()
+			err = h.Client.Update(ctx, updatedCIDR)
 			if err == nil {
 				h.SafeCache.SetCache(def.Name, updatedCIDR.Spec)
 			}
 			h.CleanPendingIPPools(ippoolSnapshot, def.Name, updatedCIDR.Spec)
 		} else {
 			if new {
-				err = h.Client.Create(context.TODO(), mapObj)
+				ctx, cancel := context.WithTimeout(context.Background(), vars.ContextTimeout)
+				defer cancel()
+				err = h.Client.Create(ctx, mapObj)
 				if err == nil {
 					h.SafeCache.SetCache(def.Name, mapObj.Spec)
 				}
