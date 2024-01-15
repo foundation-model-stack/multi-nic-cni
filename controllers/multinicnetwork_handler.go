@@ -42,7 +42,9 @@ func (h *MultiNicNetworkHandler) GetNetwork(name string) (*multinicv1.MultiNicNe
 		Name:      name,
 		Namespace: metav1.NamespaceAll,
 	}
-	err := h.Client.Get(context.TODO(), namespacedName, instance)
+	ctx, cancel := context.WithTimeout(context.Background(), vars.ContextTimeout)
+	defer cancel()
+	err := h.Client.Get(ctx, namespacedName, instance)
 	return instance, err
 }
 
@@ -111,14 +113,44 @@ func (h *MultiNicNetworkHandler) updateStatus(instance *multinicv1.MultiNicNetwo
 		RouteStatus:     status,
 	}
 
+	if !NetStatusUpdated(instance, netStatus) {
+		vars.NetworkLog.V(2).Info(fmt.Sprintf("No status update %s", instance.Name))
+		return netStatus, nil
+	}
+
+	vars.NetworkLog.V(2).Info(fmt.Sprintf("Update %s status", instance.Name))
 	instance.Status = netStatus
-	err := h.Client.Status().Update(context.Background(), instance)
+	ctx, cancel := context.WithTimeout(context.Background(), vars.ContextTimeout)
+	defer cancel()
+	err := h.Client.Status().Update(ctx, instance)
 	if err != nil {
 		vars.NetworkLog.V(2).Info(fmt.Sprintf("Failed to update %s status: %v", instance.Name, err))
 	} else {
 		h.SetStatusCache(instance.Name, instance.Status)
 	}
 	return netStatus, err
+}
+
+func NetStatusUpdated(instance *multinicv1.MultiNicNetwork, newStatus multinicv1.MultiNicNetworkStatus) bool {
+	prevStatus := instance.Status
+	if prevStatus.Message != newStatus.Message || prevStatus.RouteStatus != newStatus.RouteStatus || prevStatus.NetConfigStatus != newStatus.NetConfigStatus || prevStatus.DiscoverStatus != newStatus.DiscoverStatus {
+		return true
+	}
+	if len(prevStatus.ComputeResults) != len(newStatus.ComputeResults) {
+		return true
+	}
+	prevComputeMap := make(map[string]int)
+	for _, status := range prevStatus.ComputeResults {
+		prevComputeMap[status.NetAddress] = status.NumOfHost
+	}
+	for _, status := range newStatus.ComputeResults {
+		if numOfHost, found := prevComputeMap[status.NetAddress]; !found {
+			return true
+		} else if numOfHost != status.NumOfHost {
+			return true
+		}
+	}
+	return false
 }
 
 func (h *MultiNicNetworkHandler) UpdateNetConfigStatus(instance *multinicv1.MultiNicNetwork, netConfigStatus multinicv1.NetConfigStatus, message string) error {
@@ -129,7 +161,9 @@ func (h *MultiNicNetworkHandler) UpdateNetConfigStatus(instance *multinicv1.Mult
 		instance.Status.ComputeResults = []multinicv1.NicNetworkResult{}
 	}
 	instance.Status.NetConfigStatus = netConfigStatus
-	err := h.Client.Status().Update(context.Background(), instance)
+	ctx, cancel := context.WithTimeout(context.Background(), vars.ContextTimeout)
+	defer cancel()
+	err := h.Client.Status().Update(ctx, instance)
 	if err != nil {
 		vars.NetworkLog.V(2).Info(fmt.Sprintf("Failed to update %s status: %v", instance.Name, err))
 	} else {
