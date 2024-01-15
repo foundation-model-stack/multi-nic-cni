@@ -1,4 +1,36 @@
 # Manual Troubleshooting
+
+** Please first confirm feature supports on each multi-nic-cni release version from [here](../release/index.md). **
+
+<!-- TOC tocDepth:2..3 chapterDepth:3..6 -->
+
+- [Issues](#issues)
+    - [Pod failed to start](#pod-failed-to-start)
+    - [Pod failed to start (Summary Table)](#pod-failed-to-start-summary-table)
+    - [Ping failed](#ping-failed)
+    - [TCP/UDP communication failed.](#tcpudp-communication-failed)
+- [Actions](#actions)
+    - [Controller configuration](#controller-configuration)
+    - [Daemon configuration](#daemon-configuration)
+    - [List in-use pods](#list-in-use-pods)
+    - [Get CNI log (available after v1.0.3)](#get-cni-log-available-after-v103)
+    - [Get Controller log](#get-controller-log)
+    - [Get multi-nicd log](#get-multi-nicd-log)
+    - [Deploy multi-nicd config](#deploy-multi-nicd-config)
+    - [Set security groups](#set-security-groups)
+    - [Add secondary interfaces](#add-secondary-interfaces)
+    - [Restart controller](#restart-controller)
+    - [Restart multi-nicd](#restart-multi-nicd)
+    - [Check host secondary interfaces](#check-host-secondary-interfaces)
+    - [Update daemon pod to use latest version](#update-daemon-pod-to-use-latest-version)
+    - [Update controller to use latest version](#update-controller-to-use-latest-version)
+    - [Safe upgrade Multi-NIC CNI operator](#safe-upgrade-multi-nic-cni-operator)
+
+<!-- /TOC -->
+
+## Issues
+There are commonly three steps of issue: at pod creation, simple ICMP (ping) communication, TCP/UDP communication. The most complicated one is at pod creation. 
+
 Before start troubleshooting, set common variables for reference simplicity.
 ```bash
 export FAILED_POD= # pod that fails to run
@@ -7,18 +39,56 @@ export FAILED_NODE= # node where pod is deployed
 export FAILED_NODE_IP = # IP of FAILED_NODE
 export MULTI_NIC_NAMESPACE= # namespace where multi-nic cni operator is deployed, default=multi-nic-cni-operator
 ```
-## Issues
+
 ### Pod failed to start
+
+**Issue:**
 Pod stays pending in `ContainerCreating` status.
 Get more information from `describe`
 ```bash
 kubectl describe $FAILED_POD -n $FAILED_POD_NAMESPACE
 ```
-- Error: `FailedCreatePodSandBox`
-    * [CNI binary not found](#cni-binary-not-exist)
-    * [IPAM ExecAdd failed](#ipam-execadd-failed)
 
-##### CNI binary not exist
+Find the following keyword from `FailedCreatePodSandBox`:
+
+* [Network not found](#network-not-found)
+* [CNI binary not found](#cni-binary-not-found)
+* [IPAM ExecAdd: failed](#ipam-execadd-failed)
+* [IPAM plugin returned missing IP config](#ipam-plugin-returned-missing-ip-config)
+* [zero config](#zero-config)
+
+### Pod failed to start (Summary Table)
+For those who are familar to action command (e.g., list multinic CRs, list daemon pods), you may troubleshoot with the summary table:
+
+> - Investigate source of issue from top to bottom
+> - *X* refers to no relevance
+> - If the issue cannot be solved by configuration (multinicnetwork, annotation, host network, config.multinic) and last patch of [controller](#update-daemon-pod-to-use-latest-version) and [multi-nicd](#update-daemon-pod-to-use-latest-version), please report the [issue](https://github.com/foundation-model-stack/multi-nic-cni/issues) with the corresponding log. 
+> - *The solved bug on CNI binary requires node restart.
+
+Potential source of Issue|Network not found|CNI binary not found|- IPAM ExecAdd: failed <br>- IPAM plugin returned missing IP config|zero config|Fail execPlugin
+---|---|---|---|---|---
+**multinicnetwork definition/annotation**|- annotation missing/mismatch<br>- multinicnetwork wrong configured|X|- IPAM wrong configured<br>- `masters` multinicnetwork spec missing (> 1 multinicnetwork)|**non-IP host:**<br>- no master name provided via multi-config or annotation|X
+**host network**|X|X|X|**L3:**<br>- daemon communication blocked<br>**All:**<br>- interface missing<br>|X
+**controller**|- net-attach-def not created|- daemon not created due to wrong configured (config.multinic)|**L3:**<br>- daemon/hostinterface not created<br>- CIDR/IPPool not created/unsynced|X|X
+**daemon**<br>(multi-nicd)|X|X|**L3:**<br>- failed to discover hostinterface<br>- IP limit reach<br>**All cases:**<br>- hang on no-respond API server (should be fixed by [#172](https://github.com/foundation-model-stack/multi-nic-cni/pull/172))|X|X
+**main CNI binary**<br>(multi-nic)|X|X|- *failed to clean up previous pod network (should be fixed by [#165](https://github.com/foundation-model-stack/multi-nic-cni/pull/165))|**host-device**<br>- *failed to clean up previous pod network (should be fixed by [#152](https://github.com/foundation-model-stack/multi-nic-cni/issues/152))|X
+**ipam CNI binary**<br>(multi-nic-ipam)|X|X|- *failed to clean up previous ip allocation (should be fixed by [#104](https://github.com/foundation-model-stack/multi-nic-cni/pull/104))|X|X
+**3rd-party CNI binary**|X|- binary missing|- 3rd-party IPAM failure|X|- 3rd-party main plugin failure
+
+
+
+
+#### Network not found
+
+```bash
+kubectl get multinicnetwork # multinicnetwork resource created
+kubectl get $FAILED_POD -n $FAILED_POD_NAMESPACE -oyaml|grep "k8s.v1.cni.cncf.io/networks" # pod annotation matched
+kubectl get net-attach-def # network-attachment-definition created
+```
+
+If net-attach-def is missing (`No resources found in default namespace`), check [controller log](#get-controller-log) to see whether the failure comes from misconfiguration in multinicnetwork (Marshal failure) or network-attachment-definition creation request to API server.
+
+#### CNI binary not found
 The binary file of CNI is not in the expected location read by Multus. The expected location can be found in Multus daemonset as below.
 
 ```bash
@@ -54,7 +124,9 @@ The expected location is in *hostPath* of *cnibin*.
 - **missing other CNI such as ipvlan**
   The missing CNI may not be supported. 
 
-##### IPAM ExecAdd failed
+#### IPAM ExecAdd: failed
+This error occurs when CNI cannot execute Multi-NIC IPAM which can be caused by multiple reasons as follows.
+
 - `failed to load netconf`
    
     The configuration cannot be loaded. This is delegated CNI (such as IPVLAN) issue. 
@@ -76,11 +148,12 @@ The expected location is in *hostPath* of *cnibin*.
     - If no interfaces in `.spec.interfaces`, check [HostInterface does not show the secondary interfaces.](#no-secondary-interfaces-in-hostinterface)
     - Check whether it reaches CIDR block limit, confirm [no available IP address](#no-secondary-interfaces-in-hostinterface)
     - Other cases, find more details from [multi-nicd log](#get-multi-nicd-log)
+    - Multi-nicd daemon pod has no response, [restart multi-nicd](#restart-multi-nicd) might help.
+
 - other CNI plugin (such as aws-vpc-cni, sr-iov) failure, check each CNI log.
     - aws-vpc-cni: `/host/var/log/aws-routed-eni`
 
-
-###### HostInterface not created
+##### HostInterface not created
 There are a couple of reasons that the HostInterface is not created. First check the multi-nicd DaemonSet.
 ```bash
 kubectl get ds multi-nicd -n $MULTI_NIC_NAMESPACE -oyaml
@@ -102,7 +175,7 @@ kubectl get ds multi-nicd -n $MULTI_NIC_NAMESPACE -oyaml
                 |grep $FAILED_NODE|awk '{printf "%s -n %s", $2, $1}')
 
 - Other cases, check [controller log](#get-controller-log)
-###### No secondary interfaces in HostInterface
+##### No secondary interfaces in HostInterface
 
 The HostInterface is created but there is no interface listed in the custom resource.
 
@@ -116,14 +189,24 @@ kubectl logs --selector control-plane=controller-manager \
 - If no line shown up and the full [controller log](#get-controller-log) keep printing `Fail to create hostinterface ... cannot update interfaces: Get "<node IP>/interface": dial tcp <node IP>:11000: i/o timeout`, check [set required security group rules](#set-security-groups)
 - Other cases, [check interfaces at node's host network](#check-host-secondary-interfaces)
 
-###### No available IP address
+##### No available IP address
 List corresponding Pod CIDR from HostInterface.
 ```bash
 kubectl get HostInterface $FAILED_NODE -oyaml
 ```
 Check ippools.multinic.fms.io of the corresponding pod CIDR whether the IP address actually reach the limit. If yes, consider changing the host block and interface block in `multinicnetworks.multinic.fms.io`.
 
+#### IPAM plugin returned missing IP config
+
+No IP address set from the multi-nic type IPAM without throwing an error. To troubleshoot, we need additional information from [IPAM CNI log](#get-cni-log-available-after-v103).
+
+#### Zero config
+
+Zero config occurs when CNI cannot generate configurations from the network-attachment-definition. To troubleshoot, we need additional information from [CNI log](#get-cni-log).
+
 ### Ping failed
+**Issue:** Pods cannot ping each other.
+
 Check route status in multinicnetworks.multinic.fms.io.
 ```bash
 kubectl get multinicnetwork.multinic.fms.io multinic-ipvlanl3 -o json\ 
@@ -139,6 +222,8 @@ kubectl get multinicnetwork.multinic.fms.io multinic-ipvlanl3 -o json\
 
 - *Success*: check [set required security group rules](#set-security-groups)
 ### TCP/UDP communication failed.
+**Issue:** Pods can ping each other but do not get response from TCP/UDP communication such as iPerf.
+
 Check whether the multi-nicd detects the other host interfaces.
 ```bash
 kubectl get po $(kubectl get po -owide -A|grep multi-nicd\
@@ -151,9 +236,100 @@ The nubmer in `multi-nicd-join` should be equal to accumulated number of interfa
 [Check whether the host secondary interfaces between hosts are connected](#check-host-secondary-interfaces). 
 If yes, try [restarting multi-nic-cni controller node](#restart-controller) to forcefully synchronize host interfaces.
 
+
 ## Actions
+Available configurations on `config.multinic/multi-nicd`:
+
+### Controller configuration 
+
+These following controller configuration values will be applied on-the-fly (no need to restart the controller pod).
+
+Configuration|Description|Default Value
+---|---|---
+.spec.logLevel|controller's verbose log level|4
+.spec.urgentReconcileSeconds|time to requeue reconcile after instant failure in second unit|5 seconds
+.spec.normalReconcileMinutes|time to requeue reconcile while waiting for initial configuration in minute unit|1 minute
+.spec.longReconcileMinutes|time to requeue reconcile when sensing control traffic failure in minute unit|10 minutes
+.spec.contextTimeoutMinutes|time out for API server call context in minute unit|2 minutes
+
+#### Log Levels
+
+Verbose Level | Information
+---|---
+1|- critical error (cannot create/update resource by k8s API) <br> - "Set Config" key <br> - set up log <br>- config error
+2|- significant events/failures of multinicnetwork
+3|- significant events/failures of cidr
+4 (default)|- significant events/failures of hostinterface
+5|- significant events/failures of ippools
+6|- significant events/failures of route configurations 
+7|- requeue <br> - get deleted resource <br> - debug pointers (e.g., start point of function call)
+
+
+### Daemon configuration 
+
+Configuration|Description|Type|Default Value
+---|---|---|---
+.spec.daemon.port|multi-nicd serving port|int|11000
+.spec.daemon.mounts|additional host-path mount|HostPathMount|
+
+```yaml
+# HostPathMount
+mounts:
+- name: mountName
+  podpath: path/on/pod
+  hostpath: path/on/host
+```
+
+Additionally, the following common [apps/DaemonSet](https://kubernetes.io/docs/concepts/workloads/controllers/daemonset/) configurations are also available under `.spec.daemon`.
+- nodeSelector
+- image
+- imagePullSecret
+- imagePullPolicy
+- securityContext
+- env
+- envFrom
+- resources
+- tolerations
+
+### List in-use pods
+
+**modify '< MULTINICNETWORK NAME HERE >'** in the following command with your target.multinicnetwork name
+
+```bash
+kubectl get po -A -ojson| jq -r '.items[]|select(.metadata.annotations."k8s.v1.cni.cncf.io/networks"=="< MULTINICNETWORK NAME HERE >")|.metadata.namespace + " " + .metadata.name'
+```
 
 ### Get CNI log (available after v1.0.3)
+To make CNI log available on the daemon pod, you may mount the the host log path to the daemon pod:
+
+- Run 
+
+```bash
+kubectl edit config.multinic multi-nicd
+```
+
+- Add the following mount items
+
+```yaml
+# config/multi-nicd
+spec:
+  daemon:
+    mounts:
+    ...
+    - hostpath: /var/log/multi-nic-cni.log
+      name: cni-log
+      podpath: /host/var/log/multi-nic-cni.log
+    - hostpath: /var/log/multi-nic-ipam.log
+      name: ipam-log
+      podpath: /host/var/log/multi-nic-ipam.log
+    # For AWS-IPVLAN main plugin log also add the following lines:
+    # - hostpath: /var/log/multi-nic-aws-ipvlan.log
+    #   name: ipam-log
+    #   podpath: /host/var/log/multi-nic-aws-ipvlan.log
+```
+
+Then, you can get CNI log from the following commands:
+
 ```bash
 # default main plugin
 kubectl exec $(kubectl get po -owide -A|grep multi-nicd\
@@ -163,7 +339,7 @@ kubectl exec $(kubectl get po -owide -A|grep multi-nicd\
 # multi-nic on aws main plugin
 kubectl exec $(kubectl get po -owide -A|grep multi-nicd\
 |grep $FAILED_NODE|awk '{printf "%s -n %s", $2, $1}')\
--- cat /var/log/multi-nic-aws-ipvlan.log
+-- cat /host/var/log/multi-nic-aws-ipvlan.log
 
 # IPAM plugin
 kubectl exec $(kubectl get po -owide -A|grep multi-nicd\
@@ -211,6 +387,12 @@ There are four security group rules that must be opened for Multi-nic CNI.
 ```bash
 kubectl delete --selector control-plane=controller-manager \
 -n $MULTI_NIC_NAMESPACE
+```
+
+### Restart multi-nicd
+```bash
+kubectl delete po $(kubectl get po -owide -A|grep multi-nicd\
+|grep $FAILED_NODE|awk '{printf "%s -n %s", $2, $1}')
 ```
 
 ### Check host secondary interfaces 

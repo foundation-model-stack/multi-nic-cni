@@ -74,9 +74,15 @@
                 -   hostIP: ""
                     interfaceName: eth1
                     netAddress: 192.168.0.0/24
+                    pciAddress: ""
+                    product: ""
+                    vendor: ""
                 -   hostIP: ""
                     interfaceName: eth2
                     netAddress: 192.168.1.0/24
+                    pciAddress: ""
+                    product: ""
+                    vendor: ""
                 
 * Multi-gateway route configuration support
 
