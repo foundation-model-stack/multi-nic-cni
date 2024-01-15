@@ -281,5 +281,11 @@ func main() {
 	router := handleRequests()
 	daemonAddress := fmt.Sprintf("0.0.0.0:%d", DAEMON_PORT)
 	log.Printf("Listening @%s", daemonAddress)
-	log.Fatal(http.ListenAndServe(daemonAddress, router))
+	srv := &http.Server{
+		Addr:         daemonAddress,
+		Handler:      router,
+		ReadTimeout:  10 * time.Minute,
+		WriteTimeout: 10 * time.Minute,
+	}
+	log.Fatal(srv.ListenAndServe())
 }
