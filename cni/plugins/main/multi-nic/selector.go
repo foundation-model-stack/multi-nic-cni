@@ -2,7 +2,7 @@
  * Copyright 2022- IBM Inc. All rights reserved
  * SPDX-License-Identifier: Apache2.0
  */
- 
+
 package main
 
 import (
@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"time"
 
 	"bytes"
 	"errors"
@@ -18,7 +19,7 @@ import (
 const (
 	NIC_SELECT_PATH     = "select"
 	DEFAULT_DAEMON_PORT = 11000
-	DEFAULT_DAEMON_IP = "localhost"
+	DEFAULT_DAEMON_IP   = "localhost"
 )
 
 type NICSelectRequest struct {
@@ -26,13 +27,13 @@ type NICSelectRequest struct {
 	PodNamespace     string   `json:"namespace"`
 	HostName         string   `json:"host"`
 	NetAttachDefName string   `json:"def"`
-	MasterNetAddrs []string   `json:"masterNets"`
+	MasterNetAddrs   []string `json:"masterNets"`
 	NicSet           NicArgs  `json:"args"`
 }
 
 type NICSelectResponse struct {
-	DeviceIDs      []string   `json:"deviceIDs"`
-	Masters 	   []string   `json:"masters"`
+	DeviceIDs []string `json:"deviceIDs"`
+	Masters   []string `json:"masters"`
 }
 
 func selectNICs(daemonIP string, daemonPort int, podName string, podNamespace string, hostName string, defName string, nicSet NicArgs, masterNets []string) (NICSelectResponse, error) {
@@ -56,25 +57,29 @@ func selectNICs(daemonIP string, daemonPort int, podName string, podNamespace st
 	jsonReq, err := json.Marshal(request)
 
 	if err != nil {
-		return response, errors.New(fmt.Sprintf("Marshal fail: %v", err))
+		return response, fmt.Errorf("marshal fail: %v", err)
 	} else {
-		res, err := http.Post(address, "application/json; charset=utf-8", bytes.NewBuffer(jsonReq))
-		if err != nil {
-			return response, errors.New(fmt.Sprintf("Post fail: %v", err))
+		client := http.Client{
+			Timeout: 5 * time.Minute,
 		}
+		defer client.CloseIdleConnections()
+		res, err := client.Post(address, "application/json; charset=utf-8", bytes.NewBuffer(jsonReq))
+		if err != nil {
+			return response, fmt.Errorf("post fail: %v", err)
+		}
+		defer res.Body.Close()
 		if res.StatusCode != http.StatusOK {
 			return response, errors.New(res.Status)
 		}
 
 		body, err := ioutil.ReadAll(res.Body)
 		if err != nil {
-			return response, errors.New(fmt.Sprintf("Read body: %v", err))
+			return response, fmt.Errorf("read body: %v", err)
 		}
 		err = json.Unmarshal(body, &response)
 		if err == nil && len(response.Masters) == 0 {
-			return response, fmt.Errorf("Response nothing")
+			return response, fmt.Errorf("response nothing")
 		}
 		return response, err
 	}
 }
-

@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"time"
 
 	"bytes"
 	"errors"
@@ -73,11 +72,13 @@ func (dc DaemonConnector) GetInterfaces(podAddress string) ([]multinicv1.Interfa
 	var interfaces []multinicv1.InterfaceInfoType
 	address := podAddress + INTERFACE_PATH
 	// try connect and get interface from daemon pod
-	res, err := http.Get(address)
+	client := http.Client{}
+	defer client.CloseIdleConnections()
+	res, err := client.Get(address)
 	if err != nil {
 		return []multinicv1.InterfaceInfoType{}, err
 	}
-
+	defer res.Body.Close()
 	body, err := ioutil.ReadAll(res.Body)
 	if err != nil {
 		return []multinicv1.InterfaceInfoType{}, err
@@ -100,12 +101,13 @@ func (dc DaemonConnector) Join(podAddress string, hifs []multinicv1.InterfaceInf
 		return err
 	} else {
 		client := http.Client{
-			Timeout: 5 * time.Second,
+			Timeout: vars.ContextTimeout,
 		}
 		res, err := client.Post(address, "application/json; charset=utf-8", bytes.NewBuffer(jsonReq))
 		if err != nil {
 			return err
 		}
+		defer res.Body.Close()
 		if res.StatusCode != http.StatusOK {
 			return errors.New(res.Status)
 		}
@@ -145,7 +147,15 @@ func (dc DaemonConnector) putRouteRequest(podAddress string, path string, cidrNa
 	if err != nil {
 		return response, err
 	} else {
-		res, err := http.Post(address, "application/json; charset=utf-8", bytes.NewBuffer(jsonReq))
+		client := http.Client{
+			Timeout: vars.ContextTimeout,
+		}
+		defer client.CloseIdleConnections()
+		res, err := client.Post(address, "application/json; charset=utf-8", bytes.NewBuffer(jsonReq))
+		if err != nil {
+			return response, fmt.Errorf("post fail: %v", err)
+		}
+		defer res.Body.Close()
 		if err != nil {
 			response.Message = vars.ConnectionRefusedError
 			return response, err

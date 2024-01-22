@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"strconv"
 
@@ -157,11 +158,16 @@ func Greet(targetHost string, myIP string) {
 		log.Printf("Fail to marshal: %v", err)
 		return
 	} else {
-		res, err := http.Post(address, "application/json; charset=utf-8", bytes.NewBuffer(jsonReq))
+		client := http.Client{
+			Timeout: 2 * time.Minute,
+		}
+		defer client.CloseIdleConnections()
+		res, err := client.Post(address, "application/json; charset=utf-8", bytes.NewBuffer(jsonReq))
 		if err != nil {
 			log.Printf("Fail to post: %v", err)
 			return
 		}
+		defer res.Body.Close()
 		if res.StatusCode != http.StatusOK {
 			log.Printf("Status: %v", res.StatusCode)
 			return
