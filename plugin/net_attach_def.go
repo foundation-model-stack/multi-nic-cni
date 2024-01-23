@@ -108,6 +108,18 @@ func GetNetAttachDefHandler(config *rest.Config) (*NetAttachDefHandler, error) {
 	}, nil
 }
 
+func CheckDefChanged(def, existingDef *NetworkAttachmentDefinition) bool {
+	if def.Spec.Config != existingDef.Spec.Config || len(def.Annotations) != len(existingDef.Annotations) {
+		return true
+	}
+	for k, v := range existingDef.Annotations {
+		if def.Annotations[k] != v {
+			return true
+		}
+	}
+	return false
+}
+
 // CreateOrUpdate creates new NetworkAttachmentDefinition resource if not exists, otherwise update
 func (h *NetAttachDefHandler) CreateOrUpdate(net *multinicv1.MultiNicNetwork, pluginStr string, annotations map[string]string) error {
 	defs, err := h.generate(net, pluginStr, annotations)
@@ -122,9 +134,14 @@ func (h *NetAttachDefHandler) CreateOrUpdate(net *multinicv1.MultiNicNetwork, pl
 		if h.IsExist(name, namespace) {
 			existingDef, _ := h.Get(name, namespace)
 			def.ObjectMeta = existingDef.ObjectMeta
-			err := h.DynamicHandler.Update(namespace, def, result)
-			if err != nil {
-				errMsg = fmt.Sprintf("%s\n%s: %v", errMsg, namespace, err)
+			if CheckDefChanged(def, existingDef) {
+				if namespace == "default" {
+					vars.NetworkLog.V(2).Info(fmt.Sprintf("Update net-attach-def %s", def.Name))
+				}
+				err := h.DynamicHandler.Update(namespace, def, result)
+				if err != nil {
+					errMsg = fmt.Sprintf("%s\n%s: %v", errMsg, namespace, err)
+				}
 			}
 		} else {
 			err := h.DynamicHandler.Create(namespace, def, result)
@@ -134,7 +151,7 @@ func (h *NetAttachDefHandler) CreateOrUpdate(net *multinicv1.MultiNicNetwork, pl
 		}
 	}
 	if errMsg != "" {
-		return fmt.Errorf(errMsg)
+		vars.NetworkLog.V(2).Info(errMsg)
 	}
 	return nil
 }
@@ -159,6 +176,40 @@ func (h *NetAttachDefHandler) getNamespace(net *multinicv1.MultiNicNetwork) ([]s
 	return namespaces, nil
 }
 
+// NetToDef generates net-attach-def from multinicnetwork on specific namespace called by generate function
+func NetToDef(namespace string, net *multinicv1.MultiNicNetwork, pluginStr string, annotations map[string]string) (*NetworkAttachmentDefinition, error) {
+	name := net.GetName()
+	config := &NetConf{
+		NetConf: types.NetConf{
+			CNIVersion: CNI_VERSION,
+			Name:       name,
+			Type:       vars.TargetCNI,
+		},
+		Subnet:         net.Spec.Subnet,
+		MasterNetAddrs: net.Spec.MasterNetAddrs,
+		IsMultiNICIPAM: net.Spec.IsMultiNICIPAM,
+		DaemonPort:     vars.DaemonPort,
+	}
+	var ipamObj map[string]interface{}
+	configBytes, _ := json.Marshal(config)
+	configStr := string(configBytes)
+	err := json.Unmarshal([]byte(net.Spec.IPAM), &ipamObj)
+	if err != nil {
+		return nil, err
+	}
+	ipamBytes, _ := json.Marshal(ipamObj)
+	pluginValue := fmt.Sprintf("\"plugin\":%s", pluginStr)
+	ipamValue := fmt.Sprintf("\"ipam\":%s", string(ipamBytes))
+	configStr = strings.ReplaceAll(configStr, "\"ipam\":{}", ipamValue)
+	configStr = strings.ReplaceAll(configStr, "\"plugin\":null", pluginValue)
+	metaObj := GetMetaObject(name, namespace, annotations)
+	spec := NetworkAttachmentDefinitionSpec{
+		Config: configStr,
+	}
+	netattachdef := NewNetworkAttachmentDefinition(metaObj, spec)
+	return &netattachdef, nil
+}
+
 // generate initializes NetworkAttachmentDefinition objects from MultiNicNetwork and unmarshal plugin
 func (h *NetAttachDefHandler) generate(net *multinicv1.MultiNicNetwork, pluginStr string, annotations map[string]string) ([]*NetworkAttachmentDefinition, error) {
 	defs := []*NetworkAttachmentDefinition{}
@@ -168,37 +219,11 @@ func (h *NetAttachDefHandler) generate(net *multinicv1.MultiNicNetwork, pluginSt
 	}
 	vars.NetworkLog.V(2).Info(fmt.Sprintf("generate net-attach-def config on %d namespaces", len(namespaces)))
 	for _, ns := range namespaces {
-		name := net.GetName()
-		namespace := ns
-		config := &NetConf{
-			NetConf: types.NetConf{
-				CNIVersion: CNI_VERSION,
-				Name:       name,
-				Type:       vars.TargetCNI,
-			},
-			Subnet:         net.Spec.Subnet,
-			MasterNetAddrs: net.Spec.MasterNetAddrs,
-			IsMultiNICIPAM: net.Spec.IsMultiNICIPAM,
-			DaemonPort:     vars.DaemonPort,
-		}
-		var ipamObj map[string]interface{}
-		configBytes, _ := json.Marshal(config)
-		configStr := string(configBytes)
-		err := json.Unmarshal([]byte(net.Spec.IPAM), &ipamObj)
+		def, err := NetToDef(ns, net, pluginStr, annotations)
 		if err != nil {
 			return defs, err
 		}
-		ipamBytes, _ := json.Marshal(ipamObj)
-		pluginValue := fmt.Sprintf("\"plugin\":%s", pluginStr)
-		ipamValue := fmt.Sprintf("\"ipam\":%s", string(ipamBytes))
-		configStr = strings.ReplaceAll(configStr, "\"ipam\":{}", ipamValue)
-		configStr = strings.ReplaceAll(configStr, "\"plugin\":null", pluginValue)
-		metaObj := GetMetaObject(name, namespace, annotations)
-		spec := NetworkAttachmentDefinitionSpec{
-			Config: configStr,
-		}
-		netattachdef := NewNetworkAttachmentDefinition(metaObj, spec)
-		defs = append(defs, &netattachdef)
+		defs = append(defs, def)
 	}
 	return defs, nil
 }

@@ -23,7 +23,8 @@ import (
 )
 
 const (
-	API_VERSION = "multinic.fms.io/v1"
+	API_VERSION       = "multinic.fms.io/v1"
+	APISERVER_TIMEOUT = 2 * time.Minute
 )
 
 type DynamicHandler struct {
@@ -71,7 +72,9 @@ func (h *DynamicHandler) Create(mapObj map[string]interface{}, namespace string,
 	gvr, _ := schema.ParseResourceArg(h.ResourceName)
 	log.Println(fmt.Sprintf("Create %s/%s", h.ResourceName, mapObj["metadata"].(map[string]interface{})["name"]))
 	start := time.Now()
-	res, err := h.DYN.Resource(*gvr).Namespace(namespace).Create(context.TODO(), obj, options)
+	ctx, cancel := context.WithTimeout(context.Background(), APISERVER_TIMEOUT)
+	defer cancel()
+	res, err := h.DYN.Resource(*gvr).Namespace(namespace).Create(ctx, obj, options)
 	elapsed := time.Since(start)
 	log.Println(fmt.Sprintf("Create%s elapsed: %d us", h.Kind, int64(elapsed/time.Microsecond)))
 	return res, err
@@ -82,7 +85,9 @@ func (h *DynamicHandler) Update(mapObj map[string]interface{}, namespace string,
 	gvr, _ := schema.ParseResourceArg(h.ResourceName)
 	log.Println(fmt.Sprintf("Update %s/%s", h.ResourceName, mapObj["metadata"].(map[string]interface{})["name"]))
 	start := time.Now()
-	res, err := h.DYN.Resource(*gvr).Namespace(namespace).Update(context.TODO(), obj, options)
+	ctx, cancel := context.WithTimeout(context.Background(), APISERVER_TIMEOUT)
+	defer cancel()
+	res, err := h.DYN.Resource(*gvr).Namespace(namespace).Update(ctx, obj, options)
 	elapsed := time.Since(start)
 	log.Println(fmt.Sprintf("Update%s elapsed: %d us", h.Kind, int64(elapsed/time.Microsecond)))
 	return res, err
@@ -91,7 +96,7 @@ func (h *DynamicHandler) Update(mapObj map[string]interface{}, namespace string,
 func (h *DynamicHandler) List(namespace string, options metav1.ListOptions) (*unstructured.UnstructuredList, error) {
 	gvr, _ := schema.ParseResourceArg(h.ResourceName)
 	start := time.Now()
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), APISERVER_TIMEOUT)
 	defer cancel()
 	res, err := h.DYN.Resource(*gvr).Namespace(namespace).List(ctx, options)
 	elapsed := time.Since(start)
@@ -102,7 +107,9 @@ func (h *DynamicHandler) List(namespace string, options metav1.ListOptions) (*un
 func (h *DynamicHandler) Get(name string, namespace string, options metav1.GetOptions) (*unstructured.Unstructured, error) {
 	gvr, _ := schema.ParseResourceArg(h.ResourceName)
 	start := time.Now()
-	res, err := h.DYN.Resource(*gvr).Namespace(namespace).Get(context.TODO(), name, options)
+	ctx, cancel := context.WithTimeout(context.Background(), APISERVER_TIMEOUT)
+	defer cancel()
+	res, err := h.DYN.Resource(*gvr).Namespace(namespace).Get(ctx, name, options)
 	elapsed := time.Since(start)
 	log.Println(fmt.Sprintf("Get%s elapsed: %d us", h.Kind, int64(elapsed/time.Microsecond)))
 	return res, err
@@ -112,7 +119,9 @@ func (h *DynamicHandler) Delete(name string, namespace string, options metav1.De
 	gvr, _ := schema.ParseResourceArg(h.ResourceName)
 	log.Println(fmt.Sprintf("Delete %s/%s", h.ResourceName, name))
 	start := time.Now()
-	err := h.DYN.Resource(*gvr).Namespace(namespace).Delete(context.TODO(), name, options)
+	ctx, cancel := context.WithTimeout(context.Background(), APISERVER_TIMEOUT)
+	defer cancel()
+	err := h.DYN.Resource(*gvr).Namespace(namespace).Delete(ctx, name, options)
 	elapsed := time.Since(start)
 	log.Println(fmt.Sprintf("Delete%s elapsed: %d us", h.Kind, int64(elapsed/time.Microsecond)))
 	return err
@@ -122,7 +131,9 @@ func (h *DynamicHandler) Patch(name string, namespace string, pt types.PatchType
 	gvr, _ := schema.ParseResourceArg(h.ResourceName)
 	log.Println(fmt.Sprintf("Patch %s/%s - %s", h.ResourceName, name, string(data)))
 	start := time.Now()
-	res, err := h.DYN.Resource(*gvr).Namespace(namespace).Patch(context.TODO(), name, pt, data, options)
+	ctx, cancel := context.WithTimeout(context.Background(), APISERVER_TIMEOUT)
+	defer cancel()
+	res, err := h.DYN.Resource(*gvr).Namespace(namespace).Patch(ctx, name, pt, data, options)
 	elapsed := time.Since(start)
 	log.Println(fmt.Sprintf("Patch%s elapsed: %d us", h.Kind, int64(elapsed/time.Microsecond)))
 	return res, err

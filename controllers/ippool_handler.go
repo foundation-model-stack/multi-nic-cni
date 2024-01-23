@@ -69,7 +69,9 @@ func (h *IPPoolHandler) DeleteIPPool(netAttachDef string, podCIDR string) error 
 	name := h.GetIPPoolName(netAttachDef, podCIDR)
 	instance, err := h.GetIPPool(name)
 	if err == nil {
-		err = h.Client.Delete(context.TODO(), instance)
+		ctx, cancel := context.WithTimeout(context.Background(), vars.ContextTimeout)
+		defer cancel()
+		err = h.Client.Delete(ctx, instance)
 	}
 	return err
 }
@@ -132,7 +134,9 @@ func (h *IPPoolHandler) UpdateIPPool(netAttachDef string, podCIDR string, vlanCI
 		ippool.Spec = spec
 		ippool.Spec.Allocations = prevSpec.Allocations
 		ippool.ObjectMeta.Labels = labels
-		err = h.Client.Update(context.TODO(), ippool)
+		ctx, cancel := context.WithTimeout(context.Background(), vars.ContextTimeout)
+		defer cancel()
+		err = h.Client.Update(ctx, ippool)
 		if !reflect.DeepEqual(prevSpec.Excludes, excludesInterface) {
 			// report if allocated ip addresses have conflicts with the new IPPool (for example, in exclude list)
 			invalidAllocations := h.checkPoolValidity(excludesInterface, prevSpec.Allocations)
@@ -154,7 +158,9 @@ func (h *IPPoolHandler) UpdateIPPool(netAttachDef string, podCIDR string, vlanCI
 			},
 			Spec: spec,
 		}
-		err = h.Client.Create(context.Background(), newIPPool)
+		ctx, cancel := context.WithTimeout(context.Background(), vars.ContextTimeout)
+		defer cancel()
+		err = h.Client.Create(ctx, newIPPool)
 		vars.IPPoolLog.V(5).Info(fmt.Sprintf("New IPPool %s: %v, %v", ippoolName, newIPPool, err))
 	}
 	return err
@@ -192,7 +198,9 @@ func (h *IPPoolHandler) PatchIPPoolAllocations(ippoolName string, newAllocations
 	}
 	patch := client.MergeFrom(ippool.DeepCopy())
 	ippool.Spec.Allocations = newAllocations
-	return h.Client.Patch(context.Background(), ippool, patch)
+	ctx, cancel := context.WithTimeout(context.Background(), vars.ContextTimeout)
+	defer cancel()
+	return h.Client.Patch(ctx, ippool, patch)
 }
 
 func (h *IPPoolHandler) UpdateIPPools(defName string, entries []multinicv1.CIDREntry, excludes []compute.IPValue) {
@@ -234,6 +242,8 @@ func (h *IPPoolHandler) AddLabel(ippool *multinicv1.IPPool) error {
 	labels := map[string]string{vars.HostNameLabel: hostName, vars.DefNameLabel: netAttachDef}
 	patch := client.MergeFrom(ippool.DeepCopy())
 	ippool.ObjectMeta.Labels = labels
-	err := h.Client.Patch(context.Background(), ippool, patch)
+	ctx, cancel := context.WithTimeout(context.Background(), vars.ContextTimeout)
+	defer cancel()
+	err := h.Client.Patch(ctx, ippool, patch)
 	return err
 }
