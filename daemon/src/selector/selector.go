@@ -52,7 +52,16 @@ var GPUIdBusIdMap = GetGPUIDMap()
 var TopologyFilePath = defaultTopologyFilePath
 var NumaAwareSelectorInstance = InitNumaAwareSelector(TopologyFilePath, GPUIdBusIdMap)
 
-func getDefaultResponse(req NICSelectRequest, masterNameMap map[string]string, nameNetMap map[string]string, deviceMap map[string]string, resourceMap map[string][]string) NICSelectResponse {
+func isEmptyDeviceIDs(selectedDeviceIDs []string) bool {
+	for _, deviceID := range selectedDeviceIDs {
+		if deviceID != "" {
+			return false
+		}
+	}
+	return true
+}
+
+func getDefaultResponse(req NICSelectRequest, masterNameMap map[string]string, nameNetMap map[string]string, deviceMap map[string]string, resourceMap map[string][]string, podDeviceIDs []string) NICSelectResponse {
 	selector := DefaultSelector{}
 	selectedMasterNetAddrs := selector.Select(req, masterNameMap, nameNetMap, resourceMap)
 	selectedMasters := []string{}
@@ -62,6 +71,15 @@ func getDefaultResponse(req NICSelectRequest, masterNameMap map[string]string, n
 		master := masterNameMap[netAddress]
 		selectedDeviceIDs = append(selectedDeviceIDs, deviceID)
 		selectedMasters = append(selectedMasters, master)
+	}
+	// allow empty master name for the devices that has been assigned to the pod
+	if len(podDeviceIDs) > 0 && isEmptyDeviceIDs(selectedDeviceIDs) {
+		selectedMasters = []string{}
+		selectedDeviceIDs = []string{}
+		for _, deviceID := range podDeviceIDs {
+			selectedDeviceIDs = append(selectedDeviceIDs, deviceID)
+			selectedMasters = append(selectedMasters, "")
+		}
 	}
 
 	return NICSelectResponse{
@@ -73,6 +91,7 @@ func getDefaultResponse(req NICSelectRequest, masterNameMap map[string]string, n
 func Select(req NICSelectRequest) NICSelectResponse {
 	deviceMap := make(map[string]string)
 	resourceMap := make(map[string][]string)
+	podDeviceIDs := []string{}
 
 	pod, err := K8sClientset.CoreV1().Pods(req.PodNamespace).Get(context.TODO(), req.PodName, metav1.GetOptions{})
 	if err == nil {
@@ -81,7 +100,12 @@ func Select(req NICSelectRequest) NICSelectResponse {
 			log.Printf("resourceMap of %s: %v\n", pod.UID, resourceMap)
 			resourceName := NetAttachDefHandler.GetResourceName(req.NetAttachDefName, req.PodNamespace)
 			if resourceName != "" {
-				deviceMap = iface.GetDeviceMap(resourceMap, resourceName)
+				log.Printf("resource map: %v\n", resourceMap)
+				if deviceIDs, exist := resourceMap[resourceName]; exist {
+					log.Printf("GetDeviceMap of %s\n", resourceName)
+					podDeviceIDs = deviceIDs
+					deviceMap = iface.GetDeviceMap(podDeviceIDs)
+				}
 				log.Printf("deviceMap: %v\n", deviceMap)
 			}
 		} else {
@@ -95,7 +119,7 @@ func Select(req NICSelectRequest) NICSelectResponse {
 	nameNetMap := iface.GetNameNetMap()
 	netSpec, err := MultinicnetHandler.Get(req.NetAttachDefName, req.PodNamespace)
 	if err != nil {
-		return getDefaultResponse(req, masterNameMap, nameNetMap, deviceMap, resourceMap)
+		return getDefaultResponse(req, masterNameMap, nameNetMap, deviceMap, resourceMap, podDeviceIDs)
 	}
 	policy := netSpec.Policy
 
@@ -136,6 +160,15 @@ func Select(req NICSelectRequest) NICSelectResponse {
 			log.Printf("masterNets %s,%s\n", deviceID, master)
 			selectedDeviceIDs = append(selectedDeviceIDs, deviceID)
 			selectedMasters = append(selectedMasters, master)
+		}
+	}
+	// allow empty master name for the devices that has been assigned to the pod
+	if len(podDeviceIDs) > 0 && isEmptyDeviceIDs(selectedDeviceIDs) {
+		selectedMasters = []string{}
+		selectedDeviceIDs = []string{}
+		for _, deviceID := range podDeviceIDs {
+			selectedDeviceIDs = append(selectedDeviceIDs, deviceID)
+			selectedMasters = append(selectedMasters, "")
 		}
 	}
 
