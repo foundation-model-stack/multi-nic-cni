@@ -23,7 +23,7 @@ type HostDeviceTypeNetConf struct {
 	MainPlugin *HostDeviceNetConf `json:"plugin"`
 }
 
-type HostDeviceRuntimConfig struct {
+type HostDeviceRuntimeConfig struct {
 	DeviceID string `json:"deviceID,omitempty"`
 }
 
@@ -33,9 +33,9 @@ type HostDeviceNetConf struct {
 	Device        string `json:"device"` // Device-Name, something like eth0 or can0 etc.
 	HWAddr        string `json:"hwaddr"` // MAC Address of target network interface
 	DPDKMode      bool
-	KernelPath    string                 `json:"kernelpath"` // Kernelpath of the device
-	PCIAddr       string                 `json:"pciBusID"`   // PCI Address of target network device
-	RuntimeConfig HostDeviceRuntimConfig `json:"runtimeConfig,omitempty"`
+	KernelPath    string                  `json:"kernelpath"` // Kernelpath of the device
+	PCIAddr       string                  `json:"pciBusID"`   // PCI Address of target network device
+	RuntimeConfig HostDeviceRuntimeConfig `json:"runtimeConfig,omitempty"`
 }
 
 // loadHostDeviceConf unmarshal to HostDeviceNetConf and returns list of SR-IOV configs
@@ -62,7 +62,7 @@ func loadHostDeviceConf(bytes []byte, ifName string, n *NetConf, ipConfigs []*cu
 			singleConfig.CNIVersion = n.CNIVersion
 		}
 		singleConfig.Name = fmt.Sprintf("%s-%d", ifName, index)
-		singleConfig.RuntimeConfig = HostDeviceRuntimConfig{
+		singleConfig.RuntimeConfig = HostDeviceRuntimeConfig{
 			DeviceID: deviceID,
 		}
 		confBytes, err := json.Marshal(singleConfig)

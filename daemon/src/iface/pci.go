@@ -114,45 +114,42 @@ func GetPodResourceMap(pod *v1.Pod) (map[string][]string, error) {
 }
 
 // GetDeviceMap returns a map from network address to NIC device
-func GetDeviceMap(resourceMap map[string][]string, resourceName string) map[string]string {
+func GetDeviceMap(deviceIDs []string) map[string]string {
 	deviceMap := make(map[string]string)
-	log.Printf("GetDeviceMap of %s\n", resourceName)
 	nameNetMap := GetNameNetMap()
-	log.Printf("resource map: %v\n", resourceMap)
 	log.Printf("nameNetMap map: %v\n", nameNetMap)
 
-	if deviceIDs, exist := resourceMap[resourceName]; exist {
-		for _, deviceID := range deviceIDs {
-			var masterName string
-			deviceNameInterface := deviceMapCache.GetCache(deviceID)
-			if deviceNameInterface != nil {
-				masterName = deviceNameInterface.(string)
+	for _, deviceID := range deviceIDs {
+		var masterName string
+		deviceNameInterface := deviceMapCache.GetCache(deviceID)
+		if deviceNameInterface != nil {
+			masterName = deviceNameInterface.(string)
+		} else {
+			var err error
+			masterName, err = GetPfName(deviceID)
+			if err != nil {
+				log.Printf("cannot get physical device %s: %v\n", deviceID, err)
 			} else {
-				var err error
-				masterName, err = GetPfName(deviceID)
-				if err != nil {
-					log.Printf("cannot get physical device %s: %v\n", deviceID, err)
-				} else {
-					log.Printf("set deviceMapCache %s=%s\n", deviceID, masterName)
-					deviceMapCache.SetCache(deviceID, masterName)
-				}
+				log.Printf("set deviceMapCache %s=%s\n", deviceID, masterName)
+				deviceMapCache.SetCache(deviceID, masterName)
 			}
-			if netAddress, exist := nameNetMap[masterName]; exist {
-				deviceMap[netAddress] = deviceID
+		}
+		if netAddress, exist := nameNetMap[masterName]; exist {
+			deviceMap[netAddress] = deviceID
+		} else {
+			netAddress, err := getNetAddressFromDevice(masterName)
+			if err != nil {
+				log.Printf("cannot get network address of device %s: %v\n", masterName, err)
 			} else {
-				netAddress, err := getNetAddressFromDevice(masterName)
-				if err != nil {
-					log.Printf("cannot get network address of device %s: %v\n", masterName, err)
-				} else {
-					deviceMap[netAddress] = deviceID
-					// found new device, update interfaces
-					GetInterfaces()
-					nameNetMap = GetNameNetMap()
-					log.Printf("updated nameNetMap map: %v\n", nameNetMap)
-				}
+				deviceMap[netAddress] = deviceID
+				// found new device, update interfaces
+				GetInterfaces()
+				nameNetMap = GetNameNetMap()
+				log.Printf("updated nameNetMap map: %v\n", nameNetMap)
 			}
 		}
 	}
+
 	return deviceMap
 }
 
