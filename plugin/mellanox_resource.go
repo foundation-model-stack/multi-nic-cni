@@ -27,17 +27,6 @@ const (
 	MELLANOX_POLICY_KIND  = "NicClusterPolicy"
 )
 
-func NewHostDeviceNetwork(metaObj metav1.ObjectMeta, spec HostDeviceNetworkSpec) HostDeviceNetwork {
-	return HostDeviceNetwork{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: MELLANOX_API_VERSION,
-			Kind:       MELLANOX_NETWORK_KIND,
-		},
-		ObjectMeta: metaObj,
-		Spec:       spec,
-	}
-}
-
 // ImageSpec Contains container image specifications
 type ImageSpec struct {
 	// +kubebuilder:validation:Pattern=[a-zA-Z0-9\-]+
@@ -238,26 +227,4 @@ type NicClusterPolicy struct {
 
 	Spec   NicClusterPolicySpec   `json:"spec,omitempty"`
 	Status NicClusterPolicyStatus `json:"status,omitempty"`
-}
-
-// HostDeviceNetworkSpec defines the desired state of HostDeviceNetwork
-type HostDeviceNetworkSpec struct {
-	// Namespace of the NetworkAttachmentDefinition custom resource
-	NetworkNamespace string `json:"networkNamespace,omitempty"`
-	// Host device resource pool name
-	ResourceName string `json:"resourceName,omitempty"`
-	// IPAM configuration to be used for this network
-	IPAM string `json:"ipam,omitempty"`
-}
-
-type HostDeviceNetworkStatus struct {
-}
-
-// HostDeviceNetwork is the Schema for the hostdevicenetworks API
-type HostDeviceNetwork struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
-
-	Spec   HostDeviceNetworkSpec   `json:"spec,omitempty"`
-	Status HostDeviceNetworkStatus `json:"status,omitempty"`
 }
