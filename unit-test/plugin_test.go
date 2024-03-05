@@ -14,7 +14,6 @@ import (
 	"github.com/foundation-model-stack/multi-nic-cni/plugin"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -159,16 +158,11 @@ var _ = Describe("Test GetConfig of main plugins", func() {
 		confBytes, annotations, err := mellanoxPlugin.GetConfig(*multinicnetwork, hifList)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(confBytes).NotTo(Equal(""))
-		netName := plugin.GetHolderNetName(multinicnetwork.Name)
-		resourceName := mellanoxPlugin.GetResourceName()
+		prefix, resourceName := mellanoxPlugin.GetResourceName()
 		Expect(resourceName)
-
-		hostDeviceNet := &plugin.HostDeviceNetwork{}
-		err = mellanoxPlugin.MellanoxNetworkHandler.Get(netName, metav1.NamespaceAll, hostDeviceNet)
-		// HostDeviceNetwork is created
-		Expect(err).NotTo(HaveOccurred())
-		Expect(hostDeviceNet.Spec.ResourceName).To(Equal(resourceName))
-		Expect(annotations[plugin.RESOURCE_ANNOTATION]).To(Equal(resourceName))
+		Expect(prefix)
+		fullName := prefix + "/" + resourceName
+		Expect(annotations[plugin.RESOURCE_ANNOTATION]).To(Equal(fullName))
 		err = mellanoxPlugin.CleanUp(*multinicnetwork)
 		Expect(err).NotTo(HaveOccurred())
 	})

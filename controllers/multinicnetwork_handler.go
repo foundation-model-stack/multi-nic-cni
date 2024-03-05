@@ -161,6 +161,10 @@ func (h *MultiNicNetworkHandler) UpdateNetConfigStatus(instance *multinicv1.Mult
 		instance.Status.ComputeResults = []multinicv1.NicNetworkResult{}
 	}
 	instance.Status.NetConfigStatus = netConfigStatus
+	emptyTime := metav1.Time{}
+	if instance.Status.LastSyncTime == emptyTime {
+		instance.Status.LastSyncTime = metav1.Now()
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), vars.ContextTimeout)
 	defer cancel()
 	err := h.Client.Status().Update(ctx, instance)

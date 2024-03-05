@@ -12,7 +12,6 @@ import (
 	"github.com/containernetworking/cni/pkg/types"
 	multinicv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
 	"github.com/foundation-model-stack/multi-nic-cni/controllers/vars"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
@@ -57,21 +56,12 @@ func (p *MellanoxPlugin) GetConfig(net multinicv1.MultiNicNetwork, hifList map[s
 	annotation := make(map[string]string)
 	var err error
 	// get resource from nicclusterpolicy
-	resourceName := p.GetResourceName()
+	prefix, resourceName := p.GetResourceName()
 	if resourceName == "" {
 		msg := "failed to get resource name from sriov plugin config"
 		vars.NetworkLog.V(2).Info(msg)
 		return "", annotation, fmt.Errorf(msg)
 	}
-
-	name := net.GetName()
-	namespace := net.GetNamespace()
-	netName := GetHolderNetName(name)
-	hostdevicenetwork, err := p.createHostDeviceNetwork(net.Spec.IPAM, netName, namespace, resourceName)
-	if err != nil {
-		return "", annotation, err
-	}
-	vars.NetworkLog.V(2).Info(fmt.Sprintf("hostdevicenetwork %s created", hostdevicenetwork.Name))
 	conf := HostDeviceTypeNetConf{}
 	conf.CNIVersion = net.Spec.MainPlugin.CNIVersion
 	conf.Type = HOST_DEVICE_TYPE
@@ -84,24 +74,24 @@ func (p *MellanoxPlugin) GetConfig(net multinicv1.MultiNicNetwork, hifList map[s
 	if err != nil {
 		return "", annotation, err
 	}
-	annotation[RESOURCE_ANNOTATION] = resourceName
+	annotation[RESOURCE_ANNOTATION] = prefix + "/" + resourceName
 	return string(confBytes), annotation, nil
 }
 
 // return first resource name found in SriovDevicePlugin
-func (p *MellanoxPlugin) GetResourceName() string {
+func (p *MellanoxPlugin) GetResourceName() (string, string) {
 	policy, err := p.getPolicy()
 	if err != nil {
 		vars.NetworkLog.V(2).Info(fmt.Sprintf("failed to get policy: %v", err))
 	}
 	if err != nil {
 		vars.NetworkLog.V(2).Info(fmt.Sprintf("failed to read sriov plugin config: %v", err))
-		return ""
+		return "", ""
 	}
 	sriovPlugin := policy.Spec.SriovDevicePlugin
 	if sriovPlugin == nil || sriovPlugin.Config == nil {
 		vars.NetworkLog.V(2).Info(fmt.Sprintf("no sriov device plugin config set in %s", policy.Name))
-		return ""
+		return "", ""
 	}
 	configStr := *sriovPlugin.Config
 	var config map[string]interface{}
@@ -113,9 +103,9 @@ func (p *MellanoxPlugin) GetResourceName() string {
 					if resourceMap, ok := resource.(map[string]interface{}); ok {
 						if resourcePrefix, ok := resourceMap["resourcePrefix"]; ok {
 							if resourceName, ok := resourceMap["resourceName"]; ok {
-								return resourcePrefix.(string) + "/" + resourceName.(string)
+								return resourcePrefix.(string), resourceName.(string)
 							} else {
-								return DEFAULT_MELLANOX_PREFIX + "/" + resourceName.(string)
+								return DEFAULT_MELLANOX_PREFIX, resourceName.(string)
 							}
 						}
 					}
@@ -124,7 +114,7 @@ func (p *MellanoxPlugin) GetResourceName() string {
 		}
 	}
 	vars.NetworkLog.V(2).Info(fmt.Sprintf("cannot read value from sriov config: %v", err))
-	return ""
+	return "", ""
 }
 
 func (p *MellanoxPlugin) getPolicy() (*NicClusterPolicy, error) {
@@ -136,22 +126,6 @@ func (p *MellanoxPlugin) getPolicy() (*NicClusterPolicy, error) {
 	return policy, err
 }
 
-func (p *MellanoxPlugin) createHostDeviceNetwork(ipam string, name string, namespace string, resourceName string) (*HostDeviceNetwork, error) {
-	spec := &HostDeviceNetworkSpec{}
-	spec.NetworkNamespace = "default"
-	spec.ResourceName = resourceName
-	spec.IPAM = ipam
-	metaObj := GetMetaObject(name, namespace, make(map[string]string))
-	hostDeviceNet := NewHostDeviceNetwork(metaObj, *spec)
-	result := &HostDeviceNetwork{}
-	err := p.MellanoxNetworkHandler.Create(metav1.NamespaceAll, hostDeviceNet, result)
-	if k8serrors.IsAlreadyExists(err) {
-		return result, nil
-	}
-	return result, err
-}
-
 func (p *MellanoxPlugin) CleanUp(net multinicv1.MultiNicNetwork) error {
-	netName := GetHolderNetName(net.Name)
-	return p.MellanoxNetworkHandler.Delete(netName, metav1.NamespaceAll)
+	return nil
 }
