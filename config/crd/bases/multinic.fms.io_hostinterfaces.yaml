@@ -54,12 +54,7 @@ spec:
                     vendor:
                       type: string
                   required:
-                  - hostIP
                   - interfaceName
-                  - netAddress
-                  - pciAddress
-                  - product
-                  - vendor
                   type: object
                 type: array
             required:
