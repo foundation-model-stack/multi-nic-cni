@@ -115,6 +115,7 @@ func (h *MultiNicNetworkHandler) updateStatus(instance *multinicv1.MultiNicNetwo
 
 	if !NetStatusUpdated(instance, netStatus) {
 		vars.NetworkLog.V(2).Info(fmt.Sprintf("No status update %s", instance.Name))
+		h.SetCache(instance.Name, *instance)
 		return netStatus, nil
 	}
 
@@ -126,7 +127,7 @@ func (h *MultiNicNetworkHandler) updateStatus(instance *multinicv1.MultiNicNetwo
 	if err != nil {
 		vars.NetworkLog.V(2).Info(fmt.Sprintf("Failed to update %s status: %v", instance.Name, err))
 	} else {
-		h.SetStatusCache(instance.Name, instance.Status)
+		h.SetCache(instance.Name, *instance)
 	}
 	return netStatus, err
 }
@@ -171,12 +172,12 @@ func (h *MultiNicNetworkHandler) UpdateNetConfigStatus(instance *multinicv1.Mult
 	if err != nil {
 		vars.NetworkLog.V(2).Info(fmt.Sprintf("Failed to update %s status: %v", instance.Name, err))
 	} else {
-		h.SetStatusCache(instance.Name, instance.Status)
+		h.SetCache(instance.Name, *instance)
 	}
 	return err
 }
 
-func (h *MultiNicNetworkHandler) SetStatusCache(key string, value multinicv1.MultiNicNetworkStatus) {
+func (h *MultiNicNetworkHandler) SetCache(key string, value multinicv1.MultiNicNetwork) {
 	h.SafeCache.SetCache(key, value)
 }
 
@@ -185,15 +186,40 @@ func (h *MultiNicNetworkHandler) GetStatusCache(key string) (multinicv1.MultiNic
 	if value == nil {
 		return multinicv1.MultiNicNetworkStatus{}, fmt.Errorf(vars.NotFoundError)
 	}
-	return value.(multinicv1.MultiNicNetworkStatus), nil
+	return value.(multinicv1.MultiNicNetwork).Status, nil
 }
 
 func (h *MultiNicNetworkHandler) ListStatusCache() map[string]multinicv1.MultiNicNetworkStatus {
 	snapshot := make(map[string]multinicv1.MultiNicNetworkStatus)
 	h.SafeCache.Lock()
 	for key, value := range h.cache {
-		snapshot[key] = value.(multinicv1.MultiNicNetworkStatus)
+		snapshot[key] = value.(multinicv1.MultiNicNetwork).Status
 	}
 	h.SafeCache.Unlock()
 	return snapshot
+}
+
+func (h *MultiNicNetworkHandler) FilterNetworksByNamespace(target string) []multinicv1.MultiNicNetwork {
+	filteredNetworks := []multinicv1.MultiNicNetwork{}
+	h.SafeCache.Lock()
+	for _, value := range h.cache {
+		net := value.(multinicv1.MultiNicNetwork)
+		namespaces := net.Spec.Namespaces
+		if len(namespaces) == 0 {
+			vars.NetworkLog.V(2).Info(fmt.Sprintf("FilterNetworksByNamespace %s has no namespace set", net.Name))
+			// NOTE: if namespace list is not specified, append
+			filteredNetworks = append(filteredNetworks, net)
+		} else {
+			vars.NetworkLog.V(2).Info(fmt.Sprintf("FilterNetworksByNamespace %s set %v", net.Name, namespaces))
+			// NOTE: if namespace list is specified and target is in the list, append
+			for _, ns := range namespaces {
+				if ns == target {
+					filteredNetworks = append(filteredNetworks, net)
+					break
+				}
+			}
+		}
+	}
+	h.SafeCache.Unlock()
+	return filteredNetworks
 }
