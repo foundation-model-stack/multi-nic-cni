@@ -34,7 +34,6 @@ spec:
         - --zap-log-level=4
         - --zap-time-encoding=iso8601
         image: controller:latest
-        imagePullPolicy: Always
         name: manager
         env:
         - name: OPERATOR_NAMESPACE
