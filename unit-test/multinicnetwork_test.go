@@ -6,6 +6,7 @@
 package controllers
 
 import (
+	"context"
 	"fmt"
 
 	multinicv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
@@ -13,8 +14,13 @@ import (
 	"github.com/foundation-model-stack/multi-nic-cni/plugin"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	//+kubebuilder:scaffold:imports
+)
+
+const (
+	newNamespaceName = "new-namespace"
 )
 
 var _ = Describe("Test deploying MultiNicNetwork", func() {
@@ -34,6 +40,20 @@ var _ = Describe("Test deploying MultiNicNetwork", func() {
 		err = multinicnetworkReconciler.NetAttachDefHandler.CreateOrUpdate(multinicnetwork, mainPlugin, annotations)
 		Expect(err).NotTo(HaveOccurred())
 		err = multinicnetworkReconciler.NetAttachDefHandler.DeleteNets(multinicnetwork)
+		Expect(err).NotTo(HaveOccurred())
+	})
+	It("successfully create/delete network attachment definition on new namespace", func() {
+		newNamespace := corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: newNamespaceName,
+			},
+		}
+		mainPlugin, annotations, err := multinicnetworkReconciler.GetMainPluginConf(multinicnetwork)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(k8sClient.Create(context.TODO(), &newNamespace)).Should(Succeed())
+		err = multinicnetworkReconciler.NetAttachDefHandler.CreateOrUpdateOnNamespace(newNamespaceName, multinicnetwork, mainPlugin, annotations)
+		Expect(err).NotTo(HaveOccurred())
+		err = multinicnetworkReconciler.NetAttachDefHandler.Delete(multinicnetwork.Name, newNamespaceName)
 		Expect(err).NotTo(HaveOccurred())
 	})
 })
