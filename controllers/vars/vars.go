@@ -36,7 +36,7 @@ const (
 	DefaultOperatorNamespace                  = "multi-nic-cni-operator"
 	DefaultCNIType                            = "multi-nic"
 	DefaultIPAMType                           = "multi-nic-ipam"
-	DefaultDaemonImage                        = "ghcr.io/foundation-model-stack/multi-nic-cni-daemon:v1.2.0"
+	DefaultDaemonImage                        = "ghcr.io/foundation-model-stack/multi-nic-cni-daemon:v1.2.3"
 	DefaultJoinPath                           = "/join"
 	DefaultInterfacePath                      = "/interface"
 	DefaultAddRoutePath                       = "/addl3"
