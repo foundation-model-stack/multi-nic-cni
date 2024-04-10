@@ -9,16 +9,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
 type InterfaceInfoType struct {
 	InterfaceName string `json:"interfaceName"`
-	NetAddress    string `json:"netAddress"`
-	HostIP        string `json:"hostIP"`
-	Vendor        string `json:"vendor"`
-	Product       string `json:"product"`
-	PciAddress    string `json:"pciAddress"`
+	NetAddress    string `json:"netAddress,omitempty"`
+	HostIP        string `json:"hostIP,omitempty"`
+	Vendor        string `json:"vendor,omitempty"`
+	Product       string `json:"product,omitempty"`
+	PciAddress    string `json:"pciAddress,omitempty"`
 }
 
 func (i InterfaceInfoType) Equal(cmp InterfaceInfoType) bool {

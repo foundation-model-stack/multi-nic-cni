@@ -37,7 +37,6 @@ import (
 
 var (
 	scheme                           = runtime.NewScheme()
-	setupLog                         = ctrl.Log.WithName("setup")
 	MultiNicNetworkReconcilerPointer *controllers.MultiNicNetworkReconciler
 )
 
@@ -75,7 +74,7 @@ func main() {
 		// Become the leader before proceeding
 		err := leader.Become(context.TODO(), "5aaf67fd.fms.io")
 		if err != nil {
-			setupLog.Error(err, "cannot become leader")
+			vars.SetupLog.Error(err, "cannot become leader")
 			os.Exit(1)
 		}
 	}
@@ -92,7 +91,7 @@ func main() {
 	})
 
 	if err != nil {
-		setupLog.Error(err, "unable to start manager")
+		vars.SetupLog.Error(err, "unable to start manager")
 		os.Exit(1)
 	}
 
@@ -107,13 +106,13 @@ func main() {
 
 	defHandler, err := plugin.GetNetAttachDefHandler(config)
 	if err != nil {
-		setupLog.Error(err, "unable to create NetworkAttachmentdefinition handler")
+		vars.SetupLog.Error(err, "unable to create NetworkAttachmentdefinition handler")
 		os.Exit(1)
 	}
 
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		setupLog.Error(err, "unable to init clientset")
+		vars.SetupLog.Error(err, "unable to init clientset")
 		os.Exit(1)
 	}
 
@@ -121,14 +120,12 @@ func main() {
 	go cidrHandler.Run()
 
 	pluginMap := controllers.GetPluginMap(config)
-	setupLog.V(2).Info(fmt.Sprintf("Plugin Map: %v", pluginMap))
+	vars.SetupLog.V(2).Info(fmt.Sprintf("Plugin Map: %v", pluginMap))
 
 	podQueue := make(chan *v1.Pod, vars.MaxQueueSize)
-	setupLog.V(7).Info("New Daemon Watcher")
 	daemonWatcher := controllers.NewDaemonWatcher(mgr.GetClient(), config, hostInterfaceHandler, daemonCacheHandler, podQueue, quit)
-	setupLog.V(7).Info("Run Daemon Watcher")
+	vars.SetupLog.V(1).Info("Run Daemon Watcher")
 	go daemonWatcher.Run()
-	setupLog.V(7).Info("New Reconcilers")
 
 	cidrReconciler := &controllers.CIDRReconciler{
 		Client:        mgr.GetClient(),
@@ -137,7 +134,7 @@ func main() {
 		DaemonWatcher: daemonWatcher,
 	}
 	if err = (cidrReconciler).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "CIDR")
+		vars.SetupLog.Error(err, "unable to create controller", "controller", "CIDR")
 		os.Exit(1)
 	}
 	hostInterfaceReconciler := &controllers.HostInterfaceReconciler{
@@ -148,7 +145,7 @@ func main() {
 		CIDRHandler:          cidrHandler,
 	}
 	if err = (hostInterfaceReconciler).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "HostInterface")
+		vars.SetupLog.Error(err, "unable to create controller", "controller", "HostInterface")
 		os.Exit(1)
 	}
 
@@ -158,9 +155,10 @@ func main() {
 		CIDRHandler: cidrHandler,
 	}
 	if err = (ippoolReconciler).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "IPPool")
+		vars.SetupLog.Error(err, "unable to create controller", "controller", "IPPool")
 		os.Exit(1)
 	}
+
 	MultiNicNetworkReconcilerPointer = &controllers.MultiNicNetworkReconciler{
 		Client:              mgr.GetClient(),
 		NetAttachDefHandler: defHandler,
@@ -169,9 +167,14 @@ func main() {
 		PluginMap:           pluginMap,
 	}
 	if err = (MultiNicNetworkReconcilerPointer).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "MultiNicNetwork")
+		vars.SetupLog.Error(err, "unable to create controller", "controller", "MultiNicNetwork")
 		os.Exit(1)
 	}
+
+	namespaceWatcher := controllers.NewNamespaceWatcher(mgr.GetClient(), config, MultiNicNetworkReconcilerPointer, quit)
+	vars.SetupLog.V(1).Info("Run Namespace Watcher")
+	go namespaceWatcher.Run()
+
 	cfgReconciler := &controllers.ConfigReconciler{
 		Client:              mgr.GetClient(),
 		Clientset:           clientset,
@@ -181,21 +184,21 @@ func main() {
 		Scheme:              mgr.GetScheme(),
 	}
 	if err = (cfgReconciler).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "Config")
+		vars.SetupLog.Error(err, "unable to create controller", "controller", "Config")
 		os.Exit(1)
 	}
 	err = cfgReconciler.CreateDefaultDaemonConfig()
 	if err != nil {
-		setupLog.Info(fmt.Sprintf("fail to create default config: %v", err))
+		vars.SetupLog.Info(fmt.Sprintf("fail to create default config: %v", err))
 	}
 
 	//+kubebuilder:scaffold:builder
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
-		setupLog.Error(err, "unable to set up health check")
+		vars.SetupLog.Error(err, "unable to set up health check")
 		os.Exit(1)
 	}
 	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
-		setupLog.Error(err, "unable to set up ready check")
+		vars.SetupLog.Error(err, "unable to set up ready check")
 		os.Exit(1)
 	}
 
@@ -204,9 +207,9 @@ func main() {
 
 	controllers.RunPeriodicUpdate(ticker, daemonWatcher, cidrHandler, hostInterfaceReconciler, quit)
 
-	setupLog.V(7).Info("starting manager")
+	vars.SetupLog.V(7).Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
-		setupLog.Error(err, "problem running manager")
+		vars.SetupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
 }

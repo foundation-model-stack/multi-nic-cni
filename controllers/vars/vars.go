@@ -77,6 +77,7 @@ var (
 
 	// logger options to change log level on the fly
 	ZapOpts    *zap.Options
+	SetupLog   logr.Logger
 	DaemonLog  logr.Logger
 	DefLog     logr.Logger
 	CIDRLog    logr.Logger
@@ -103,6 +104,7 @@ func SetLog() {
 	zapp := zap.New(zap.UseFlagOptions(ZapOpts))
 	dlog := logf.NewDelegatingLogSink(zapp.GetSink())
 	ctrl.Log = logr.New(dlog)
+	SetupLog = ctrl.Log.WithName("setup")
 	DaemonLog = ctrl.Log.WithName("controllers").WithName("Daemon")
 	DefLog = ctrl.Log.WithName("controllers").WithName("NetAttachDef")
 	CIDRLog = ctrl.Log.WithName("controllers").WithName("CIDR")
