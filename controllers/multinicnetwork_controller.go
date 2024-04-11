@@ -132,8 +132,6 @@ func (r *MultiNicNetworkReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	instance.Status.DiscoverStatus.ExistDaemon = daemonSize
 	instance.Status.InterfaceInfoAvailable = infoAvailableSize
 
-	// Get main plugin
-	mainPlugin, annotations, err := r.GetMainPluginConf(instance)
 	multinicnetworkName := instance.GetName()
 	if err != nil {
 		message := fmt.Sprintf("Failed to get main config %s: %v", multinicnetworkName, err)
@@ -143,10 +141,7 @@ func (r *MultiNicNetworkReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		}
 		vars.NetworkLog.V(2).Info(message)
 	} else {
-		mainPlugin = plugin.RemoveEmpty(instance.Spec.MainPlugin.CNIArgs, mainPlugin)
-		vars.NetworkLog.V(2).Info(fmt.Sprintf("main plugin: %s", mainPlugin))
-		// Create net attach def
-		err = r.NetAttachDefHandler.CreateOrUpdate(instance, mainPlugin, annotations)
+		err = r.GenerateNetAttachDef(instance)
 		if err != nil {
 			message := fmt.Sprintf("Failed to create %s: %v", multinicnetworkName, err)
 			err = r.CIDRHandler.MultiNicNetworkHandler.UpdateNetConfigStatus(instance, multinicv1.ConfigFailed, message)
@@ -202,6 +197,18 @@ func (r *MultiNicNetworkReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		}
 	}
 	return ctrl.Result{}, nil
+}
+
+func (r *MultiNicNetworkReconciler) GenerateNetAttachDef(instance *multinicv1.MultiNicNetwork) error {
+	// Get main plugin
+	mainPlugin, annotations, err := r.GetMainPluginConf(instance)
+	if err == nil {
+		mainPlugin = plugin.RemoveEmpty(instance.Spec.MainPlugin.CNIArgs, mainPlugin)
+		vars.NetworkLog.V(2).Info(fmt.Sprintf("main plugin: %s", mainPlugin))
+		// Create net attach def
+		err = r.NetAttachDefHandler.CreateOrUpdate(instance, mainPlugin, annotations)
+	}
+	return err
 }
 
 func (r *MultiNicNetworkReconciler) GetMainPluginConf(instance *multinicv1.MultiNicNetwork) (string, map[string]string, error) {
@@ -290,4 +297,21 @@ func (r *MultiNicNetworkReconciler) callFinalizer(reqLogger logr.Logger, instanc
 	reqLogger.V(2).Info(fmt.Sprintf("Finalized %s: %v", instance.ObjectMeta.Name, err))
 	r.CIDRHandler.MultiNicNetworkHandler.SafeCache.UnsetCache(instance.Name)
 	return nil
+}
+
+// HandleNewNamespace handles new namespace
+// - generate NAD
+func (r *MultiNicNetworkReconciler) HandleNewNamespace(namespace string) {
+	multinicnetworks := r.CIDRHandler.MultiNicNetworkHandler.FilterNetworksByNamespace(namespace)
+	for _, net := range multinicnetworks {
+		// Get main plugin
+		mainPlugin, annotations, err := r.GetMainPluginConf(&net)
+		if err == nil {
+			mainPlugin = plugin.RemoveEmpty(net.Spec.MainPlugin.CNIArgs, mainPlugin)
+			err = r.NetAttachDefHandler.CreateOrUpdateOnNamespace(namespace, &net, mainPlugin, annotations)
+		}
+		if err != nil {
+			vars.NetworkLog.V(2).Info(fmt.Sprintf("Failed to create networkAttachementDefinition for %s on %s: %v", net.Name, namespace, err))
+		}
+	}
 }

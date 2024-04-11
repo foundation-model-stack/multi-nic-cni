@@ -120,7 +120,6 @@ func CheckDefChanged(def, existingDef *NetworkAttachmentDefinition) bool {
 	return false
 }
 
-// CreateOrUpdate creates new NetworkAttachmentDefinition resource if not exists, otherwise update
 func (h *NetAttachDefHandler) CreateOrUpdate(net *multinicv1.MultiNicNetwork, pluginStr string, annotations map[string]string) error {
 	defs, err := h.generate(net, pluginStr, annotations)
 	if err != nil {
@@ -128,32 +127,51 @@ func (h *NetAttachDefHandler) CreateOrUpdate(net *multinicv1.MultiNicNetwork, pl
 	}
 	errMsg := ""
 	for _, def := range defs {
-		name := def.GetName()
-		namespace := def.GetNamespace()
-		result := &NetworkAttachmentDefinition{}
-		if h.IsExist(name, namespace) {
-			existingDef, _ := h.Get(name, namespace)
-			def.ObjectMeta = existingDef.ObjectMeta
-			if CheckDefChanged(def, existingDef) {
-				if namespace == "default" {
-					vars.NetworkLog.V(2).Info(fmt.Sprintf("Update net-attach-def %s", def.Name))
-				}
-				err := h.DynamicHandler.Update(namespace, def, result)
-				if err != nil {
-					errMsg = fmt.Sprintf("%s\n%s: %v", errMsg, namespace, err)
-				}
-			}
-		} else {
-			err := h.DynamicHandler.Create(namespace, def, result)
-			if err != nil {
-				errMsg = fmt.Sprintf("%s\n%s: %v", errMsg, namespace, err)
-			}
-		}
+		errMsg = h.createOrUpdate(def, errMsg)
 	}
 	if errMsg != "" {
 		vars.NetworkLog.V(2).Info(errMsg)
 	}
 	return nil
+}
+
+func (h *NetAttachDefHandler) CreateOrUpdateOnNamespace(ns string, net *multinicv1.MultiNicNetwork, pluginStr string, annotations map[string]string) error {
+	def, err := NetToDef(ns, net, pluginStr, annotations)
+	if err != nil {
+		return err
+	}
+	errMsg := h.createOrUpdate(def, "")
+	if errMsg != "" {
+		vars.NetworkLog.V(2).Info(errMsg)
+		return fmt.Errorf(errMsg)
+	}
+	return nil
+}
+
+// createOrUpdate creates new NetworkAttachmentDefinition resource if not exists, otherwise update
+func (h *NetAttachDefHandler) createOrUpdate(def *NetworkAttachmentDefinition, errMsg string) string {
+	name := def.GetName()
+	namespace := def.GetNamespace()
+	result := &NetworkAttachmentDefinition{}
+	if h.IsExist(name, namespace) {
+		existingDef, _ := h.Get(name, namespace)
+		def.ObjectMeta = existingDef.ObjectMeta
+		if CheckDefChanged(def, existingDef) {
+			if namespace == "default" {
+				vars.NetworkLog.V(2).Info(fmt.Sprintf("Update net-attach-def %s", def.Name))
+			}
+			err := h.DynamicHandler.Update(namespace, def, result)
+			if err != nil {
+				errMsg = fmt.Sprintf("%s\n%s: %v", errMsg, namespace, err)
+			}
+		}
+	} else {
+		err := h.DynamicHandler.Create(namespace, def, result)
+		if err != nil {
+			errMsg = fmt.Sprintf("%s\n%s: %v", errMsg, namespace, err)
+		}
+	}
+	return errMsg
 }
 
 // getNamespace returns all available namespaces if .Spec.Namespaces not specified

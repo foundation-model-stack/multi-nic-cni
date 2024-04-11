@@ -6,6 +6,16 @@ metadata:
     capabilities: Basic Install
     categories: Networking
     containerImage: ${IMG}
+    repository: http://github.com/foundation-model-stack/multi-nic-cni
+    support: IBM
+    description: Automate container multi-network configuration
+    features.operators.openshift.io/disconnected: "true"
+    features.operators.openshift.io/fips-compliant: "false"
+    features.operators.openshift.io/proxy-aware: "false"
+    features.operators.openshift.io/tls-profiles: "false"
+    features.operators.openshift.io/token-auth-aws: "false"
+    features.operators.openshift.io/token-auth-azure: "false"
+    features.operators.openshift.io/token-auth-gcp: "false"
   name: multi-nic-cni-operator.v0.0.0
   namespace: placeholder
 spec:
@@ -131,4 +141,4 @@ spec:
   provider:
     name: Foundation Model Stack
   version: 0.0.0
-  replaces: multi-nic-cni-operator.v1.2.1
+  replaces: multi-nic-cni-operator.v1.2.2
