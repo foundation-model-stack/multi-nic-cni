@@ -7,7 +7,7 @@ metadata:
     categories: Networking
     containerImage: ${IMG}
     repository: http://github.com/foundation-model-stack/multi-nic-cni
-    support: IBM
+    support: Foundation Model Stack Team
     description: Automate container multi-network configuration
     features.operators.openshift.io/disconnected: "true"
     features.operators.openshift.io/fips-compliant: "false"
@@ -138,6 +138,7 @@ spec:
   - email: chiba@jp.ibm.com
     name: Tatsuhiro Chiba
   maturity: alpha
+  minKubeVersion: 1.25.0
   provider:
     name: Foundation Model Stack
   version: 0.0.0
