@@ -1,10 +1,11 @@
-# Manual Troubleshooting
+# Manual Troubleshooting (Common Issues)
 
 ** Please first confirm feature supports on each multi-nic-cni release version from [here](../release/index.md). **
 
 <!-- TOC tocDepth:2..3 chapterDepth:3..6 -->
 
 - [Issues](#issues)
+    - [ Multi-NIC CNI Controller gets OOMKilled](#multi-nic-cni-controller-gets-oomkilled)
     - [Pod failed to start](#pod-failed-to-start)
     - [Pod failed to start (Summary Table)](#pod-failed-to-start-summary-table)
     - [Ping failed](#ping-failed)
@@ -25,6 +26,7 @@
     - [Update daemon pod to use latest version](#update-daemon-pod-to-use-latest-version)
     - [Update controller to use latest version](#update-controller-to-use-latest-version)
     - [Safe upgrade Multi-NIC CNI operator](#safe-upgrade-multi-nic-cni-operator)
+    - [Customize Multi-NIC CNI controller of operator](#customize-multi-nic-cni-controller-of-operator)
 
 <!-- /TOC -->
 
@@ -39,6 +41,10 @@ export FAILED_NODE= # node where pod is deployed
 export FAILED_NODE_IP = # IP of FAILED_NODE
 export MULTI_NIC_NAMESPACE= # namespace where multi-nic cni operator is deployed, default=multi-nic-cni-operator
 ```
+
+### Multi-NIC CNI Controller gets OOMKilled
+
+This is expected issue in a large cluster where the controller requires large amount of member to operate. Please adjust the resource limit in the controller deployment. For the case of installing via operator hub or operator bundle, please check the step to modify the deployment in [Customize Multi-NIC CNI controller of operator](#customize-multi-nic-cni-controller-of-operator).
 
 ### Pod failed to start
 
@@ -461,3 +467,19 @@ Log in to FAILED_NODE with `oc debug node/$FAILED_NODE` or using [nettools](http
     <br>
 
     Otherwise, check [live migration](https://github.com/foundation-model-stack/multi-nic-cni/tree/doc/live-migration)
+
+### Customize Multi-NIC CNI controller of operator
+If the multi-nic-cni operator has been managed by the Operator Lifecycle Manager (olm)  (installed by operator-sdk run bundle or via operator hub), the modification to the controller deployment (multi-nic-cni controller pod) will be overriden by the olm. 
+
+To modify the value such as resource request/limit to the controller pod, you need to edit the `.spec.install.spec.deployments` section in the ClusterServiceVersion (csv) resource of the multi-nic-cni operator. 
+
+You can locate the csv resource of multi-nic-cni operator in your cluster from the following command.
+
+```
+kubectl get csv -l operators.coreos.com/multi-nic-cni-operator.multi-nic-cni-operator -A
+```
+
+
+*Before v1.0.5, the csv are created in all namespaces. You need to edit the csv in the namespace that the controller has been deployed. The modification of csv in the other namespace will not be applied.*
+
+

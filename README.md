@@ -18,6 +18,7 @@
         - [One-time all-to-all  - *recommended for small cluster (<10 HostInterfaces)*](#one-time-all-to-all---recommended-for-small-cluster-10-hostinterfaces)
         - [Health checker service](#health-checker-service)
       - [Uninstallation](#uninstallation)
+- [Troubleshooting](#troubleshooting)
 
 <!-- /TOC -->
 
@@ -253,3 +254,8 @@ Deploy health check and agents to the cluster to serve a functional and connetio
     ```bash
     operator-sdk cleanup multi-nic-cni-operator --delete-all -n multi-nic-cni-operator
     ```
+
+# Troubleshooting
+Multi-NIC CNI operator is composed of multiple components. There are some common issues could happen due to the missing required configuration (e.g., security rule on VPC), versioning, and 3rd party CNI. 
+
+To primarily troubleshoot the failure, please check the [Troubleshooting (Common Issues) page](https://foundation-model-stack.github.io/multi-nic-cni/troubleshooting/troubleshooting/).
