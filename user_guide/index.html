@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>User Guide - Multi-NIC CNI</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "User Guide";
+        var mkdocs_page_input_path = "user_guide/index.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/yaml.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/rust.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> Multi-NIC CNI
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Multi-NIC CNI</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Maintainers/">Maintainers</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Concept</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../concept/">Key Concept</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../concept/multi-cloud-support/">Multi-Cloud Support</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../concept/multi-nic-ipam/">Built-in Multi-NIC Network</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../concept/network-status/">Network Status</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../concept/policy/">Policy-based secondary network attachment</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Developer guide</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../developer_guide/">Contributor Guide</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../developer_guide/architecture/">Architecture</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../developer_guide/local_build_push/">Local Development</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Release</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../release/">Release</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../release/alpha/">Alpha Channel</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../release/beta/">Beta Channel</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../release/stable/">Stable Channel (default)</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Troubleshooting</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../troubleshooting/health-checker/">Troubleshooting with Multi-NIC CNI Health Checker Service</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../troubleshooting/troubleshooting/">Manual Troubleshooting (Common Issues)</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">User guide</span></p>
+              <ul class="current">
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">User Guide</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#requirements">Requirements</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#quick-installation">Quick Installation</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#deploy-multinicnetwork-resource">Deploy MultiNicNetwork resource</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#check-connections">Check connections</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#one-time-peer-to-peer">One-time peer-to-peer</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#one-time-all-to-all">One-time all-to-all</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#health-checker-service">Health checker service</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#clean-up">Clean up</a>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="multi-cloud/">Multi-NIC CNI on Multi-Cloud</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">Multi-NIC CNI</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">User guide</li>
+      <li class="breadcrumb-item active">User Guide</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="user-guide">User Guide</h1>
+<h2 id="requirements">Requirements</h2>
+<ul>
+<li>Secondary interfaces attached to worker nodes, check terraform script <a href="https://github.com/foundation-model-stack/multi-nic-cni/tree/main/terraform">here</a>.</li>
+<li>Multus CNI installation; compatible with networkAttachmentDefinition and pod annotation in multus-cni v3.8</li>
+<li>For IPVLAN L3 CNI, the following configurations are additionally required<ul>
+<li>enable allowing IP spoofing for each attached interface</li>
+<li>set security group to allow IPs in the target container subnet</li>
+<li>IPVLAN support (kernel version &gt;= 4.2)</li>
+</ul>
+</li>
+</ul>
+<h2 id="quick-installation">Quick Installation</h2>
+<p><strong>by OperatorHub</strong></p>
+<ul>
+<li>Kubernetes with OLM:<ul>
+<li>check <a href="https://operatorhub.io/operator/multi-nic-cni-operator">multi-nic-cni-operator on OperatorHub.io</a>
+<img alt="" src="../img/k8s-operatorhub.png" /></li>
+</ul>
+</li>
+<li>Openshift Container Platform:<ul>
+<li>Search for <code>multi-nic-cni-operator</code> in OperatorHub
+<img alt="" src="../img/openshift-operatorhub.png" /></li>
+</ul>
+</li>
+</ul>
+<p>Recommended to deploy in the same default namespace for <a href="https://operatorhub.io/operator/multi-nic-cni-operator/health-check">health check service</a>, which is <code>multi-nic-cni-operator</code>. </p>
+<p><img alt="" src="../img/specify-ns.png" /></p>
+<p>(available version &gt;= v1.0.5)</p>
+<p><strong>by manifests with kubectl</strong></p>
+<pre><code class="language-bash">kubectl apply -f deploy/
+</code></pre>
+<p><strong>by bundle with operator-sdk</strong></p>
+<pre><code class="language-bash">operator-sdk run bundle ghcr.io/foundation-model-stack/multi-nic-cni-bundle:v1.0.5 -n multi-nic-cni-operator
+</code></pre>
+<h2 id="deploy-multinicnetwork-resource">Deploy MultiNicNetwork resource</h2>
+<p><strong>MultiNicNetwork CR</strong></p>
+<pre><code class="language-yaml"># network.yaml
+apiVersion: multinic.fms.io/v1
+kind: MultiNicNetwork
+metadata:
+  name: multi-nic-sample
+spec:
+  subnet: &quot;192.168.0.0/16&quot;
+  ipam: |
+    {
+      &quot;type&quot;: &quot;multi-nic-ipam&quot;,
+      &quot;hostBlock&quot;: 6, 
+      &quot;interfaceBlock&quot;: 2,
+      &quot;vlanMode&quot;: &quot;l3&quot;
+    }
+  multiNICIPAM: true
+  plugin:
+    cniVersion: &quot;0.3.0&quot;
+    type: ipvlan
+    args: 
+      mode: l3
+  attachPolicy:
+    strategy: none
+  namespaces:
+  - default
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Description</th>
+<th>Value</th>
+<th>Remarks</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>subnet</td>
+<td>cluster-wide subnet for all hosts and pods</td>
+<td>CIDR range</td>
+<td>currently support only v4</td>
+</tr>
+<tr>
+<td>hostBlock</td>
+<td>number of address bits for host indexing</td>
+<td>int (n)</td>
+<td>the number of assignable host = 2^n</td>
+</tr>
+<tr>
+<td>ipam</td>
+<td>ipam plugin config</td>
+<td>string</td>
+<td>ipam can be single-NIC IPAM (e.g., whereabouts, VPC-native IPAM) or multi-NIC IPAM (e.g., <a href="../concept/multi-nic-ipam/#ipam-configuration">Multi-NIC IPAM Plugin</a>)</td>
+</tr>
+<tr>
+<td>multiNicIPAM</td>
+<td>indicator of ipam type</td>
+<td>bool</td>
+<td><strong>true</strong> if ipam returns multiple IPs from <em>masters</em> key of NetworkAttachmentDefinition config at once, <strong>false</strong> if ipam returns only single IP from static config in ipam block</td>
+</tr>
+<tr>
+<td>plugin</td>
+<td>main plugin config</td>
+<td><a href="https://pkg.go.dev/github.com/containernetworking/cni/pkg/types#NetConf">NetConf</a> + plugin-specific arguments</td>
+<td>main plugin integration must implement <a href="https://github.com/foundation-model-stack/multi-nic-cni/blob/main/plugin/plugin.go">Plugin</a> with GetConfig function</td>
+</tr>
+<tr>
+<td>attachPolicy</td>
+<td>attachment policy</td>
+<td>policy</td>
+<td><a href="../concept/policy/">strategy</a> with corresponding arguments to select host NICs to be master of secondary interfaces on Pod</td>
+</tr>
+<tr>
+<td>namespaces</td>
+<td>list of namespaces to apply the network definitions (i.e., to create NetworkAttachmentDefinition resource)</td>
+<td>[]string</td>
+<td>apply to all namespace if not specified. new item can be added to the list by <code>kubectl edit</code> to create new NetworkAttachmentDefinition. the created NetworkAttachmentDefinition must be deleted manually if needed.</td>
+</tr>
+</tbody>
+</table>
+<ol>
+<li>
+<p>Prepare <code>network.yaml</code> as shown in the <a href="#multinicnetwork">example</a></p>
+</li>
+<li>
+<p>Deploy the network definition.</p>
+<pre><code>kubectl apply -f network.yaml
+</code></pre>
+<p>After deployment, the operator will create <em>NetworkAttachmentDefinition</em> of <a href="https://github.com/k8snetworkplumbingwg/multus-cni">Multus CNI</a> from <em>MultiNicNetwork</em> as well as dependent resource such as <em>SriovNetworkNodePolicy</em>, <em>SriovNetwork</em> for sriov plugin.</p>
+</li>
+<li>
+<p>Annotate the pod with the network name to attach additional interfaces. </p>
+<pre><code>metadata:
+  annotations:
+      k8s.v1.cni.cncf.io/networks: multi-nic-sample
+</code></pre>
+</li>
+</ol>
+<h2 id="check-connections">Check connections</h2>
+<h3 id="one-time-peer-to-peer">One-time peer-to-peer</h3>
+<p>This is a quick test by a randomly picked-up pair.</p>
+<ol>
+<li>
+<p>Set target peer</p>
+<pre><code>export SERVER_HOST_NAME=&lt;target-server-node-name&gt;
+export CLIENT_HOST_NAME=&lt;target-client-node-name&gt;
+</code></pre>
+<p>If the target peer is not set, the last two of listed nodes will be selected as server and client, respectively.</p>
+</li>
+<li>
+<p>Run the test</p>
+<pre><code>make sample-concheck
+</code></pre>
+<p>Example output:</p>
+<pre><code># pod/multi-nic-iperf3-server created
+# pod/multi-nic-iperf3-server condition met
+# pod/multi-nic-iperf3-client created
+# pod/multi-nic-iperf3-client condition met
+# [  5] local 192.168.0.66 port 46284 connected to 192.168.0.130 port 5201
+# [ ID] Interval           Transfer     Bitrate         Retr  Cwnd
+# [  5]   0.00-1.00   sec   121 MBytes  1.02 Gbits/sec    0   3.04 MBytes
+# [  5]   1.00-2.00   sec   114 MBytes   954 Mbits/sec    0   3.04 MBytes
+# [  5]   2.00-3.00   sec   115 MBytes   964 Mbits/sec   45   2.19 MBytes
+# [  5]   3.00-4.00   sec   114 MBytes   954 Mbits/sec   45   1.67 MBytes
+# [  5]   4.00-5.00   sec   114 MBytes   954 Mbits/sec    0   1.77 MBytes
+# - - - - - - - - - - - - - - - - - - - - - - - - -
+# [ ID] Interval           Transfer     Bitrate         Retr
+# [  5]   0.00-5.00   sec   577 MBytes   969 Mbits/sec   90             sender
+# [  5]   0.00-5.04   sec   574 MBytes   956 Mbits/sec                  receiver
+
+# iperf Done.
+# pod "multi-nic-iperf3-client" deleted
+# pod "multi-nic-iperf3-server" deleted
+</code></pre>
+</li>
+</ol>
+<h3 id="one-time-all-to-all">One-time all-to-all</h3>
+<p>This is recommended for small cluster ( &lt;10 HostInterfaces )</p>
+<ol>
+<li>
+<p>Run </p>
+<pre><code>make concheck
+</code></pre>
+<p>Example output:</p>
+<pre><code># serviceaccount/multi-nic-concheck-account created
+# clusterrole.rbac.authorization.k8s.io/multi-nic-concheck-cr created
+# clusterrolebinding.rbac.authorization.k8s.io/multi-nic-concheck-cr-binding created
+# job.batch/multi-nic-concheck created
+# Wait for job/multi-nic-concheck to complete
+# job.batch/multi-nic-concheck condition met
+# 2023/02/14 01:22:21 Config
+# W0214 01:22:21.976565       1 client_config.go:617] Neither --kubeconfig nor --master was specified.  Using the inClusterConfig.  This might not work.
+# 2023/02/14 01:22:23 2/2 servers successfully created
+# 2023/02/14 01:22:23 p-cni-operator-ipvlanl3-multi-nic-n7zf6-worker-2-zt5l5-serv: Pending
+...
+# 2023/02/14 01:23:13 2/2 clients successfully finished
+# ###########################################
+# ## Connection Check: multi-nic-cni-operator-ipvlanl3
+# ###########################################
+# FROM                           TO                              CONNECTED/TOTAL IPs                            BANDWIDTHs
+# multi-nic-n7zf6-worker-2-zt5l5 multi-nic-n7zf6-worker-2-zxw2n  2/2             [192.168.0.65 192.168.64.65]   [ 1.05Gbits/sec 1.03Gbits/sec]
+# multi-nic-n7zf6-worker-2-zxw2n multi-nic-n7zf6-worker-2-zt5l5  2/2             [192.168.0.129 192.168.64.129] [ 934Mbits/sec 937Mbits/sec]
+# ###########################################
+# 2023/02/14 01:23:13 multi-nic-cni-operator-ipvlanl3 checked
+</code></pre>
+<p>If the job takes longer than 50 minutes (mostly in large cluster), you will get </p>
+<p><code>error: timed out waiting for the condition on jobs/multi-nic-concheck</code></p>
+<p>Check the test progress directly:</p>
+<pre><code>kubectl get po -w
+</code></pre>
+<p>When the multi-nic-concheck job has completed, check the log:</p>
+<pre><code>kubectl logs job/multi-nic-concheck
+</code></pre>
+<p>If some connection failed, you may investigate the failure from log of the iperf3 client pod.</p>
+</li>
+<li>
+<p>Clean up the job</p>
+<pre><code>make clean-concheck
+</code></pre>
+</li>
+</ol>
+<h3 id="health-checker-service">Health checker service</h3>
+<p>Deploy health check and agents to the cluster to serve a functional and connetion checking on-demand and periodically exporting to Prometheus metric server. See <a href="https://github.com/foundation-model-stack/multi-nic-cni/tree/main/health-check">more detail</a>.</p>
+<h2 id="clean-up">Clean up</h2>
+<p><strong>installed by manifests with kubectl</strong></p>
+<pre><code>kubectl delete -f deploy/
+</code></pre>
+<p><strong>installed by bundle with operator-sdk</strong></p>
+<pre><code>operator-sdk cleanup multi-nic-cni-operator -n multi-nic-cni-operator
+</code></pre>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../troubleshooting/troubleshooting/" class="btn btn-neutral float-left" title="Manual Troubleshooting (Common Issues)"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="multi-cloud/" class="btn btn-neutral float-right" title="Multi-NIC CNI on Multi-Cloud">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../troubleshooting/troubleshooting/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="multi-cloud/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

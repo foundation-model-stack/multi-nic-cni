@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>Multi-NIC CNI on Multi-Cloud - Multi-NIC CNI</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Multi-NIC CNI on Multi-Cloud";
+        var mkdocs_page_input_path = "user_guide/multi-cloud.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/yaml.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/rust.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> Multi-NIC CNI
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">Multi-NIC CNI</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../Maintainers/">Maintainers</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Concept</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../concept/">Key Concept</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../concept/multi-cloud-support/">Multi-Cloud Support</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../concept/multi-nic-ipam/">Built-in Multi-NIC Network</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../concept/network-status/">Network Status</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../concept/policy/">Policy-based secondary network attachment</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Developer guide</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../developer_guide/">Contributor Guide</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../developer_guide/architecture/">Architecture</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../developer_guide/local_build_push/">Local Development</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Release</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../release/">Release</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../release/alpha/">Alpha Channel</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../release/beta/">Beta Channel</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../release/stable/">Stable Channel (default)</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Troubleshooting</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../troubleshooting/health-checker/">Troubleshooting with Multi-NIC CNI Health Checker Service</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../troubleshooting/troubleshooting/">Manual Troubleshooting (Common Issues)</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">User guide</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../">User Guide</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Multi-NIC CNI on Multi-Cloud</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#operator-installation">Operator Installation</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#multinicnetwork-deployment">MultiNICNetwork Deployment</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#ibm-cloud-azure">IBM Cloud, Azure</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#baremetal">BareMetal</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#aws">AWS</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#connection-check">Connection Check</a>
+    </li>
+    </ul>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">Multi-NIC CNI</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">User guide</li>
+      <li class="breadcrumb-item active">Multi-NIC CNI on Multi-Cloud</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="multi-nic-cni-on-multi-cloud">Multi-NIC CNI on Multi-Cloud</h1>
+<table>
+<thead>
+<tr>
+<th>Multi-NIC CNI Features</th>
+<th>IBM Cloud</th>
+<th>Bare Metal</th>
+<th>AWS</th>
+<th>Azure (tentative)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Single definition for multiple attachments<br>- dynamic interface discovery<br>- policy-based NIC selection</td>
+<td>&check;</td>
+<td>&check;</td>
+<td>&check;</td>
+<td>&check;</td>
+</tr>
+<tr>
+<td>CIDR/IP management</td>
+<td>&check;</td>
+<td>*</td>
+<td>*</td>
+<td>&check;</td>
+</tr>
+<tr>
+<td>L3 Route configuration</td>
+<td>&check;</td>
+<td>X</td>
+<td>X</td>
+<td>&check;</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>&check;:</strong> beneficial<br><strong>*:</strong> optional (e.g., replacable by whereabout, aws-vpc-cni IPAM)<br><strong>X:</strong> non-beneficial as using L2</p>
+</blockquote>
+<h2 id="operator-installation">Operator Installation</h2>
+<p>Multi-NIC CNI Operator for supporting multi-cloud is under developing from v1.1.0. The pre-release bundle is available on <a href="../../release/alpha/">alpha</a> and <a href="../../release/beta/">beta</a> channel on Openshift OKD OperatorHub.</p>
+<p>Please check latest <a href="../../release/">release</a>.</p>
+<h2 id="multinicnetwork-deployment">MultiNICNetwork Deployment</h2>
+<h3 id="ibm-cloud-azure">IBM Cloud, Azure</h3>
+<ul>
+<li><a href="https://github.com/foundation-model-stack/multi-nic-cni/tree/main/config/samples/multinicnetwork/ipvlanl3.yaml">IPVLAN L3</a><pre><code>kubectl apply -f config/samples/multinicnetwork/ipvlanl3.yaml
+</code></pre>
+</li>
+</ul>
+<h3 id="baremetal">BareMetal</h3>
+<ul>
+<li>
+<p><a href="https://github.com/foundation-model-stack/multi-nic-cni/tree/main/config/samples/multinicnetwork/ipvlanl2.yaml">IPVLAN L2 with whereabout IPAM</a></p>
+<pre><code>kubectl apply -f config/samples/multinicnetwork/ipvlanl2.yaml
+</code></pre>
+</li>
+<li>
+<p><a href="https://github.com/foundation-model-stack/multi-nic-cni/tree/main/config/samples/multinicnetwork/sriov.yaml">SR-IoV with Multi-NIC IPAM</a> ( from v1.2.0 )</p>
+<pre><code>kubectl apply -f config/samples/multinicnetwork/sriov.yaml
+</code></pre>
+</li>
+<li>
+<p><a href="https://github.com/foundation-model-stack/multi-nic-cni/tree/main/config/samples/multinicnetwork/mellanox_hostdevice.yaml">Mellanox Host Device without IPAM</a> ( from v1.2.0 )</p>
+<pre><code>kubectl apply -f config/samples/multinicnetwork/mellanox_hostdevice.yaml
+</code></pre>
+</li>
+<li>
+<p><a href="https://github.com/foundation-model-stack/multi-nic-cni/tree/main/config/samples/multinicnetwork/ipvlanl2_unmanaged.yaml">IPVLAN L2 with unmanaged HostInterface</a> ( from v1.2.1 )</p>
+<pre><code>kubectl apply -f config/samples/multinicnetwork/ipvlanl2_unmanaged.yaml
+</code></pre>
+</li>
+</ul>
+<h3 id="aws">AWS</h3>
+<ul>
+<li><a href="https://github.com/foundation-model-stack/multi-nic-cni/tree/main/config/samples/multinicnetwork/awsipvlan.yaml">IPVLAN L2 with AWS-VPC-connecting IPAM</a> ( from v1.1.0 )<pre><code>kubectl apply -f config/samples/multinicnetwork/awsipvlan.yaml
+</code></pre>
+</li>
+</ul>
+<h2 id="connection-check">Connection Check</h2>
+<p>see <a href="https://github.com/foundation-model-stack/multi-nic-cni/tree/main/README.md#check-connections">check connection</a>.</p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../" class="btn btn-neutral float-left" title="User Guide"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>
