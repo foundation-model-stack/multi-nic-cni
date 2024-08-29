@@ -8,7 +8,6 @@ package plugin
 import (
 	"bytes"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -312,7 +311,7 @@ func RenderTemplate(path string, d *RenderData) ([]*unstructured.Unstructured, e
 	tmpl.Funcs(template.FuncMap{"getOr": getOr, "isSet": isSet})
 	tmpl.Funcs(sprig.TxtFuncMap())
 
-	source, err := ioutil.ReadFile(path)
+	source, err := os.ReadFile(path)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to read manifest %s", path)
 	}

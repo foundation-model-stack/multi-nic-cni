@@ -8,6 +8,7 @@ package plugin
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -15,7 +16,7 @@ import (
 	multinicv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
 	"github.com/foundation-model-stack/multi-nic-cni/controllers/vars"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
@@ -143,7 +144,7 @@ func (h *NetAttachDefHandler) CreateOrUpdateOnNamespace(ns string, net *multinic
 	errMsg := h.createOrUpdate(def, "")
 	if errMsg != "" {
 		vars.NetworkLog.V(2).Info(errMsg)
-		return fmt.Errorf(errMsg)
+		return errors.New(errMsg)
 	}
 	return nil
 }
@@ -268,7 +269,7 @@ func (h *NetAttachDefHandler) Get(name string, namespace string) (*NetworkAttach
 func (h *NetAttachDefHandler) IsExist(name string, namespace string) bool {
 	_, err := h.Get(name, namespace)
 	if err != nil {
-		if !errors.IsNotFound(err) {
+		if !k8serrors.IsNotFound(err) {
 			vars.NetworkLog.V(2).Info(fmt.Sprintf("Not exist: %v", err))
 		}
 		return false

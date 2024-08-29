@@ -59,9 +59,9 @@ func (p *MellanoxPlugin) GetConfig(net multinicv1.MultiNicNetwork, hifList map[s
 	// get resource from nicclusterpolicy
 	resourceName := p.GetResourceName()
 	if resourceName == "" {
-		msg := "failed to get resource name from sriov plugin config"
-		vars.NetworkLog.V(2).Info(msg)
-		return "", annotation, fmt.Errorf(msg)
+		err := fmt.Errorf("failed to get resource name from sriov plugin config")
+		vars.NetworkLog.V(2).Info(err.Error())
+		return "", annotation, err
 	}
 
 	name := net.GetName()
