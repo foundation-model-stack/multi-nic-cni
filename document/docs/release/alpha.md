@@ -2,6 +2,14 @@
 
 ![](../img/alpha-release.png)
 
+## v1.3.0
+
+**Improvements:**
+
+* Make all fields except interfaceName in `HostInterface.Interfaces` optional
+* Add **namespace watcher** to add `NetworkAttachmentDefinition` when new namespace is created
+* Set `manager` container as default container in controller
+
 ## v1.2.2
 
 **Improvements:**
