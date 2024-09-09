@@ -112,7 +112,9 @@ func cmdAdd(args *skel.CmdArgs) error {
 		// Invoke ipam del if err to avoid ip leak
 		defer func() {
 			if err != nil {
-				ipam.ExecDel(n.IPAM.Type, args.StdinData)
+				if !isBuiltInIPAM(n.IPAM.Type) {
+					ipam.ExecDel(n.IPAM.Type, args.StdinData)
+				}
 			}
 		}()
 
@@ -233,7 +235,7 @@ func cmdDel(args *skel.CmdArgs) error {
 	}
 	utils.Logger.Debug(fmt.Sprintf("Received an DEL request for: conf=%v", n))
 	// On chained invocation, IPAM block can be empty
-	if n.IPAM.Type != "" {
+	if n.IPAM.Type != "" && !isBuiltInIPAM(n.IPAM.Type) {
 		injectedStdIn := injectMaster(args.StdinData, n.MasterNetAddrs, n.Masters, n.DeviceIDs)
 		if n.IPAM.Type != "multi-nic-ipam" {
 			err = ipam.ExecDel(n.IPAM.Type, injectedStdIn)
