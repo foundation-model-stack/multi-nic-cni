@@ -227,3 +227,8 @@ func getHostIPConfig(index int, devName string) *current.IPConfig {
 	}
 	return ipConf
 }
+
+// isBuiltInIPAM returns true if ipam is a built-in IPAM (host-device-ipam)
+func isBuiltInIPAM(ipamType string) bool {
+	return ipamType == HostDeviceIPAMType
+}
