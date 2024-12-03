@@ -3,12 +3,12 @@ name: Build and push connection check image
 on:
   push:
     branches:
-      - v1.2.3
+      - v1.2.4
     paths:
       - connection-check/**
 
 env:
-  IMAGE_VERSION: '1.2.3'
+  IMAGE_VERSION: '1.2.4'
   IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
 
 jobs:

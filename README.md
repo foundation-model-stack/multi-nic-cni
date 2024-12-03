@@ -112,7 +112,7 @@ Recommended to deploy in the same default namespace for [health check service](.
   ```
 ##### by bundle with operator-sdk
   ```bash
-  operator-sdk run bundle ghcr.io/foundation-model-stack/multi-nic-cni-bundle:v1.2.3 -n multi-nic-cni-operator
+  operator-sdk run bundle ghcr.io/foundation-model-stack/multi-nic-cni-bundle:v1.2.4 -n multi-nic-cni-operator
   ```
 #### Deploy MultiNicNetwork resource
 1. Prepare `network.yaml` as shown in the [example](#multinicnetwork)

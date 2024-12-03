@@ -3,7 +3,7 @@ name: Build and push controller and its bundle image
 on:
   push:
     branches:
-      - v1.2.3
+      - v1.2.4
     paths:
       - controllers/**
       - compute/**
@@ -16,7 +16,7 @@ on:
       - ./Makefile
 
 env:
-  VERSION: '1.2.3'
+  VERSION: '1.2.4'
   IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
   DAEMON_REGISTRY: ghcr.io/${{ github.repository_owner }}
 

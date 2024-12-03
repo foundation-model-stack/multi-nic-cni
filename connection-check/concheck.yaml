@@ -71,7 +71,7 @@ spec:
       serviceAccountName: multi-nic-concheck-account
       containers:
       - name: concheck
-        image: ghcr.io/foundation-model-stack/multi-nic-cni-concheck:v1.2.3
+        image: ghcr.io/foundation-model-stack/multi-nic-cni-concheck:v1.2.4
         imagePullPolicy: Always
         securityContext:
           privileged: true
