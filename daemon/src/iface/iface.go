@@ -75,9 +75,9 @@ func GetNameNetMap() map[string]string {
 	return nameNetMap
 }
 
-// GetInterfaceNameMap returns a map from network address to interface name
-func GetInterfaceNameMap() map[string]string {
-	ifaceNameMap := make(map[string]string)
+// GetInterfaceNameMap returns a map from network address to map of pciaddress to interface name
+func GetInterfaceNameMap() map[string]map[string]string {
+	ifaceNameMap := make(map[string]map[string]string)
 	if interfaceInfoCache.GetSize() == 0 {
 		// update LastestInterfaceMap
 		interfaces := GetInterfaces()
@@ -87,7 +87,10 @@ func GetInterfaceNameMap() map[string]string {
 	}
 	interfaceMap := GetInterfaceInfoCache()
 	for devName, info := range interfaceMap {
-		ifaceNameMap[info.NetAddress] = devName
+		if _, found := ifaceNameMap[info.NetAddress]; !found {
+			ifaceNameMap[info.NetAddress] = make(map[string]string)
+		}
+		ifaceNameMap[info.NetAddress][info.PciAddress] = devName
 	}
 	return ifaceNameMap
 }

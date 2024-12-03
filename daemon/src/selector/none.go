@@ -8,6 +8,7 @@ package selector
 import (
 	"log"
 	"math"
+	"sort"
 
 	gnet "github.com/jaypipes/ghw/pkg/net"
 )
@@ -65,10 +66,11 @@ func (DefaultSelector) Select(req NICSelectRequest, interfaceNameMap map[string]
 	}
 	if len(selectedMaster) == 0 {
 		// apply all network addresses
-		for netAddress, _ := range interfaceNameMap {
+		for netAddress := range interfaceNameMap {
 			log.Printf("select %s", netAddress)
 			selectedMaster = append(selectedMaster, netAddress)
 		}
+		sort.Strings(selectedMaster)
 	}
 	if maxSize > 0 {
 		maxSize = int(math.Min(float64(len(selectedMaster)), float64(maxSize)))

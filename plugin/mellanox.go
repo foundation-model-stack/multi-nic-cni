@@ -7,7 +7,9 @@ package plugin
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/containernetworking/cni/pkg/types"
 	multinicv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
@@ -29,6 +31,71 @@ const (
 type MellanoxPlugin struct {
 	MellanoxNetworkHandler          *DynamicHandler
 	MellanoxNicClusterPolicyHandler *DynamicHandler
+}
+
+// SrIoVResource defines prefix and resource of resource from sriov plugin
+type SrIoVResource struct {
+	Prefix       string
+	ResourceName string
+}
+
+// GetAnnotation returns prefix/resourceName
+func (r SrIoVResource) GetAnnotation() string {
+	return r.Prefix + "/" + r.ResourceName
+}
+
+// Valid checks if resourceName has value.
+func (r SrIoVResource) Valid() bool {
+	return r.ResourceName != ""
+}
+
+// GetSrIoVResource returns SrIoVResource from item in resourceList
+func GetSrIoVResource(resourceMap map[string]interface{}) *SrIoVResource {
+	if resourcePrefix, ok := resourceMap["resourcePrefix"]; ok {
+		if resourceName, ok := resourceMap["resourceName"]; ok {
+			return &SrIoVResource{
+				Prefix:       resourcePrefix.(string),
+				ResourceName: resourceName.(string),
+			}
+		} else {
+			return &SrIoVResource{
+				Prefix:       DEFAULT_MELLANOX_PREFIX,
+				ResourceName: resourceName.(string),
+			}
+		}
+	}
+	return nil
+}
+
+func GetSrIoVResourcesFromSrIoVPlugin(sriovPlugin *DevicePluginSpec) (rs []SrIoVResource, err error) {
+	configStr := *sriovPlugin.Config
+	var config map[string]interface{}
+	err = json.Unmarshal([]byte(configStr), &config)
+	if err == nil {
+		if resourceListStr, ok := config["resourceList"]; ok {
+			if resourceList, ok := resourceListStr.([]interface{}); ok {
+				for _, resource := range resourceList {
+					if resourceMap, ok := resource.(map[string]interface{}); ok {
+						if r := GetSrIoVResource(resourceMap); r != nil {
+							rs = append(rs, *r)
+						}
+					}
+				}
+			}
+		}
+	}
+	return rs, err
+}
+
+// GetCombinedResourceNames returns string joining SrIoVResource annotation list with comma
+func GetCombinedResourceNames(rs []SrIoVResource) string {
+	annotaions := []string{}
+	for _, r := range rs {
+		if r.Valid() {
+			annotaions = append(annotaions, r.GetAnnotation())
+		}
+	}
+	return strings.Join(annotaions, ",")
 }
 
 // origin: https://github.com/containernetworking/plugins/blob/283f200489b5ef8f0b6aadc09f751ab0c5145497/plugins/main/host-device/host-device.go#L45C1-L56C2
@@ -56,11 +123,12 @@ func (p *MellanoxPlugin) GetConfig(net multinicv1.MultiNicNetwork, hifList map[s
 	annotation := make(map[string]string)
 	var err error
 	// get resource from nicclusterpolicy
-	prefix, resourceName := p.GetResourceName()
-	if resourceName == "" {
-		msg := "failed to get resource name from sriov plugin config"
+	rs := p.GetSrIoVResources()
+	resourceAnnotation := GetCombinedResourceNames(rs)
+	if resourceAnnotation == "" {
+		msg := "failed to get resource annotation from sriov plugin config"
 		vars.NetworkLog.V(2).Info(msg)
-		return "", annotation, fmt.Errorf(msg)
+		return "", annotation, errors.New(msg)
 	}
 	conf := HostDeviceTypeNetConf{}
 	conf.CNIVersion = net.Spec.MainPlugin.CNIVersion
@@ -74,47 +142,30 @@ func (p *MellanoxPlugin) GetConfig(net multinicv1.MultiNicNetwork, hifList map[s
 	if err != nil {
 		return "", annotation, err
 	}
-	annotation[RESOURCE_ANNOTATION] = prefix + "/" + resourceName
+	annotation[RESOURCE_ANNOTATION] = resourceAnnotation
 	return string(confBytes), annotation, nil
 }
 
-// return first resource name found in SriovDevicePlugin
-func (p *MellanoxPlugin) GetResourceName() (string, string) {
+// return list of SrIoVResource found in SriovDevicePlugin
+func (p *MellanoxPlugin) GetSrIoVResources() (rs []SrIoVResource) {
 	policy, err := p.getPolicy()
 	if err != nil {
 		vars.NetworkLog.V(2).Info(fmt.Sprintf("failed to get policy: %v", err))
 	}
 	if err != nil {
 		vars.NetworkLog.V(2).Info(fmt.Sprintf("failed to read sriov plugin config: %v", err))
-		return "", ""
+		return rs
 	}
 	sriovPlugin := policy.Spec.SriovDevicePlugin
 	if sriovPlugin == nil || sriovPlugin.Config == nil {
 		vars.NetworkLog.V(2).Info(fmt.Sprintf("no sriov device plugin config set in %s", policy.Name))
-		return "", ""
+		return rs
 	}
-	configStr := *sriovPlugin.Config
-	var config map[string]interface{}
-	err = json.Unmarshal([]byte(configStr), &config)
-	if err == nil {
-		if resourceListStr, ok := config["resourceList"]; ok {
-			if resourceList, ok := resourceListStr.([]interface{}); ok {
-				for _, resource := range resourceList {
-					if resourceMap, ok := resource.(map[string]interface{}); ok {
-						if resourcePrefix, ok := resourceMap["resourcePrefix"]; ok {
-							if resourceName, ok := resourceMap["resourceName"]; ok {
-								return resourcePrefix.(string), resourceName.(string)
-							} else {
-								return DEFAULT_MELLANOX_PREFIX, resourceName.(string)
-							}
-						}
-					}
-				}
-			}
-		}
+	rs, err = GetSrIoVResourcesFromSrIoVPlugin(sriovPlugin)
+	if err != nil || len(rs) == 0 {
+		vars.NetworkLog.V(2).Info(fmt.Sprintf("no readable value from sriov config (%s): %v", *sriovPlugin.Config, err))
 	}
-	vars.NetworkLog.V(2).Info(fmt.Sprintf("cannot read value from sriov config: %v", err))
-	return "", ""
+	return rs
 }
 
 func (p *MellanoxPlugin) getPolicy() (*NicClusterPolicy, error) {

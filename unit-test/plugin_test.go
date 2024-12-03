@@ -147,23 +147,47 @@ var _ = Describe("Test GetConfig of main plugins", func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
-	It("mellanox main plugin without resource name", func() {
-		cniType := "mellanox"
-		cniArgs := make(map[string]string)
-		ipam := `{
-			"type":           "host-device-ipam"
-		   }`
-		multinicnetwork := getNonMultiNicCNINetwork("test-mellanox-default", cniVersion, cniType, cniArgs, ipam)
-
-		confBytes, annotations, err := mellanoxPlugin.GetConfig(*multinicnetwork, hifList)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(confBytes).NotTo(Equal(""))
-		prefix, resourceName := mellanoxPlugin.GetResourceName()
-		Expect(resourceName)
-		Expect(prefix)
-		fullName := prefix + "/" + resourceName
-		Expect(annotations[plugin.RESOURCE_ANNOTATION]).To(Equal(fullName))
-		err = mellanoxPlugin.CleanUp(*multinicnetwork)
-		Expect(err).NotTo(HaveOccurred())
+	It("mellanox main plugin - GetSrIoVResource", func() {
+		sriovResourceList := `
+		{
+			"resourceList": [
+				{
+					"resourcePrefix": "nvidia.com",
+					"resourceName": "host_dev0",
+					"selectors": {
+						"vendors": ["15b3"],
+						"isRdma": true,
+						"pciAddresses": ["0000:00:00.0"]
+					}
+				},
+				{
+					"resourcePrefix": "nvidia.com",
+					"resourceName": "host_dev1",
+					"selectors": {
+						"vendors": ["15b3"],
+						"isRdma": true,
+						"pciAddresses": ["0000:00:00.1"]
+					}
+				}
+			]
+		}
+		`
+		expectedAnnotation := "nvidia.com/host_dev0,nvidia.com/host_dev1"
+		sriovPluginConfig := &plugin.DevicePluginSpec{
+			ImageSpecWithConfig: plugin.ImageSpecWithConfig{
+				Config: &sriovResourceList,
+				ImageSpec: plugin.ImageSpec{
+					Image:            "sriov-network-device-plugin",
+					Repository:       "ghcr.io/k8snetworkplumbingwg",
+					Version:          "v3.5.1",
+					ImagePullSecrets: []string{},
+				},
+			},
+		}
+		rs, err := plugin.GetSrIoVResourcesFromSrIoVPlugin(sriovPluginConfig)
+		Expect(err).To(BeNil())
+		Expect(len(rs)).To(Equal(2))
+		resourceAnnotation := plugin.GetCombinedResourceNames(rs)
+		Expect(resourceAnnotation).To(Equal(expectedAnnotation))
 	})
 })

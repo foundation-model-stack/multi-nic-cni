@@ -98,15 +98,19 @@ func Select(req NICSelectRequest) NICSelectResponse {
 		resourceMap, err = iface.GetPodResourceMap(pod)
 		if err == nil {
 			log.Printf("resourceMap of %s: %v\n", pod.UID, resourceMap)
-			resourceName := NetAttachDefHandler.GetResourceName(req.NetAttachDefName, req.PodNamespace)
-			if resourceName != "" {
+			resourceNames := NetAttachDefHandler.GetResourceNames(req.NetAttachDefName, req.PodNamespace)
+			if len(resourceNames) > 0 {
 				log.Printf("resource map: %v\n", resourceMap)
-				if deviceIDs, exist := resourceMap[resourceName]; exist {
-					log.Printf("GetDeviceMap of %s\n", resourceName)
-					podDeviceIDs = deviceIDs
-					deviceMap = iface.GetDeviceMap(podDeviceIDs)
+				for _, resourceName := range resourceNames {
+					if deviceIDs, exist := resourceMap[resourceName]; exist {
+						podDeviceIDs = append(podDeviceIDs, deviceIDs...)
+						deviceMapPerResource := iface.GetDeviceMap(deviceIDs)
+						log.Printf("deviceMap of %s (%v): %v\n", resourceName, deviceIDs, deviceMapPerResource)
+						for netAddress, deviceID := range deviceMapPerResource {
+							deviceMap[netAddress] = deviceID
+						}
+					}
 				}
-				log.Printf("deviceMap: %v\n", deviceMap)
 			}
 		} else {
 			log.Printf("Cannot get pod resource map: %v\n", err)
@@ -116,22 +120,45 @@ func Select(req NICSelectRequest) NICSelectResponse {
 	}
 
 	masterNameMap := iface.GetInterfaceNameMap()
+	log.Printf("master name map: %v\n", masterNameMap)
 	nameNetMap := iface.GetNameNetMap()
 	netSpec, err := MultinicnetHandler.Get(req.NetAttachDefName, req.PodNamespace)
 	if err != nil {
-		return getDefaultResponse(req, masterNameMap, nameNetMap, deviceMap, resourceMap, podDeviceIDs)
+		// FIXME: failed to get network spec (use default policy): the server could not find the requested resource
+		log.Printf("failed to get network spec (use default policy): %v\n", err)
+		defaultMasterNameMap := make(map[string]string)
+		if len(deviceMap) > 0 {
+			// filter only existing deviceID
+			for netAddress, deviceID := range deviceMap {
+				if master, exist := masterNameMap[netAddress][deviceID]; exist {
+					defaultMasterNameMap[netAddress] = master
+				}
+			}
+		} else {
+			for netAddress, masterDeviceMap := range masterNameMap {
+				for _, master := range masterDeviceMap {
+					defaultMasterNameMap[netAddress] = master
+				}
+			}
+		}
+		return getDefaultResponse(req, defaultMasterNameMap, nameNetMap, deviceMap, resourceMap, podDeviceIDs)
 	}
 	policy := netSpec.Policy
 
-	var filteredMasterNameMap map[string]string
+	filteredMasterNameMap := make(map[string]string)
 	if len(deviceMap) > 0 {
 		// filter only existing deviceID
-		filteredMasterNameMap = make(map[string]string)
-		for netAddress, _ := range deviceMap {
-			filteredMasterNameMap[netAddress] = masterNameMap[netAddress]
+		for netAddress, deviceID := range deviceMap {
+			if master, exist := masterNameMap[netAddress][deviceID]; exist {
+				filteredMasterNameMap[netAddress] = master
+			}
 		}
 	} else {
-		filteredMasterNameMap = masterNameMap
+		for netAddress, masterDeviceMap := range masterNameMap {
+			for _, master := range masterDeviceMap {
+				filteredMasterNameMap[netAddress] = master
+			}
+		}
 	}
 
 	var selector Selector

@@ -85,6 +85,7 @@ func convertDeviceIDs(deviceIDs interface{}) []string {
 	return deviceIDsArray
 }
 
+// GetPodResourceMap returns a map from resource name to device ID
 func GetPodResourceMap(pod *v1.Pod) (map[string][]string, error) {
 	podID := string(pod.UID)
 	log.Printf("GetPodDeviceIDs: %s (%s)\n", pod.GetName(), podID)

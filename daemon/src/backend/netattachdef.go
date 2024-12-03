@@ -6,12 +6,15 @@
 package backend
 
 import (
+	"strings"
+
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 
+	"log"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
-	"log"
 )
 
 const (
@@ -19,8 +22,6 @@ const (
 	NET_ATTACH_DEF_KIND     = "NetworkAttachmentDefinition"
 	RESOURCE_ANNOTATION     = "k8s.v1.cni.cncf.io/resourceName"
 )
-
-
 
 type NetAttachDefHandler struct {
 	*DynamicHandler
@@ -41,19 +42,18 @@ func NewNetAttachDefHandler(config *rest.Config) *NetAttachDefHandler {
 	return handler
 }
 
-func (h *NetAttachDefHandler) GetResourceName(name string, namespace string) string {
+func (h *NetAttachDefHandler) GetResourceNames(name string, namespace string) (resourceNames []string) {
 	netattachdef, err := h.DynamicHandler.Get(name, namespace, metav1.GetOptions{})
 	if err != nil {
 		log.Printf("Cannot get NetworkAttachDef %v \n", err)
-		return ""
+		return resourceNames
 	}
 	metadata := netattachdef.Object["metadata"].(map[string]interface{})
 	if annotations, exist := metadata["annotations"]; exist {
-		if resourceName, exist := annotations.(map[string]interface{})[RESOURCE_ANNOTATION]; exist {
-			return resourceName.(string)
+		if combinedResourceName, exist := annotations.(map[string]interface{})[RESOURCE_ANNOTATION]; exist {
+			resourceNames = strings.Split(combinedResourceName.(string), ",")
 		}
 	}
 	log.Printf("No target annotation: %v\n", metadata)
-	return ""
+	return resourceNames
 }
-

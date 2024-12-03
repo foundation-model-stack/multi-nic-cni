@@ -398,25 +398,6 @@ func getMultiNicCNINetwork(name string, cniVersion string, cniType string, cniAr
 	}
 }
 
-// getNonMultiIPAMNicCNINetwork returns MultiNicNetwork object without Multi-NIC IPAM
-func getNonMultiNicCNINetwork(name string, cniVersion string, cniType string, cniArgs map[string]string, ipam string) *multinicv1.MultiNicNetwork {
-	return &multinicv1.MultiNicNetwork{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
-		Spec: multinicv1.MultiNicNetworkSpec{
-			Subnet:         "",
-			IPAM:           ipam,
-			IsMultiNICIPAM: false,
-			MainPlugin: multinicv1.PluginSpec{
-				CNIVersion: cniVersion,
-				Type:       cniType,
-				CNIArgs:    cniArgs,
-			},
-		},
-	}
-}
-
 // newDaemonPod creates new daemonPod
 func newDaemonPod(daemonSpec multinicv1.DaemonSpec) *corev1.Pod {
 	labels := map[string]string{vars.DeamonLabelKey: vars.DaemonLabelValue}
