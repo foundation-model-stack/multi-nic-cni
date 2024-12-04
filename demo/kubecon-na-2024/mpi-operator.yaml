@@ -1,0 +1,28 @@
+apiVersion: cpe.cogadvisor.io/v1
+kind: BenchmarkOperator
+metadata:
+  name: mpi
+spec:
+  apiVersion: kubeflow.org/v1alpha2
+  kind: MPIJob
+  adaptor: mpi
+  crd:
+    host: https://raw.githubusercontent.com/sunya-ch/mpi-operator/master
+    paths:
+    - /deploy/v2beta1/crd.yaml
+  deploySpec:
+    namespace: mpi-operator
+    yaml:
+      host: https://raw.githubusercontent.com/sunya-ch/mpi-operator/master
+      paths:
+        - /deploy/v2beta1/admin_role.yaml
+        - /deploy/v2beta1/all.yaml
+        - /deploy/v2beta1/cr.yaml
+        - /deploy/v2beta1/crb.yaml
+        - /deploy/v2beta1/crd.yaml
+        - /deploy/v2beta1/deployment.yaml
+        - /deploy/v2beta1/edit_role.yaml
+        - /deploy/v2beta1/mpi-operator.yaml
+        - /deploy/v2beta1/namespace.yaml
+        - /deploy/v2beta1/serviceaccount.yaml
+        - /deploy/v2beta1/view_role.yaml
