@@ -1,0 +1,79 @@
+apiVersion: cpe.cogadvisor.io/v1
+kind: Benchmark
+metadata:
+  name: mpilat
+  namespace: default
+spec:
+  benchmarkOperator:
+    name: mpi
+    namespace: default
+  benchmarkSpec: |
+    slotsPerWorker: 1
+    runPolicy:
+      cleanPodPolicy: Running
+    mpiReplicaSpecs:
+      Launcher:
+        replicas: 1
+        template:
+          metadata:
+            annotations:
+              k8s.v1.cni.cncf.io/networks: multi-nic-cni-operator-ipvlanl3
+          spec:
+            initContainers:
+            - name: wait-for-workers
+              image: registry.access.redhat.com/ubi9/ubi:latest
+              command:
+              - sleep
+              - "10"
+            containers:
+            - image: osubenchmark:0.3.0-5.6.3
+              name: mpi-bench-master
+              imagePullPolicy: Always
+              securityContext: 
+                privileged: true
+              command:
+              - mpirun
+              - --allow-run-as-root
+              - --mca
+              - btl_tcp_if_include
+              - {{ .net }}
+              - -np
+              - "2"
+              - /osu-micro-benchmarks-5.6.3/mpi/pt2pt/osu_latency
+              - -m
+              - "4194304"
+      Worker:
+        replicas: 2
+        template:
+          metadata:
+            annotations:
+              k8s.v1.cni.cncf.io/networks: multi-nic-cni-operator-ipvlanl3
+          spec:
+            affinity:
+              podAntiAffinity:
+                preferredDuringSchedulingIgnoredDuringExecution:
+                - weight: 100
+                  podAffinityTerm:
+                    labelSelector:
+                      matchExpressions:
+                      - key: training.kubeflow.org/job-name
+                        operator: In
+                        values:
+                        - osu-benchmark-bw
+                    topologyKey: kubernetes.io/hostname
+            containers:
+            - image: osubenchmark:0.3.0-5.6.3
+              name: mpi-bench-worker
+              imagePullPolicy: Always
+              securityContext: 
+                privileged: true
+  repetition: 1
+  iterationSpec:
+    sequential: true
+    minimize: true
+    iterations:
+      - name: net
+        values:
+        - "eth0"
+        - "net1-0"
+  parserKey: osu
