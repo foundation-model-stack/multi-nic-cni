@@ -15,4 +15,4 @@ kind: Kustomization
 images:
 - name: multi-nic-cni-daemon
   newName: ghcr.io/foundation-model-stack/multi-nic-cni-daemon
-  newTag: v1.2.3
+  newTag: v1.2.4

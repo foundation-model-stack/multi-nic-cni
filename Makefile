@@ -4,12 +4,10 @@
 #
 include daemon/Makefile
 
+DOCKER ?= $(shell command -v podman 2> /dev/null || echo docker)
+
 export IMAGE_REGISTRY ?= ghcr.io/foundation-model-stack
-ifneq ($(shell kubectl get po -A --selector app=multus --ignore-not-found),)
-export CNI_BIN_HOSTPATH = $(shell kubectl get po -A --selector app=multus -o jsonpath='{.items[0].spec.volumes[?(@.name=="cnibin")].hostPath.path}')
-else
-export CNI_BIN_HOSTPATH = /var/lib/cni/bin
-endif
+
 
 # VERSION defines the project version for the bundle.
 # Update this value when you upgrade the version of your project.
@@ -17,7 +15,7 @@ endif
 # - use the VERSION as arg of the bundle target (e.g make bundle VERSION=0.0.2)
 # - use environment variables to overwrite this value (e.g export VERSION=0.0.2)
 # VERSION ?= 0.0.1
-VERSION ?= 1.2.3
+VERSION ?= 1.2.4
 export CHANNELS = "beta"
 
 # CHANNELS define the bundle channels used in the bundle.
@@ -114,18 +112,18 @@ run: manifests generate fmt vet ## Run a controller from your host.
 	go run ./main.go
 
 golint:
-	docker pull golangci/golangci-lint:latest
-	docker run --tty --rm \
+	$(DOCKER) pull golangci/golangci-lint:v1.54.2
+	$(DOCKER) run --tty --rm \
 		--volume '$(BASE_DIR):/app' \
 		--workdir /app \
-		golangci/golangci-lint \
+		golangci/golangci-lint:v1.54.2 \
 		golangci-lint run --verbose
 
 docker-build: test ## Build docker image with the manager.
-	docker build -t ${IMG} .
+	$(DOCKER) build -t ${IMG} .
 
 docker-push: ## Push docker image with the manager.
-	docker push ${IMG}
+	$(DOCKER) push ${IMG}
 
 ##@ Deployment
 
@@ -163,8 +161,8 @@ daemon-secret: ## Modify kustomization files for image pull secret of daemon
 	envsubst < config/samples/patches/image_pull_secret.template > config/samples/patches/image_pull_secret.yaml
 	cd config/samples;$(KUSTOMIZE) edit add patch --path patches/image_pull_secret.yaml
 
-concheck: 
-	@kubectl create -f connection-check/concheck.yaml 
+concheck:
+	@kubectl create -f connection-check/concheck.yaml
 	@echo "Wait for job/multi-nic-concheck to complete"
 	@kubectl wait --for=condition=complete job/multi-nic-concheck --timeout=3000s
 	@kubectl logs job/multi-nic-concheck
@@ -174,11 +172,10 @@ clean-concheck:
 	@kubectl delete pod -n default --selector multi-nic-concheck
 	@kubectl delete job -n default --selector multi-nic-concheck
 
-
-export SERVER_HOST_NAME ?= $(shell kubectl get nodes|tail -n 2|head -n 1|awk '{ print $1 }')
-export CLIENT_HOST_NAME ?= $(shell kubectl get nodes|tail -n 1|awk '{ print $1 }')
 sample-concheck:
-	@echo "Test connection from ${CLIENT_HOST_NAME} to ${SERVER_HOST_NAME}"
+	@export SERVER_HOST_NAME ?= $(shell kubectl get nodes|tail -n 2|head -n 1|awk '{ print $1 }')
+	@export CLIENT_HOST_NAME ?= $(shell kubectl get nodes|tail -n 1|awk '{ print $1 }')
+	@echo "Test connection from ${CLIENT_HOST_NAME} to ${SERVER_HOST_NAME}"ƒ
 	@cd ./live-migration && chmod +x live_migrate.sh && ./live_migrate.sh live_iperf3 ${SERVER_HOST_NAME} ${CLIENT_HOST_NAME} 5
 
 CONTROLLER_GEN = $(shell pwd)/bin/controller-gen
@@ -264,16 +261,16 @@ catalog-push: ## Push a catalog image.
 	$(MAKE) docker-push IMG=$(CATALOG_IMG)
 
 test-daemon:
-	docker build -t daemon-test:latest -f ./daemon/dockerfiles/Dockerfile.multi-nicd-test .
-	docker run -i --privileged daemon-test /bin/bash -c "cd /usr/local/build/cni&&make test"
-	docker run -i --privileged daemon-test /bin/bash -c "cd /usr/local/build/daemon/src&&make test-verbose"
+	$(DOCKER) build -t daemon-test:latest -f ./daemon/dockerfiles/Dockerfile.multi-nicd-test .
+	$(DOCKER) run -i --privileged daemon-test /bin/bash -c "cd /usr/local/build/cni&&make test"
+	$(DOCKER) run -i --privileged daemon-test /bin/bash -c "cd /usr/local/build/daemon/src&&make test-verbose"
 
 build-push-kbuilder-base:
-	docker build -t $(IMAGE_TAG_BASE)-kbuilder -f ./daemon/dockerfiles/Dockerfile.kbuilder .
-	docker push $(IMAGE_TAG_BASE)-kbuilder
+	$(DOCKER) build -t $(IMAGE_TAG_BASE)-kbuilder -f ./daemon/dockerfiles/Dockerfile.kbuilder .
+	$(DOCKER) push $(IMAGE_TAG_BASE)-kbuilder
 
 daemon-build: test-daemon ## Build docker image with the manager.
-	docker tag daemon-test:latest $(IMAGE_TAG_BASE)-daemon:v$(VERSION)
+	$(DOCKER) tag daemon-test:latest $(IMAGE_TAG_BASE)-daemon:v$(VERSION)
 
 daemon-push:
-	docker push $(IMAGE_TAG_BASE)-daemon:v$(VERSION)
+	$(DOCKER) push $(IMAGE_TAG_BASE)-daemon:v$(VERSION)
