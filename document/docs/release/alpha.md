@@ -2,7 +2,10 @@
 
 ![](../img/alpha-release.png)
 
-## v1.3.0
+> **FIX-ME:** <br>
+> This channel does not include no bug fixes for incompability to newer version of network operator in https://github.com/foundation-model-stack/multi-nic-cni/pull/182.
+
+## v1.3.0 (based on v1.2.2)
 
 **Improvements:**
 
