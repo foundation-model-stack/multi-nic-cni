@@ -3,14 +3,14 @@ name: Build and push daemon image
 on:
   push:
     branches:
-      - v1.2.4
+      - v1.2.5
     paths:
       - daemon/**
       - cni/**
       - Makefile
       
 env:
-  IMAGE_VERSION: '1.2.4'
+  IMAGE_VERSION: '1.2.5'
   DAEMON_REGISTRY: ghcr.io/${{ github.repository_owner }}
 
 jobs:
