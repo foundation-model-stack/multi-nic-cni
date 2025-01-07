@@ -8,7 +8,6 @@ package iface
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -57,7 +56,7 @@ type NetDeviceInfo struct {
 
 func getCheckpointData() (checkpointData, error) {
 	cpd := &checkpointFileData{}
-	rawBytes, err := ioutil.ReadFile(CheckPointfile)
+	rawBytes, err := os.ReadFile(CheckPointfile)
 	if err != nil {
 		return checkpointData{}, fmt.Errorf("getPodEntries: error reading file %s\n%v\n", CheckPointfile, err)
 	}
@@ -87,10 +86,9 @@ func convertDeviceIDs(deviceIDs interface{}) []string {
 
 // GetPodResourceMap returns a map from resource name to device ID
 func GetPodResourceMap(pod *v1.Pod) (map[string][]string, error) {
+	resourceMap := make(map[string][]string)
 	podID := string(pod.UID)
 	log.Printf("GetPodDeviceIDs: %s (%s)\n", pod.GetName(), podID)
-
-	resourceMap := make(map[string][]string)
 	if podID == "" {
 		return resourceMap, fmt.Errorf("GetPodResourceMap: invalid Pod cannot be empty")
 	}
@@ -114,44 +112,22 @@ func GetPodResourceMap(pod *v1.Pod) (map[string][]string, error) {
 	return resourceMap, nil
 }
 
-// GetDeviceMap returns a map from network address to NIC device
-func GetDeviceMap(deviceIDs []string) map[string]string {
-	deviceMap := make(map[string]string)
-	nameNetMap := GetNameNetMap()
-	log.Printf("nameNetMap map: %v\n", nameNetMap)
-
-	for _, deviceID := range deviceIDs {
-		var masterName string
-		deviceNameInterface := deviceMapCache.GetCache(deviceID)
-		if deviceNameInterface != nil {
-			masterName = deviceNameInterface.(string)
+func GetDeviceName(deviceID string) string {
+	deviceNameInterface := deviceMapCache.GetCache(deviceID)
+	if deviceNameInterface != nil {
+		return deviceNameInterface.(string)
+	} else {
+		var err error
+		masterName, err := GetPfName(deviceID)
+		if err != nil {
+			log.Printf("cannot get physical device %s: %v\n", deviceID, err)
+			return ""
 		} else {
-			var err error
-			masterName, err = GetPfName(deviceID)
-			if err != nil {
-				log.Printf("cannot get physical device %s: %v\n", deviceID, err)
-			} else {
-				log.Printf("set deviceMapCache %s=%s\n", deviceID, masterName)
-				deviceMapCache.SetCache(deviceID, masterName)
-			}
-		}
-		if netAddress, exist := nameNetMap[masterName]; exist {
-			deviceMap[netAddress] = deviceID
-		} else {
-			netAddress, err := getNetAddressFromDevice(masterName)
-			if err != nil {
-				log.Printf("cannot get network address of device %s: %v\n", masterName, err)
-			} else {
-				deviceMap[netAddress] = deviceID
-				// found new device, update interfaces
-				GetInterfaces()
-				nameNetMap = GetNameNetMap()
-				log.Printf("updated nameNetMap map: %v\n", nameNetMap)
-			}
+			log.Printf("set deviceMapCache %s=%s\n", deviceID, masterName)
+			deviceMapCache.SetCache(deviceID, masterName)
+			return masterName
 		}
 	}
-
-	return deviceMap
 }
 
 // reference: github.com/k8snetworkplumbingwg/sriov-cni/pkg/utils
@@ -168,7 +144,7 @@ func GetPfName(vf string) (string, error) {
 			return "", err
 		}
 	}
-	files, err := ioutil.ReadDir(pfSymLink)
+	files, err := os.ReadDir(pfSymLink)
 	if err != nil {
 		return "", err
 	}
@@ -223,7 +199,7 @@ func GetTargetNetworks() []NetDeviceInfo {
 // getVirtioNetNames returns list of net name in virtio folder
 func getVirtioNetNames(topDir string) ([]string, error) {
 	names := []string{}
-	fileList, err := ioutil.ReadDir(topDir)
+	fileList, err := os.ReadDir(topDir)
 	if err != nil {
 		return names, fmt.Errorf("failed to read directory %s: %q", topDir, err)
 	}
@@ -236,7 +212,7 @@ func getVirtioNetNames(topDir string) ([]string, error) {
 				// net folder not exist
 				continue
 			}
-			fileList, err := ioutil.ReadDir(netDir)
+			fileList, err := os.ReadDir(netDir)
 			if err != nil {
 				continue
 			}
@@ -259,7 +235,7 @@ func getNetNames(pciAddr string) ([]string, error) {
 		topDir := filepath.Join(SysBusPci, pciAddr)
 		return getVirtioNetNames(topDir)
 	}
-	fileList, err := ioutil.ReadDir(netDir)
+	fileList, err := os.ReadDir(netDir)
 	if err != nil {
 		return names, fmt.Errorf("failed to read net directory %s: %q", netDir, err)
 	}

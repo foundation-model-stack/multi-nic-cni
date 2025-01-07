@@ -54,6 +54,6 @@ func (h *NetAttachDefHandler) GetResourceNames(name string, namespace string) (r
 			resourceNames = strings.Split(combinedResourceName.(string), ",")
 		}
 	}
-	log.Printf("No target annotation: %v\n", metadata)
+	log.Printf("Resource names: %v\n", resourceNames)
 	return resourceNames
 }

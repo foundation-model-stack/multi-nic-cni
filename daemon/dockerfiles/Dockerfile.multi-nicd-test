@@ -19,9 +19,11 @@ RUN cd cni && make ginkgo-set
 # build Daemon
 COPY daemon daemon
 RUN mkdir -p /usr/local/kubebuilder
+RUN mkdir -p /usr/local/build/daemon/src/test-bin
+RUN cp setup-envtest.sh /usr/local/build/daemon/src/test-bin/setup-envtest.sh
 RUN cd daemon/src && make test-env && cp -r /usr/local/build/daemon/src/test-bin/bin /usr/local/kubebuilder/bin
 RUN mkdir -p daemon/src/test-bin
-RUN cd daemon/src && go mod tidy 
+RUN cd daemon/src && go mod tidy
 RUN cd daemon/src && go build -o /usr/local/app/daemon
 RUN cp /usr/local/app/multi-nic /usr/local/bin \ 
 && cp /usr/local/app/multi-nic-ipam /usr/local/bin \
