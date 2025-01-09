@@ -9,16 +9,17 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+
 	da "github.com/foundation-model-stack/multi-nic-cni/daemon/allocator"
 	backend "github.com/foundation-model-stack/multi-nic-cni/daemon/backend"
 	di "github.com/foundation-model-stack/multi-nic-cni/daemon/iface"
 	dr "github.com/foundation-model-stack/multi-nic-cni/daemon/router"
 	ds "github.com/foundation-model-stack/multi-nic-cni/daemon/selector"
-	"io/ioutil"
 	"k8s.io/client-go/kubernetes"
-	"net/http"
-	"net/http/httptest"
-	"testing"
 
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/install"
@@ -32,19 +33,21 @@ import (
 	"k8s.io/client-go/restmapper"
 
 	"context"
+	"path/filepath"
+
 	"github.com/vishvananda/netlink"
 	"k8s.io/apimachinery/pkg/runtime"
-	"path/filepath"
+
+	"log"
+	"strings"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"log"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	"strings"
 
 	"os"
 	//+kubebuilder:scaffold:imports
@@ -156,6 +159,7 @@ func replacePodUID(clientset *kubernetes.Clientset) {
 }
 
 var _ = BeforeSuite(func() {
+	os.Setenv("TEST_MODE", "true")
 
 	// this env should be set by config.multinic when creating the daemonset
 	os.Setenv(NODENAME_ENV, FULL_HOST_NAME)

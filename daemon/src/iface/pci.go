@@ -54,6 +54,14 @@ type NetDeviceInfo struct {
 	PciAddress string
 }
 
+func SetDeviceMapCache(pciAddresss, name string) {
+	deviceMapCache.SetCache(pciAddresss, name)
+}
+
+func GetDeviceMapSize() int {
+	return deviceMapCache.GetSize()
+}
+
 func getCheckpointData() (checkpointData, error) {
 	cpd := &checkpointFileData{}
 	rawBytes, err := os.ReadFile(CheckPointfile)

@@ -233,11 +233,14 @@ func (w *DaemonWatcher) ProcessPodQueue() {
 			}
 		} else {
 			vars.DaemonLog.V(4).Info(fmt.Sprintf("Daemon pod for %s deleted", nodeName))
-			// deleted, delete HostInterface
-			w.DaemonCacheHandler.SafeCache.UnsetCache(nodeName)
-			err := w.HostInterfaceHandler.DeleteHostInterface(nodeName)
-			if err != nil {
-				vars.DaemonLog.V(4).Info(fmt.Sprintf("Failed to delete HostInterface %s: %v", nodeName, err))
+			_, err := w.Clientset.CoreV1().Nodes().Get(context.TODO(), nodeName, metav1.GetOptions{})
+			if errors.IsNotFound(err) {
+				// deleted, delete HostInterface
+				w.DaemonCacheHandler.SafeCache.UnsetCache(nodeName)
+				err := w.HostInterfaceHandler.DeleteHostInterface(nodeName)
+				if err != nil {
+					vars.DaemonLog.V(4).Info(fmt.Sprintf("Failed to delete HostInterface %s: %v", nodeName, err))
+				}
 			}
 		}
 	}

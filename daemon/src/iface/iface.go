@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"os"
 	"strings"
 
 	"github.com/vishvananda/netlink"
@@ -189,4 +190,12 @@ func getNetAddressFromDevice(devName string) (string, error) {
 	}
 	netAddress := getNetAddress(addr)
 	return netAddress, nil
+}
+
+func DeviceExists(devName string) bool {
+	if val, ok := os.LookupEnv("TEST_MODE"); ok && val == "true" {
+		return true
+	}
+	_, err := netlink.LinkByName(devName)
+	return err == nil
 }

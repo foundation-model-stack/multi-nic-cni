@@ -14,6 +14,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 )
 
 // For NIC Selection
@@ -68,11 +69,31 @@ func getDefaultResponse(req NICSelectRequest, masterNameMap map[string]string, n
 	selectedMasters := []string{}
 	for _, netAddress := range selectedMasterNetAddrs {
 		master := masterNameMap[netAddress]
-		selectedMasters = append(selectedMasters, master)
+		log.Printf("select device %s\n", master)
+		if iface.DeviceExists(master) {
+			selectedMasters = append(selectedMasters, master)
+		} else {
+			log.Printf("device %s not exists, skip", master)
+		}
 	}
 	return NICSelectResponse{
 		DeviceIDs: []string{},
 		Masters:   selectedMasters,
+	}
+}
+
+func InitCache(cfg *rest.Config, hostName string) {
+	hostInterfaceHandler := backend.NewHostInterfaceHandler(cfg, hostName)
+	infos, err := hostInterfaceHandler.GetHostInterfaces()
+	if err != nil {
+		log.Printf("cannot set cache from hostinterface CR: %v\n", err)
+	} else {
+		for _, info := range infos {
+			if info.PciAddress != "" {
+				iface.SetDeviceMapCache(info.PciAddress, info.InterfaceName)
+			}
+		}
+		log.Printf("set %d devices cache from hostinterface CR", iface.GetDeviceMapSize())
 	}
 }
 
@@ -159,8 +180,12 @@ func Select(req NICSelectRequest) NICSelectResponse {
 	log.Printf("masterNets %v, %v, %v\n", selectedMasterNetAddrs, filteredMasterNameMap, nameNetMap)
 	for _, netAddress := range selectedMasterNetAddrs {
 		if master, ok := filteredMasterNameMap[netAddress]; ok && master != "" {
-			log.Printf("masterNets %s\n", master)
-			selectedMasters = append(selectedMasters, master)
+			log.Printf("select device %s\n", master)
+			if iface.DeviceExists(master) {
+				selectedMasters = append(selectedMasters, master)
+			} else {
+				log.Printf("device %s not exists, skip", master)
+			}
 		}
 	}
 
