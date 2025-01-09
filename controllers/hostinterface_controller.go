@@ -159,12 +159,12 @@ func (r *HostInterfaceReconciler) UpdateInterfaces(instance multinicv1.HostInter
 		if err != nil {
 			return err
 		}
-		if r.interfaceChanged(instance.Spec.Interfaces, interfaces) {
+		interfaces, updated := UpdateNewInterfaces(instance.Spec.Interfaces, interfaces)
+		if updated {
 			err = r.DaemonWatcher.IpamJoin(pod)
 			if err != nil {
 				vars.HifLog.V(4).Info(fmt.Sprintf("Failed to join %s: %v", nodeName, err))
 			}
-
 			updatedHif, err := r.HostInterfaceHandler.UpdateHostInterface(instance, interfaces)
 			if err != nil {
 				return err
@@ -203,22 +203,36 @@ func (r *HostInterfaceReconciler) UpdateInterfaces(instance multinicv1.HostInter
 	}
 }
 
-func (r *HostInterfaceReconciler) interfaceChanged(olds []multinicv1.InterfaceInfoType, news []multinicv1.InterfaceInfoType) bool {
-	if len(olds) != len(news) {
-		return true
+func UpdateNewInterfaces(olds []multinicv1.InterfaceInfoType, news []multinicv1.InterfaceInfoType) ([]multinicv1.InterfaceInfoType, bool) {
+	if len(news) == 0 {
+		return olds, false
 	}
+	updated := false
 	oldMap := make(map[string]multinicv1.InterfaceInfoType)
 	for _, old := range olds {
 		oldMap[old.InterfaceName] = old
 	}
 	for _, new := range news {
 		if old, exists := oldMap[new.InterfaceName]; exists {
-			return !old.Equal(new)
+			if !old.Equal(new) {
+				updated = true
+			}
+			delete(oldMap, new.InterfaceName)
 		} else {
-			return true
+			updated = true
 		}
 	}
-	return true
+	if !updated {
+		return olds, false
+	}
+	if len(oldMap) == 0 {
+		// no missing old interfaces
+		return news, updated
+	}
+	for _, old := range oldMap {
+		news = append(news, old)
+	}
+	return news, true
 }
 
 // CallFinalizer updates CIDRs

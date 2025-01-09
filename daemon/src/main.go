@@ -271,7 +271,7 @@ func initHostName() {
 }
 
 func main() {
-	InitClient()
+	cfg := InitClient()
 	initHostName()
 	setDaemonPort, found := os.LookupEnv("DAEMON_PORT")
 	if found && setDaemonPort != "" {
@@ -281,7 +281,7 @@ func main() {
 		}
 	}
 	dr.SetRTTablePath()
-
+	ds.InitCache(cfg, hostName)
 	da.CleanHangingAllocation(hostName)
 	router := handleRequests()
 	daemonAddress := fmt.Sprintf("0.0.0.0:%d", DAEMON_PORT)
