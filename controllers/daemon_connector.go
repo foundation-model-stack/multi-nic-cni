@@ -8,7 +8,7 @@ package controllers
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	"bytes"
@@ -79,7 +79,7 @@ func (dc DaemonConnector) GetInterfaces(podAddress string) ([]multinicv1.Interfa
 		return []multinicv1.InterfaceInfoType{}, err
 	}
 	defer res.Body.Close()
-	body, err := ioutil.ReadAll(res.Body)
+	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		return []multinicv1.InterfaceInfoType{}, err
 	}
@@ -112,7 +112,7 @@ func (dc DaemonConnector) Join(podAddress string, hifs []multinicv1.InterfaceInf
 			return errors.New(res.Status)
 		}
 
-		_, err = ioutil.ReadAll(res.Body)
+		_, err = io.ReadAll(res.Body)
 		if err != nil {
 			return err
 		}
@@ -165,7 +165,7 @@ func (dc DaemonConnector) putRouteRequest(podAddress string, path string, cidrNa
 			return response, errors.New(res.Status)
 		}
 
-		body, err := ioutil.ReadAll(res.Body)
+		body, err := io.ReadAll(res.Body)
 		if err != nil {
 			return response, err
 		}
