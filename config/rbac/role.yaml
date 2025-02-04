@@ -1,112 +1,16 @@
-
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  creationTimestamp: null
   name: manager-role
 rules:
 - apiGroups:
   - multinic.fms.io
   resources:
   - cidrs
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - multinic.fms.io
-  resources:
-  - cidrs/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - multinic.fms.io
-  resources:
-  - cidrs/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - multinic.fms.io
-  resources:
   - configs
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - multinic.fms.io
-  resources:
-  - configs/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - multinic.fms.io
-  resources:
   - hostinterfaces
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - multinic.fms.io
-  resources:
-  - hostinterfaces/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - multinic.fms.io
-  resources:
-  - hostinterfaces/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - multinic.fms.io
-  resources:
   - ippools
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - multinic.fms.io
-  resources:
-  - ippools/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - multinic.fms.io
-  resources:
-  - ippools/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - multinic.fms.io
-  resources:
   - multinicnetworks
   verbs:
   - create
@@ -119,12 +23,19 @@ rules:
 - apiGroups:
   - multinic.fms.io
   resources:
+  - cidrs/finalizers
+  - hostinterfaces/finalizers
+  - ippools/finalizers
   - multinicnetworks/finalizers
   verbs:
   - update
 - apiGroups:
   - multinic.fms.io
   resources:
+  - cidrs/status
+  - configs/status
+  - hostinterfaces/status
+  - ippools/status
   - multinicnetworks/status
   verbs:
   - get
