@@ -35,8 +35,8 @@ patchesJson6902:
    namespace: system
   patch: |-
       - op: add
-        path: /spec/template/spec/containers/1/args/0
+        path: /spec/template/spec/containers/0/args/0
         value: "--zap-log-level=4"
       - op: add
-        path: /spec/template/spec/containers/1/args/1
+        path: /spec/template/spec/containers/0/args/1
         value: "--zap-time-encoding=iso8601"
