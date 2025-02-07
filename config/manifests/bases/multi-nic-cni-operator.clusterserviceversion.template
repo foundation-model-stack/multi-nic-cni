@@ -127,6 +127,10 @@ spec:
     name: Sunyanan Choochotkaew
   - email: chiba@jp.ibm.com
     name: Tatsuhiro Chiba
+  - email: minzhang@redhat.com
+    name: Min Zhang
+  - email: ebendror@redhat.com
+    name: Eran Ben Dror
   maturity: alpha
   provider:
     name: Foundation Model Stack
