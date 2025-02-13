@@ -297,9 +297,7 @@ set_version:
 	@$(SED_CMD) -i 's/\(image: ghcr.io\/foundation-model-stack\/multi-nic-cni-daemon:v\).*/\1$(VERSION)/' config/samples/config.yaml
 	@$(SED_CMD) -i 's/\(IMAGE_VERSION: \).*/\1\"$(VERSION)\"/' .github/workflows/*.yaml
 	@$(SED_CMD) -i 's/\(VERSION: \).*/\1\"$(VERSION)\"/' .github/workflows/build_push_controller.yaml
-	@$(SED_CMD) -i '0,/branches:/s//branches:/; n; s/- v.*/- v$(VERSION)/' .github/workflows/*.yaml
 	@$(SED_CMD) -i 's/multi-nic-cni-bundle:v[0-9.]\+/multi-nic-cni-bundle:v$(VERSION)/' README.md
 	@$(SED_CMD) -i 's/multi-nic-cni-concheck:v[0-9.]\+/multi-nic-cni-concheck:v$(VERSION)/' connection-check/concheck.yaml
 	@$(SED_CMD) -i 's/multi-nic-cni-daemon:v[0-9.]\+/multi-nic-cni-daemon:v$(VERSION)/' controllers/vars/vars.go
 	@$(SED_CMD) -i 's/-daemon:v[0-9.]\+/-daemon:v$(VERSION)/' daemon/Makefile
-
