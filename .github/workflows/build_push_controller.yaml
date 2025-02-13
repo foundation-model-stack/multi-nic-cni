@@ -3,7 +3,7 @@ name: Build and push controller and its bundle image
 on:
   push:
     branches:
-      - v1.2.5
+      - main
     paths:
       - controllers/**
       - compute/**
