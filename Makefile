@@ -274,3 +274,32 @@ daemon-build: test-daemon ## Build docker image with the manager.
 
 daemon-push:
 	$(DOCKER) push $(IMAGE_TAG_BASE)-daemon:v$(VERSION)
+
+# Determine correct 'sed' version to use based on OS
+ifeq ($(shell uname), Darwin)
+  # macOS: use gsed if available
+  ifeq ($(shell which gsed),)
+    $(error gsed not found. Install with 'brew install gnu-sed')
+  endif
+  SED_CMD := gsed
+else
+  SED_CMD := sed
+endif
+
+# update the version in Makefile, kustomization.yaml, config.yaml, and GitHub workflows
+# use VERSION as an arg to the set_version target: make set_version VERSION=x.x.x
+.PHONY: set_version
+set_version:
+	@echo "VERSION: $(VERSION)"
+	@$(SED_CMD) -i 's/^\(VERSION ?= \).*/\1$(VERSION)/' Makefile
+	@$(SED_CMD) -i 's/\(newTag: v\).*/\1$(VERSION)/' config/manager/kustomization.yaml
+	@$(SED_CMD) -i 's/\(newTag: v\).*/\1$(VERSION)/' config/samples/kustomization.yaml
+	@$(SED_CMD) -i 's/\(image: ghcr.io\/foundation-model-stack\/multi-nic-cni-daemon:v\).*/\1$(VERSION)/' config/samples/config.yaml
+	@$(SED_CMD) -i 's/\(IMAGE_VERSION: \).*/\1\"$(VERSION)\"/' .github/workflows/*.yaml
+	@$(SED_CMD) -i 's/\(VERSION: \).*/\1\"$(VERSION)\"/' .github/workflows/build_push_controller.yaml
+	@$(SED_CMD) -i '0,/branches:/s//branches:/; n; s/- v.*/- v$(VERSION)/' .github/workflows/*.yaml
+	@$(SED_CMD) -i 's/multi-nic-cni-bundle:v[0-9.]\+/multi-nic-cni-bundle:v$(VERSION)/' README.md
+	@$(SED_CMD) -i 's/multi-nic-cni-concheck:v[0-9.]\+/multi-nic-cni-concheck:v$(VERSION)/' connection-check/concheck.yaml
+	@$(SED_CMD) -i 's/multi-nic-cni-daemon:v[0-9.]\+/multi-nic-cni-daemon:v$(VERSION)/' controllers/vars/vars.go
+	@$(SED_CMD) -i 's/-daemon:v[0-9.]\+/-daemon:v$(VERSION)/' daemon/Makefile
+
