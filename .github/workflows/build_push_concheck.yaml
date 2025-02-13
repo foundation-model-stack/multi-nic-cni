@@ -3,7 +3,7 @@ name: Build and push connection check image
 on:
   push:
     branches:
-      - v1.2.5
+      - main
     paths:
       - connection-check/**
 

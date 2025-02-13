@@ -3,7 +3,7 @@ name: Build and push daemon image
 on:
   push:
     branches:
-      - v1.2.5
+      - main
     paths:
       - daemon/**
       - cni/**
