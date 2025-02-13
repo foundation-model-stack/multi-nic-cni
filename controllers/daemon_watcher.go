@@ -74,7 +74,7 @@ func NewDaemonWatcher(client client.Client, config *rest.Config, hostInterfaceHa
 	factory := informers.NewSharedInformerFactory(clientset, 0)
 	podInformer := factory.Core().V1().Pods()
 
-	podInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+	_, err = podInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		UpdateFunc: func(prevObj, obj interface{}) {
 			pod, ok := obj.(*v1.Pod)
 			prevPod, _ := prevObj.(*v1.Pod)
@@ -98,7 +98,11 @@ func NewDaemonWatcher(client client.Client, config *rest.Config, hostInterfaceHa
 			}
 		},
 	})
-	podInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+	if err != nil {
+		vars.DaemonLog.Error(err, "failed to add pod update event handler")
+	}
+
+	_, err = podInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		DeleteFunc: func(obj interface{}) {
 			pod, ok := obj.(*v1.Pod)
 			if !ok {
@@ -110,6 +114,11 @@ func NewDaemonWatcher(client client.Client, config *rest.Config, hostInterfaceHa
 			}
 		},
 	})
+
+	if err != nil {
+		vars.DaemonLog.Error(err, "failed to add pod delete event handler")
+	}
+
 	factory.Start(watcher.Quit)
 
 	return watcher

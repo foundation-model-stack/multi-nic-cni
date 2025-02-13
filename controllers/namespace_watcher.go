@@ -13,6 +13,8 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/foundation-model-stack/multi-nic-cni/controllers/vars"
 )
 
 // NamespaceWatcher watches new namespace and generate net-attach-def
@@ -35,13 +37,18 @@ func NewNamespaceWatcher(client client.Client, config *rest.Config, multinicnetw
 	factory := informers.NewSharedInformerFactory(clientset, 0)
 	nsInformer := factory.Core().V1().Namespaces()
 
-	nsInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+	_, err := nsInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			if ns, ok := obj.(*v1.Namespace); ok {
 				watcher.NamespaceQueue <- ns.Name
 			}
 		},
 	})
+
+	if err != nil {
+		vars.NetworkLog.Error(err, "failed to add namespace add event handler")
+	}
+
 	factory.Start(watcher.Quit)
 
 	return watcher
