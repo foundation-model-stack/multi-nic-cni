@@ -1,0 +1,45 @@
+name: Build Developing Operator Catalog
+
+on:
+  workflow_dispatch:
+    inputs:
+      bundle_images:
+        description: 'Comma-separated list of bundle images'
+        required: true
+      tag:
+        description: 'image tag'
+        required: true
+
+env:
+  CATALOG_IMAGE: ghcr.io/${{ github.repository }}-catalog:${{ github.event.inputs.tag }}
+
+jobs:
+  build-catalog:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: '1.22'
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            opm \
+            docker.io
+
+      - name: Build Operator Catalog
+        run: |
+          mkdir -p /tmp/catalog
+          opm index add --bundles ${{ github.event.inputs.bundle_images }} --tag ${{ env.CATALOG_IMAGE }}
+
+      - name: Push Catalog to Docker Registry
+        run: |
+          docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
+          docker build -t ${{ env.CATALOG_IMAGE }} /tmp/catalog
+          docker push ${{ env.CATALOG_IMAGE }}
