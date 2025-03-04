@@ -53,7 +53,7 @@ jobs:
           context: .
           push: true
           tags: |
-            ${{ env.IMAGE_NAME }}:${{ env.VERSION }}
+            ${{ env.IMAGE_NAME }}:v${{ env.VERSION }}
           file: ./Dockerfile
   build-push-bundle:
     runs-on: ubuntu-latest
@@ -94,7 +94,7 @@ jobs:
           context: .
           push: true
           tags: |
-            ${{ env.BUNDLE_IMAGE_NAME }}:${{ env.VERSION }}
+            ${{ env.BUNDLE_IMAGE_NAME }}:v${{ env.VERSION }}
           file: ./bundle.Dockerfile
   build-push-daemon:
     runs-on: ubuntu-latest
@@ -122,5 +122,5 @@ jobs:
           context: daemon
           push: true
           tags: |
-            ${{ env.IMAGE_NAME }}:${{ env.VERSION }}
+            ${{ env.IMAGE_NAME }}:v${{ env.VERSION }}
           file: ./daemon/dockerfiles/Dockerfile
