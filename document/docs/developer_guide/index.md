@@ -102,6 +102,3 @@ make test
 Follow [effective GO](https://go.dev/doc/effective_go).
 
 Please run `go fmt` for every packages before submitting PRs.
-
-
-
