@@ -10,9 +10,9 @@ import (
 	"strconv"
 	"time"
 
+	logf "github.com/foundation-model-stack/multi-nic-cni/controllers/logr"
 	"github.com/go-logr/logr"
 	ctrl "sigs.k8s.io/controller-runtime"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
@@ -101,9 +101,11 @@ func InitIntFromEnv(key string, defaultValue int) int {
 }
 
 func SetLog() {
+	ctrl.Log.GetSink()
 	zapp := zap.New(zap.UseFlagOptions(ZapOpts))
 	dlog := logf.NewDelegatingLogSink(zapp.GetSink())
 	ctrl.Log = logr.New(dlog)
+	ctrl.SetLogger(zap.New(zap.UseFlagOptions(ZapOpts)))
 	SetupLog = ctrl.Log.WithName("setup")
 	DaemonLog = ctrl.Log.WithName("controllers").WithName("Daemon")
 	DefLog = ctrl.Log.WithName("controllers").WithName("NetAttachDef")
