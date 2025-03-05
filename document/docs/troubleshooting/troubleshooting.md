@@ -46,6 +46,50 @@ export MULTI_NIC_NAMESPACE= # namespace where multi-nic cni operator is deployed
 
 This is expected issue in a large cluster where the controller requires large amount of member to operate. Please adjust the resource limit in the controller deployment. For the case of installing via operator hub or operator bundle, please check the step to modify the deployment in [Customize Multi-NIC CNI controller of operator](#customize-multi-nic-cni-controller-of-operator).
 
+
+### HostInterface not created
+There are a couple of reasons that the HostInterface is not created. First check the multi-nicd DaemonSet.
+```bash
+kubectl get ds multi-nicd -n $MULTI_NIC_NAMESPACE -oyaml
+```
+- *daemonsets.apps "multi-nicd" not found*
+      - Check whether no config.multinic.fms.io deployed in the cluster.
+
+            kubectl get config.multinic multi-nicd -n $MULTI_NIC_NAMESPACE
+
+        If no config.multinic.fms.io deployed, see [Deploy multi-nicd](#deploy-multi-nicd-config)
+
+      - The node has taint that the daemon is not tolerate. 
+
+            kubectl get nodes $FAILED_NODE -o json|jq -r .spec.taints
+
+        To tolerate the [taint](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration), add the tolerate manually to the multi-nicd DaemonSet.
+
+            kubectl edit $(kubectl get po -owide -A|grep multi-nicd\
+                |grep $FAILED_NODE|awk '{printf "%s -n %s", $2, $1}')
+
+- Other cases, check [controller log](#get-controller-log)
+
+### No secondary interfaces in HostInterface
+
+The HostInterface is created but there is no interface listed in the custom resource.
+There are two common root causes.
+
+1. Communication between controller and multi-nicd is blocked. 
+      
+      * Check whether the controller can communicate with multi-nicd:
+
+            kubectl logs --selector control-plane=controller-manager \
+              -n $MULTI_NIC_NAMESPACE -c manager| grep Join| grep $FAILED_NODE_IP
+
+        - If no line shown up and the full [controller log](#get-controller-log) printing `Fail to create hostinterface ... cannot update interfaces: Get "<node IP>/interface": dial tcp <node IP>:11000: i/o timeout`, check [set required security group rules](#set-security-groups)
+
+2. Network interfaces are not configured as expected.
+      * Check [multi-nicd log](#get-multi-nicd-log).
+    
+        - If getting `cannot list address on <SECONDARY INTERFACE>`, please confirm whether IPv4 address on the host. 
+        - Otherwise, please refer to [check interfaces at node's host network](#check-host-secondary-interfaces).
+
 ### Pod failed to start
 
 **Issue:**
@@ -159,43 +203,7 @@ This error occurs when CNI cannot execute Multi-NIC IPAM which can be caused by 
 - other CNI plugin (such as aws-vpc-cni, sr-iov) failure, check each CNI log.
     - aws-vpc-cni: `/host/var/log/aws-routed-eni`
 
-##### HostInterface not created
-There are a couple of reasons that the HostInterface is not created. First check the multi-nicd DaemonSet.
-```bash
-kubectl get ds multi-nicd -n $MULTI_NIC_NAMESPACE -oyaml
-```
-- *daemonsets.apps "multi-nicd" not found*
-      - Check whether no config.multinic.fms.io deployed in the cluster.
-
-            kubectl get config.multinic multi-nicd -n $MULTI_NIC_NAMESPACE
-
-        If no config.multinic.fms.io deployed, see [Deploy multi-nicd](#deploy-multi-nicd-config)
-
-      - The node has taint that the daemon is not tolerate. 
-
-            kubectl get nodes $FAILED_NODE -o json|jq -r .spec.taints
-
-        To tolerate the [taint](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration), add the tolerate manually to the multi-nicd DaemonSet.
-
-            kubectl edit $(kubectl get po -owide -A|grep multi-nicd\
-                |grep $FAILED_NODE|awk '{printf "%s -n %s", $2, $1}')
-
-- Other cases, check [controller log](#get-controller-log)
-##### No secondary interfaces in HostInterface
-
-The HostInterface is created but there is no interface listed in the custom resource.
-
-Check whether the controller can communicate with multi-nicd:
-
-```bash
-kubectl logs --selector control-plane=controller-manager \
-  -n $MULTI_NIC_NAMESPACE -c manager| grep Join| grep $FAILED_NODE_IP
-```
-
-- If no line shown up and the full [controller log](#get-controller-log) keep printing `Fail to create hostinterface ... cannot update interfaces: Get "<node IP>/interface": dial tcp <node IP>:11000: i/o timeout`, check [set required security group rules](#set-security-groups)
-- Other cases, [check interfaces at node's host network](#check-host-secondary-interfaces)
-
-##### No available IP address
+###### No available IP address
 List corresponding Pod CIDR from HostInterface.
 ```bash
 kubectl get HostInterface $FAILED_NODE -oyaml
@@ -402,7 +410,7 @@ kubectl delete po $(kubectl get po -owide -A|grep multi-nicd\
 ```
 
 ### Check host secondary interfaces 
-Log in to FAILED_NODE with `oc debug node/$FAILED_NODE` or using [nettools](https://github.com/jedrecord/nettools) with `hostNetwork: true`. If secondary interfaces do not exist at the host network, [add the secondary interfaces](#add-secondary-interfaces-at-nodes-host-network)
+Log in to FAILED_NODE with `oc debug node/$FAILED_NODE` or using [nettools](https://github.com/jedrecord/nettools) with `hostNetwork: true`. If secondary interfaces do not exist at the host network or an IPv4 address has not been assigned, [add the secondary interfaces](#add-secondary-interfaces-at-nodes-host-network)
 
 ### Update daemon pod to use latest version
 1. Check whether the using `image` set with `latest` version tag and `imagePullPolicy: Always`
