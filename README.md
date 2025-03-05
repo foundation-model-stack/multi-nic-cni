@@ -1,6 +1,4 @@
-> Documents and source codes for the deprecated domain `cogadvisor.io` are moved to [cogadvisor-net branch](https://github.com/foundation-model-stack/multi-nic-cni/tree/cogadvisor-net)
-
-**official document:** https://foundation-model-stack.github.io/multi-nic-cni.
+## **official document:** https://foundation-model-stack.github.io/multi-nic-cni
 
 - [Multi-NIC CNI](#multi-nic-cni)
   - [MultiNicNetwork](#multinicnetwork)
@@ -15,27 +13,38 @@
         - [Peer-to-peer - *quick test*](#peer-to-peer---quick-test)
         - [All-to-all  - *recommended for small cluster (\<10 HostInterfaces)*](#all-to-all----recommended-for-small-cluster-10-hostinterfaces)
       - [Uninstallation](#uninstallation)
+- [Demo](#demo)
+- [Blog Posts, Talks, and Papers](#blog-posts-talks-and-papers)
 
 # Multi-NIC CNI
-Attaching secondary network interfaces that is linked to different network interfaces on host (NIC) to pod provides benefits of network segmentation and top-up network bandwidth in the containerization system. 
 
-Multi-NIC CNI is the CNI plugin operating on top of [Multus CNI](https://github.com/k8snetworkplumbingwg/multus-cni). However, unlike Multus, instead of defining and handling each secondary network interface one by one, this CNI automatically discovers all available secondary interfaces and handles them as a NIC pool.
-With this manner, it can provide the following benefits.
+Multi-NIC CNI is the CNI plugin for secondary networks operating on top of [Multus CNI](https://github.com/k8snetworkplumbingwg/multus-cni). This CNI offers several key features, outlined below, to help cluster administrators and users simplify the process of enabling high-performance networking.
 
-i) **Common secondary network definition**: User can manage only one network definition for multiple secondary interfaces with a common CNI main plugin such as ipvlan, macvlan, and sr-iov. 
+- I) **Unifying user-managed network definition**: User can manage only one network definition for multiple secondary interfaces with a common CNI main plugin such as ipvlan, macvlan, and sr-iov.The Multi-NIC CNI automatically discovers all available secondary interfaces and handles them as a NIC pool.
 
-ii) **Common NAT-bypassing network solution**: All secondary NICs on each host can be assigned with non-conflict CIDR and non-conflict L3 routing configuration that can omit an overlay networking overhead. Particularyly, the CNI is built-in with L3 IPVLAN solution composing of the following functionalities.
-  1) **Interface-host-devision CIDR Computation**: compute allocating CIDR range for each host and each interface from a single global subnet with the number of bits for hosts and for interface. 
-  2) **L3 Host Route Configuration**: configure L3 routes (next hop via dev) in host route table according to the computed CIDR.
-  3) **Distributed IP Allocation Management**: manage IP allocation/deallocation distributedly via the communication between CNI program and daemon at each host.
+  ![](./document/docs/img/multi-nic-cni-feature-1.png)
 
-[read more](./document/docs/Concept/multi-nic-ipam.md) 
+  With this manner, it can provide the following benefits.
 
-iii) **Policy-based secondary network attachment**: Instead of statically set the desired host's master interface name one by one, user can define a policy on attaching multiple secondary network interfaces such as specifying only the number of desired interfaces, filtering only highspeed NICs. 
+  - **Common NAT-bypassing network solution**: All secondary NICs on each host can be assigned with non-conflict CIDR and non-conflict L3 routing configuration that can omit an overlay networking overhead. Particularyly, the CNI is built-in with L3 IPVLAN solution composing of the following functionalities.
+    1) **Interface-host-devision CIDR Computation**: compute allocating CIDR range for each host and each interface from a single global subnet with the number of bits for hosts and for interface. 
+    2) **L3 Host Route Configuration**: configure L3 routes (next hop via dev) in host route table according to the computed CIDR.
+    3) **Distributed IP Allocation Management**: manage IP allocation/deallocation distributedly via the communication between CNI program and daemon at each host.
 
-[read more](./document/docs/Concept/policy.md)
+    [read more](./document/docs/Concept/multi-nic-ipam.md) 
 
-![](./document/docs/img/commonstack.png)
+  - **Policy-based secondary network attachment**: Instead of statically set the desired host's master interface name one by one, user can define a policy on attaching multiple secondary network interfaces such as specifying only the number of desired interfaces, filtering only highspeed NICs. 
+
+    [read more](./document/docs/Concept/policy.md)
+
+-  II) **Bridging device plugin runtime results and CNI configuration:** Multi-NIC CNI can configure CNI of network device in accordance to device plugin allocation results orderly.
+
+   ![](./document/docs/img/multi-nic-cni-feature-2.png)
+
+- III) **Building-in with several auto-configured CNIs**
+Leveraging advantage point of managing multiple CNIs together with auto-discovery and dynamic interface selection, we built several auto-configured CNIs in the Multi-NIC CNI project.
+
+  <img src="./document/docs/img/multi-nic-cni-feature-3.png" alt="drawing" style="width:600px;"/>
 
 The Multi-NIC CNI architecture can be found [here](./document/docs/Developer%20Guide/architecture.md).
 
@@ -246,3 +255,15 @@ Deploy health check and agents to the cluster to serve a functional and connetio
     ```bash
     operator-sdk cleanup multi-nic-cni-operator --delete-all -n multi-nic-cni-operator
     ```
+# Demo
+
+https://github.com/user-attachments/assets/129239b9-37f0-4669-b2ec-d93c4ce16c84
+
+# Blog Posts, Talks, and Papers
+Discover more insights about Multi-NIC CNI through our blog posts, talks, and academic papers.
+
+- Medium Blog Post Series: https://medium.com/@sunyanan.choochotkaew1/list/multinic-cni-series-8570830e6f3f
+- KubeCon+CloudNativeCon NA 20222 CNCF-Hosted Co-located Event: https://sched.co/1AsSs
+- KubeCon+CloudNativeCon NA 20224 CNCF-Hosted Co-located Event: https://sched.co/1izs8
+- Multi-NIC CNI in Vela IBM Research's AI supercomputer in the cloud: https://research.ibm.com/blog/openshift-foundation-model-stack
+- Paper - The infrastructure powering IBM's Gen AI model development: https://arxiv.org/abs/2407.05467
