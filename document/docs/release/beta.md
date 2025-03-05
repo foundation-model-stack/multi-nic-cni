@@ -4,7 +4,7 @@
 
 **Major feature update:**
 
-[Multi-cloud support](../user_guide/multi-cloud.md)
+[Multi-cloud support](../user_guide/index.md#additional-multinicnetwork-for-specific-cloud-infrastructure)
 
 - AWS-support CNI
     - Provide `aws-ipvlan` working with Multi-NIC IPAM
