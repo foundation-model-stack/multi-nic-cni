@@ -1,5 +1,14 @@
 # Contributor Guide
 
+## Onboarding Multi-NIC CNI
+
+1. Learn about Multi-NIC CNI. Recommend the blog post [Multi-NIC CNI Operator 101: Deep Dive into Container Multi-NIC Simplification](https://medium.com/@sunyanan.choochotkaew1/multi-nic-cni-operator-101-deep-dive-into-container-multi-nic-simplification-1b0cf5f67bb5). 
+2. Deep dive into [Multi-NIC CNI architecture](./architecture.md) and [communication flow](../concept/multi-nic-ipam.md#workflows).
+3. Prepare Cluster with required environments. Check [the requirements](../user_guide/index.md#requirements).
+4. Install Multi-NIC CNI with common MultiNicNetwork definition. Check [installation guide](../user_guide/index.md#installation).
+5. Test network connection. Check [user guide](../user_guide/user.md).
+6. Check [development guide](./local_build_push.md).
+
 ## Contributing In General
 Our project welcomes external contributions. If you have an itch, please feel
 free to scratch it.
@@ -69,9 +78,6 @@ local git repository using the following command:
 ```
 git commit -s
 ```
-
-## Communication
-Please feel free to connect with us on our [ibm-research.slack.com](https://ibm-research.slack.com/archives/C0413T1KELX).
 
 ## Setup
 #### Clone the repo and enter the workspace
