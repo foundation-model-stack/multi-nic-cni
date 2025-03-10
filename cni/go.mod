@@ -1,11 +1,11 @@
 module github.com/containernetworking/plugins
 
-go 1.17
+go 1.22
 
 require (
 	github.com/Microsoft/hcsshim v0.9.2
 	github.com/buger/jsonparser v1.1.1
-	github.com/containernetworking/cni v1.0.1
+	github.com/containernetworking/cni v1.2.3
 	github.com/coreos/go-iptables v0.6.0
 	github.com/gorilla/mux v1.7.3
 	github.com/onsi/ginkgo v1.16.5

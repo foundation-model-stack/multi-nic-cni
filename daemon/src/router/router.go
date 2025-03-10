@@ -8,7 +8,7 @@ package router
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -62,7 +62,7 @@ func ApplyL3Config(r *http.Request) RouteUpdateResponse {
 		res_msg += fmt.Sprintf("AddRoutesError %v;", err)
 		success = false
 	}
-	log.Printf("Apply L3 config %d; (%v)", tableID, success)
+	log.Printf("Apply L3 config %d; message: %s (%v)", tableID, res_msg, success)
 	response := RouteUpdateResponse{Success: success, Message: res_msg}
 	return response
 }
@@ -175,7 +175,7 @@ func isRouteExist(cmpRoute netlink.Route, dev netlink.Link) (bool, error) {
 }
 
 func getRoutesFromRequest(r *http.Request, addIfNotExists bool) (string, int, map[netlink.Link][]netlink.Route, error) {
-	reqBody, err := ioutil.ReadAll(r.Body)
+	reqBody, err := io.ReadAll(r.Body)
 	devRoutesMap := make(map[netlink.Link][]netlink.Route)
 
 	if err != nil {
@@ -226,7 +226,7 @@ func getRoutesFromRequest(r *http.Request, addIfNotExists bool) (string, int, ma
 }
 
 func getRouteFromRequest(r *http.Request) (netlink.Route, netlink.Link, error) {
-	reqBody, err := ioutil.ReadAll(r.Body)
+	reqBody, err := io.ReadAll(r.Body)
 	var route netlink.Route
 	var dev netlink.Link
 	if err != nil {

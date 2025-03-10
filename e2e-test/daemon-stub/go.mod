@@ -1,6 +1,6 @@
 module github.com/foundation-model-stack/multi-nic-cni/e2e-test/daemon-stub
 
-go 1.17
+go 1.23
 
 require (
 	github.com/gorilla/mux v1.8.0
