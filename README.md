@@ -1,41 +1,45 @@
-> Documents and source codes for the deprecated domain `cogadvisor.io` are moved to [cogadvisor-net branch](https://github.com/foundation-model-stack/multi-nic-cni/tree/cogadvisor-net)
-
-**official document:** https://foundation-model-stack.github.io/multi-nic-cni.
+## **official document:** https://foundation-model-stack.github.io/multi-nic-cni
 
 - [Multi-NIC CNI](#multi-nic-cni)
   - [MultiNicNetwork](#multinicnetwork)
   - [Usage](#usage)
-      - [Requirements](#requirements)
-      - [Quick Installation](#quick-installation)
-        - [by OperatorHub](#by-operatorhub)
-        - [by manifests with kubectl](#by-manifests-with-kubectl)
-        - [by bundle with operator-sdk](#by-bundle-with-operator-sdk)
-      - [Deploy MultiNicNetwork resource](#deploy-multinicnetwork-resource)
-      - [Check connections](#check-connections)
-        - [Peer-to-peer - *quick test*](#peer-to-peer---quick-test)
-        - [All-to-all  - *recommended for small cluster (\<10 HostInterfaces)*](#all-to-all----recommended-for-small-cluster-10-hostinterfaces)
-      - [Uninstallation](#uninstallation)
+      - [Installation](#installation)
+        - [Requirements](#requirements)
+        - [Quick Installation](#quick-installation)
+        - [Deploy MultiNicNetwork resource](#deploy-multinicnetwork-resource)
+      - [Test](#test)
+- [Demo](#demo)
+- [Blog Posts, Talks, and Papers](#blog-posts-talks-and-papers)
 
 # Multi-NIC CNI
-Attaching secondary network interfaces that is linked to different network interfaces on host (NIC) to pod provides benefits of network segmentation and top-up network bandwidth in the containerization system. 
 
-Multi-NIC CNI is the CNI plugin operating on top of [Multus CNI](https://github.com/k8snetworkplumbingwg/multus-cni). However, unlike Multus, instead of defining and handling each secondary network interface one by one, this CNI automatically discovers all available secondary interfaces and handles them as a NIC pool.
-With this manner, it can provide the following benefits.
+Multi-NIC CNI is the CNI plugin for secondary networks operating on top of [Multus CNI](https://github.com/k8snetworkplumbingwg/multus-cni). This CNI offers several key features, outlined below, to help cluster administrators and users simplify the process of enabling high-performance networking.
 
-i) **Common secondary network definition**: User can manage only one network definition for multiple secondary interfaces with a common CNI main plugin such as ipvlan, macvlan, and sr-iov. 
+- I) **Unifying user-managed network definition**: User can manage only one network definition for multiple secondary interfaces with a common CNI main plugin such as ipvlan, macvlan, and sr-iov.The Multi-NIC CNI automatically discovers all available secondary interfaces and handles them as a NIC pool.
 
-ii) **Common NAT-bypassing network solution**: All secondary NICs on each host can be assigned with non-conflict CIDR and non-conflict L3 routing configuration that can omit an overlay networking overhead. Particularyly, the CNI is built-in with L3 IPVLAN solution composing of the following functionalities.
-  1) **Interface-host-devision CIDR Computation**: compute allocating CIDR range for each host and each interface from a single global subnet with the number of bits for hosts and for interface. 
-  2) **L3 Host Route Configuration**: configure L3 routes (next hop via dev) in host route table according to the computed CIDR.
-  3) **Distributed IP Allocation Management**: manage IP allocation/deallocation distributedly via the communication between CNI program and daemon at each host.
+  ![](./document/docs/img/multi-nic-cni-feature-1.png)
 
-[read more](./document/docs/Concept/multi-nic-ipam.md) 
+  With this manner, it can provide the following benefits.
 
-iii) **Policy-based secondary network attachment**: Instead of statically set the desired host's master interface name one by one, user can define a policy on attaching multiple secondary network interfaces such as specifying only the number of desired interfaces, filtering only highspeed NICs. 
+  - **Common NAT-bypassing network solution**: All secondary NICs on each host can be assigned with non-conflict CIDR and non-conflict L3 routing configuration that can omit an overlay networking overhead. Particularyly, the CNI is built-in with L3 IPVLAN solution composing of the following functionalities.
+    1) **Interface-host-devision CIDR Computation**: compute allocating CIDR range for each host and each interface from a single global subnet with the number of bits for hosts and for interface. 
+    2) **L3 Host Route Configuration**: configure L3 routes (next hop via dev) in host route table according to the computed CIDR.
+    3) **Distributed IP Allocation Management**: manage IP allocation/deallocation distributedly via the communication between CNI program and daemon at each host.
 
-[read more](./document/docs/Concept/policy.md)
+    [read more](./document/docs/Concept/multi-nic-ipam.md) 
 
-![](./document/docs/img/commonstack.png)
+  - **Policy-based secondary network attachment**: Instead of statically set the desired host's master interface name one by one, user can define a policy on attaching multiple secondary network interfaces such as specifying only the number of desired interfaces, filtering only highspeed NICs. 
+
+    [read more](./document/docs/Concept/policy.md)
+
+-  II) **Bridging device plugin runtime results and CNI configuration:** Multi-NIC CNI can configure CNI of network device in accordance to device plugin allocation results orderly.
+
+   ![](./document/docs/img/multi-nic-cni-feature-2.png)
+
+- III) **Building-in with several auto-configured CNIs**
+Leveraging advantage point of managing multiple CNIs together with auto-discovery and dynamic interface selection, we built several auto-configured CNIs in the Multi-NIC CNI project.
+
+  <img src="./document/docs/img/multi-nic-cni-feature-3.png" alt="drawing" style="width:600px;"/>
 
 The Multi-NIC CNI architecture can be found [here](./document/docs/Developer%20Guide/architecture.md).
 
@@ -81,39 +85,29 @@ namespaces| (optional) limit network definition application to list of namespace
 
 
 ## Usage
-#### Requirements
-- Secondary interfaces attached to worker nodes, check terraform script [here](./terraform/)
-- Multus CNI installation; compatible with networkAttachmentDefinition and pod annotation in multus-cni v3.8
-- For IPVLAN L3 CNI, the following configurations are additionally required
-  - enable allowing IP spoofing for each attached interface
-  - set security group to allow IPs in the target container subnet
-  - IPVLAN support (kernel version >= 4.2)
-#### Quick Installation
-##### by OperatorHub
-- Kubernetes with OLM:
-  - check [multi-nic-cni-operator on OperatorHub.io](https://operatorhub.io/operator/multi-nic-cni-operator)
 
-    ![](./document/docs/img/k8s-operatorhub.png)
+### Installation
+For full installation guide, please check https://foundation-model-stack.github.io/multi-nic-cni/user_guide/.
+
+#### Requirements
+- **Secondary interfaces** attached to worker nodes, check terraform script [here](https://github.com/foundation-model-stack/multi-nic-cni/tree/main/terraform).
+    * Secondary interfaces must have an **IPv4** address assigned.
+- Multus CNI installation; compatible with networkAttachmentDefinition and pod annotation in **multus-cni v3.8**
+- For IPVLAN L3 CNI, the following configurations are additionally required
+    * enable allowing **IP spoofing** for each attached interface
+    * set **security group** to allow IPs in the target container subnet
+    * **IPVLAN support (kernel version >= 4.2)**
+
+
+#### Quick Installation
 
 - Openshift Container Platform:
   - Search for `multi-nic-cni-operator` in OperatorHub
 
     ![](./document/docs/img/openshift-operatorhub.png)
 
-Recommended to deploy in the same default namespace for [health check service](./health-check/), which is `multi-nic-cni-operator`. 
-
 ![](./document/docs/img/specify-ns.png)
 
-(available after v1.0.5)
-
-##### by manifests with kubectl
-  ```bash
-  kubectl apply -f deploy/
-  ```
-##### by bundle with operator-sdk
-  ```bash
-  operator-sdk run bundle ghcr.io/foundation-model-stack/multi-nic-cni-bundle:v1.2.6 -n multi-nic-cni-operator
-  ```
 #### Deploy MultiNicNetwork resource
 1. Prepare `network.yaml` as shown in the [example](#multinicnetwork)
     
@@ -129,8 +123,11 @@ Recommended to deploy in the same default namespace for [health check service](.
         k8s.v1.cni.cncf.io/networks: multi-nic-sample
     ```
 
-#### Check connections
-##### One-time peer-to-peer - *quick test*
+### Test
+For full user guide and testing , please check https://foundation-model-stack.github.io/multi-nic-cni/user_guide/user.
+
+#### Check simple client-server connection
+
 1. Set target peer
    
     ```bash
@@ -168,81 +165,18 @@ Recommended to deploy in the same default namespace for [health check service](.
     # pod "multi-nic-iperf3-server" deleted
     ```
 
-##### One-time all-to-all  - *recommended for small cluster (<10 HostInterfaces)*
-1. Run 
+- If pod is failed to start, check [this troubleshooting guide](https://foundation-model-stack.github.io/multi-nic-cni/troubleshooting/troubleshooting/#pod-failed-to-start).
+- If pod is failed to communicate, check [this troubleshooting guide](https://foundation-model-stack.github.io/multi-nic-cni/troubleshooting/troubleshooting/#tcpudp-communication-failed).
 
-    ```bash
-    make concheck
-    ```
+# Demo
 
-    Example output:
+https://github.com/user-attachments/assets/129239b9-37f0-4669-b2ec-d93c4ce16c84
 
-    ```bash
-    # serviceaccount/multi-nic-concheck-account created
-    # clusterrole.rbac.authorization.k8s.io/multi-nic-concheck-cr created
-    # clusterrolebinding.rbac.authorization.k8s.io/multi-nic-concheck-cr-binding created
-    # job.batch/multi-nic-concheck created
-    # Wait for job/multi-nic-concheck to complete
-    # job.batch/multi-nic-concheck condition met
-    # 2023/02/14 01:22:21 Config
-    # W0214 01:22:21.976565       1 client_config.go:617] Neither --kubeconfig nor --master was specified.  Using the inClusterConfig.  This might not work.
-    # 2023/02/14 01:22:23 2/2 servers successfully created
-    # 2023/02/14 01:22:23 p-cni-operator-ipvlanl3-multi-nic-n7zf6-worker-2-zt5l5-serv: Pending
-    ...
-    # 2023/02/14 01:23:13 2/2 clients successfully finished
-    # ###########################################
-    # ## Connection Check: multi-nic-cni-operator-ipvlanl3
-    # ###########################################
-    # FROM                           TO                              CONNECTED/TOTAL IPs                            BANDWIDTHs
-    # multi-nic-n7zf6-worker-2-zt5l5 multi-nic-n7zf6-worker-2-zxw2n  2/2             [192.168.0.65 192.168.64.65]   [ 1.05Gbits/sec 1.03Gbits/sec]
-    # multi-nic-n7zf6-worker-2-zxw2n multi-nic-n7zf6-worker-2-zt5l5  2/2             [192.168.0.129 192.168.64.129] [ 934Mbits/sec 937Mbits/sec]
-    # ###########################################
-    # 2023/02/14 01:23:13 multi-nic-cni-operator-ipvlanl3 checked
-    ```
+# Blog Posts, Talks, and Papers
+Discover more insights about Multi-NIC CNI through our blog posts, talks, and academic papers.
 
-    If the job takes longer than 50 minutes (mostly in large cluster), you will get 
-
-    > `error: timed out waiting for the condition on jobs/multi-nic-concheck`
-    
-      Check the test progress directly:
-
-      ```bash
-      kubectl get po -w
-      ```
-
-      When the multi-nic-concheck job has completed, check the log:
-
-      ```bash
-      kubectl logs job/multi-nic-concheck
-      ```
-
-    If some connection failed, you may investigate the failure from log of the iperf3 client pod.
-
-2. Clean up the job
-   
-   ```bash
-    make clean-concheck
-    ```
-##### Health checker service
-
-Deploy health check and agents to the cluster to serve a functional and connetion checking on-demand and periodically exporting to Prometheus metric server. See [more detail](./health-check/).
-
-#### Uninstallation
-1. Clean all CRs
-    ```bash
-    make clean-resource
-    ```
-
-2. Uninstall
-   
-    For installation by manifests with kubectl:
-    
-    ```bash
-    kubectl delete -f deploy/
-    ```
-    
-    For installation by bundle with operator-sdk:
-
-    ```bash
-    operator-sdk cleanup multi-nic-cni-operator --delete-all -n multi-nic-cni-operator
-    ```
+- Medium Blog Post Series: https://medium.com/@sunyanan.choochotkaew1/list/multinic-cni-series-8570830e6f3f
+- KubeCon+CloudNativeCon NA 20222 CNCF-Hosted Co-located Event: https://sched.co/1AsSs
+- KubeCon+CloudNativeCon NA 20224 CNCF-Hosted Co-located Event: https://sched.co/1izs8
+- Multi-NIC CNI in Vela IBM Research's AI supercomputer in the cloud: https://research.ibm.com/blog/openshift-foundation-model-stack
+- Paper - The infrastructure powering IBM's Gen AI model development: https://arxiv.org/abs/2407.05467
