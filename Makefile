@@ -173,9 +173,6 @@ clean-concheck:
 	@kubectl delete job -n default --selector multi-nic-concheck
 
 sample-concheck:
-	@export SERVER_HOST_NAME ?= $(shell kubectl get nodes|tail -n 2|head -n 1|awk '{ print $1 }')
-	@export CLIENT_HOST_NAME ?= $(shell kubectl get nodes|tail -n 1|awk '{ print $1 }')
-	@echo "Test connection from ${CLIENT_HOST_NAME} to ${SERVER_HOST_NAME}"ƒ
 	@cd ./live-migration && chmod +x live_migrate.sh && ./live_migrate.sh live_iperf3 ${SERVER_HOST_NAME} ${CLIENT_HOST_NAME} 5
 
 CONTROLLER_GEN = $(shell pwd)/bin/controller-gen

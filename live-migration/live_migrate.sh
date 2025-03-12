@@ -210,11 +210,22 @@ restart_controller() {
 # iperf live
 
 # ./live_migrate.sh live_iperf3 <SERVER_HOST_NAME> <CLIENT_HOST_NAME> <LIVE_TIME>
+# or
+# ./live_migrate.sh live_iperf3 <LIVE_TIME>
 live_iperf3() {
-   SERVER_HOST_NAME=$1
-   CLIENT_HOST_NAME=$2
-   LIVE_TIME=$3
+    # use first two pods if server and client hosts are not specified.
+    if [ $# -eq 3 ]; then
+        SERVER_HOST_NAME=$1
+        CLIENT_HOST_NAME=$2
+        LIVE_TIME=$3
+    else
+        SERVER_HOST_NAME=$(kubectl get nodes|tail -n 2|head -n 1|awk '{ print $1 }')
+        CLIENT_HOST_NAME=$(kubectl get nodes|tail -n 1|awk '{ print $1 }')
+        LIVE_TIME=$1
+    fi
+
    NETWORK_NAME=$(get_netname)
+   echo "Test connection of ${NETWORK_NAME} from ${CLIENT_HOST_NAME} to ${SERVER_HOST_NAME}"
    NETWORK_REPLACEMENT=$(create_replacement .metadata.annotations.\"k8s.v1.cni.cncf.io/networks\" \"${NETWORK_NAME}\")
    SERVER_HOSTNAME_REPLACEMENT=$(create_replacement .spec.nodeName \"${SERVER_HOST_NAME}\")
    CLIENT_HOSTNAME_REPLACEMENT=$(create_replacement .spec.nodeName \"${CLIENT_HOST_NAME}\")
