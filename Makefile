@@ -263,8 +263,8 @@ test-daemon:
 	$(DOCKER) run -i --privileged daemon-test /bin/bash -c "cd /usr/local/build/daemon/src&&make test-verbose"
 
 build-push-kbuilder-base:
-	$(DOCKER) build -t $(IMAGE_TAG_BASE)-kbuilder -f ./daemon/dockerfiles/Dockerfile.kbuilder .
-	$(DOCKER) push $(IMAGE_TAG_BASE)-kbuilder
+	$(DOCKER) build -t $(IMAGE_TAG_BASE)-kbuilder:v$(VERSION) -f ./daemon/dockerfiles/Dockerfile.kbuilder .
+	$(DOCKER) push $(IMAGE_TAG_BASE)-kbuilder:v$(VERSION)
 
 daemon-build: test-daemon ## Build docker image with the manager.
 	$(DOCKER) tag daemon-test:latest $(IMAGE_TAG_BASE)-daemon:v$(VERSION)
