@@ -52,7 +52,7 @@ operator-sdk run bundle ghcr.io/foundation-model-stack/multi-nic-cni-bundle:v1.0
         worker-node-2                          40h
         worker-node-3                          40h
 
-    If multi-nicd is not running or hostinterface is not created, check [this troubleshooting guide](./troubleshooting.md#hostinterface-not-created).
+    If multi-nicd is not running or hostinterface is not created, check [this troubleshooting guide](../troubleshooting/troubleshooting.md#hostinterface-not-created).
 
 
 3. Secondary interfaces have been correctly detected. 
@@ -71,7 +71,7 @@ operator-sdk run bundle ghcr.io/foundation-model-stack/multi-nic-cni-bundle:v1.0
             interfaceName: eth1
             ...
 
-      If secondary interface is not added, check [this troubleshooting guide](./troubleshooting.md#no-secondary-interfaces-in-hostinterface).
+      If secondary interface is not added, check [this troubleshooting guide](../troubleshooting/troubleshooting.md#no-secondary-interfaces-in-hostinterface).
 
 ## 3. Deploy MultiNicNetwork resource
 
