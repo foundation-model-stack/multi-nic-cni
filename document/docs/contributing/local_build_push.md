@@ -97,3 +97,11 @@ make deploy
 ```bash
 make undeploy
 ```
+
+## Documentation update
+We build the document website using GitHub Page site which is based on [mkdocs](https://squidfunk.github.io/mkdocs-material/publishing-your-site/).
+
+The material for building the website is under the folder `documentation`.
+To test the updated document locally, please [install `mkdocs`](https://www.mkdocs.org/getting-started/) in your local environment and test with `mkdocs serve` under the folder `documentation`.
+
+Please do not include any changes outside `documentation` folder and push the PR towards `doc` branch instead of `main` branch. 
