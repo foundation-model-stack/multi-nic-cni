@@ -37,6 +37,7 @@ cni/bin
 cni/test-bin
 daemon/src/test-bin
 document/diagram
+document/drawio/
 daemon/test-bin
 
 .DS_Store

@@ -30,6 +30,28 @@
 
          operator-sdk run bundle ${IMAGE_REGISTRY}/multi-nic-cni-bundle:v${VERSION}
 
+4. Build and use catalog source image (optional)
+
+         make catalog-build catalog-push
+
+    To test deploy with customized catalog, deploy the catalogsource resource.
+
+         apiVersion: operators.coreos.com/v1alpha1
+         kind: CatalogSource
+         metadata:
+           name: multi-nic-cni-operator
+           namespace: openshift-marketplace
+         spec:
+           displayName: Multi-NIC CNI Operator
+           publisher: IBM
+           sourceType: grpc
+           image: # <YOUR_CATALOG_IMAGE>
+           updateStrategy:
+             registryPoll:
+               interval: 10m
+
+     Then, you can deploy via console or subscription resource.
+
 ### Build CNI daemon
 1. Set `IMAGE_REGISTRY` and `VERSION` environment to target image repository for daemon
 
