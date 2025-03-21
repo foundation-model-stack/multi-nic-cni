@@ -84,8 +84,8 @@ namespaces|list of namespaces to apply the network definitions (i.e., to create 
 3. Annotate the pod with the network name to attach additional interfaces. 
 
         metadata:
-        annotations:
-            k8s.v1.cni.cncf.io/networks: multi-nic-sample
+          annotations:
+              k8s.v1.cni.cncf.io/networks: multi-nic-sample
 
 ## Check connections
 ### One-time peer-to-peer 
