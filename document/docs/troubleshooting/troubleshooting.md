@@ -5,7 +5,9 @@
 <!-- TOC tocDepth:2..3 chapterDepth:3..6 -->
 
 - [Issues](#issues)
-    - [ Multi-NIC CNI Controller gets OOMKilled](#multi-nic-cni-controller-gets-oomkilled)
+    - [Multi-NIC CNI Controller gets OOMKilled](#multi-nic-cni-controller-gets-oomkilled)
+    - [HostInterface not created](#hostinterface-not-created)
+    - [No secondary interfaces in HostInterface](#no-secondary-interfaces-in-hostinterface)
     - [Pod failed to start](#pod-failed-to-start)
     - [Pod failed to start (Summary Table)](#pod-failed-to-start-summary-table)
     - [Ping failed](#ping-failed)
@@ -104,10 +106,11 @@ Find the following keyword from `FailedCreatePodSandBox`:
 * [Network not found](#network-not-found)
 * [CNI binary not found](#cni-binary-not-found)
 * [IPAM ExecAdd: failed](#ipam-execadd-failed)
+* [No available IP address](#no-available-ip-address)
 * [IPAM plugin returned missing IP config](#ipam-plugin-returned-missing-ip-config)
 * [zero config](#zero-config)
 
-### Pod failed to start (Summary Table)
+#### Pod failed to start (Summary Table)
 For those who are familar to action command (e.g., list multinic CRs, list daemon pods), you may troubleshoot with the summary table:
 
 > - Investigate source of issue from top to bottom
@@ -124,8 +127,6 @@ Potential source of Issue|Network not found|CNI binary not found|- IPAM ExecAdd:
 **main CNI binary**<br>(multi-nic)|X|X|- *failed to clean up previous pod network (should be fixed by [#165](https://github.com/foundation-model-stack/multi-nic-cni/pull/165))|**host-device**<br>- *failed to clean up previous pod network (should be fixed by [#152](https://github.com/foundation-model-stack/multi-nic-cni/issues/152))|X
 **ipam CNI binary**<br>(multi-nic-ipam)|X|X|- *failed to clean up previous ip allocation (should be fixed by [#104](https://github.com/foundation-model-stack/multi-nic-cni/pull/104))|X|X
 **3rd-party CNI binary**|X|- binary missing|- 3rd-party IPAM failure|X|- 3rd-party main plugin failure
-
-
 
 
 #### Network not found
