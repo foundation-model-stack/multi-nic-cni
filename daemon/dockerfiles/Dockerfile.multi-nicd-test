@@ -1,4 +1,4 @@
-FROM ghcr.io/foundation-model-stack/multi-nic-cni-kbuilder
+FROM ghcr.io/foundation-model-stack/multi-nic-cni-kbuilder:v1.2.6
 
 RUN mkdir -p /usr/local/app
 RUN mkdir -p /host/opt/cni/bin
@@ -20,6 +20,7 @@ RUN cd cni && make ginkgo-set
 COPY daemon daemon
 RUN mkdir -p /usr/local/kubebuilder
 RUN mkdir -p /usr/local/build/daemon/src/test-bin
+RUN curl -sSLo setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.7.2/hack/setup-envtest.sh
 RUN cp setup-envtest.sh /usr/local/build/daemon/src/test-bin/setup-envtest.sh
 RUN cd daemon/src && make test-env && cp -r /usr/local/build/daemon/src/test-bin/bin /usr/local/kubebuilder/bin
 RUN mkdir -p daemon/src/test-bin

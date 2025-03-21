@@ -285,7 +285,7 @@ func main() {
 	da.CleanHangingAllocation(hostName)
 	router := handleRequests()
 	daemonAddress := fmt.Sprintf("0.0.0.0:%d", DAEMON_PORT)
-	log.Printf("Listening @%s", daemonAddress)
+	log.Printf("Serving at %s", daemonAddress)
 	srv := &http.Server{
 		Addr:         daemonAddress,
 		Handler:      router,

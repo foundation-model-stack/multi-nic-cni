@@ -24,8 +24,11 @@ func getHostIP(devName string) net.IP {
 		return nil
 	}
 	addrs, err := netlink.AddrList(devLink, netlink.FAMILY_V4)
-	if err != nil || len(addrs) == 0 {
+	if err != nil {
 		utils.Logger.Debug(fmt.Sprintf("cannot list address on %s: %v", devName, err))
+		return nil
+	}
+	if len(addrs) == 0 {
 		return nil
 	}
 	return addrs[0].IPNet.IP.To4()

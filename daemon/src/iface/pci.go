@@ -170,8 +170,9 @@ func GetTargetNetworks() []NetDeviceInfo {
 	pci, err := ghw.PCI()
 	if err != nil {
 		log.Printf("cannot get PCI info: %v", err)
+		return []NetDeviceInfo{}
 	}
-	devices := pci.ListDevices()
+	devices := pci.Devices
 	for _, device := range devices {
 		devClass, err := strconv.ParseInt(device.Class.ID, 16, 64)
 		if err != nil {

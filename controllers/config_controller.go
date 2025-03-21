@@ -92,7 +92,12 @@ func (r *ConfigReconciler) getDefaultConfigSpec() multinicv1.ConfigSpec {
 		PodCNIPath:  "/opt/rt_tables",
 		HostCNIPath: "/etc/iproute2/rt_tables",
 	}
-	hostPathMounts := []multinicv1.HostPathMount{binMnt, devPluginMnt, routeMnt}
+	hwDataMnt := multinicv1.HostPathMount{
+		Name:        "hwdata",
+		PodCNIPath:  "/usr/share/hwdata",
+		HostCNIPath: "/usr/share/hwdata",
+	}
+	hostPathMounts := []multinicv1.HostPathMount{binMnt, devPluginMnt, routeMnt, hwDataMnt}
 	resources := corev1.ResourceRequirements{
 		Requests: corev1.ResourceList{
 			corev1.ResourceCPU:    resource.MustParse("100m"),

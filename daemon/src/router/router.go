@@ -8,7 +8,7 @@ package router
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -41,9 +41,12 @@ func ApplyL3Config(r *http.Request) RouteUpdateResponse {
 	if err == nil {
 		for dev, routes := range devRoutesMap {
 			for _, route := range routes {
-				exists, _ := isRouteExist(route, dev)
-				log.Printf("Add route %s; (%v)", route.String(), exists)
+				exists, err := isRouteExist(route, dev)
+				if err != nil {
+					log.Printf("Failed to check route %s exists: %v", route.String(), err)
+				}
 				if !exists {
+					log.Printf("Add route %s; (%v)", route.String(), exists)
 					err = netlink.RouteAdd(&route)
 					if err != nil {
 						res_msg += fmt.Sprintf("AddRouteError %v;", err)
@@ -53,8 +56,7 @@ func ApplyL3Config(r *http.Request) RouteUpdateResponse {
 						success = success && true
 					}
 				} else {
-					res_msg += "Route exists"
-					success = false
+					res_msg += fmt.Sprintf("%s route exists;", route.String())
 				}
 			}
 		}
@@ -62,7 +64,9 @@ func ApplyL3Config(r *http.Request) RouteUpdateResponse {
 		res_msg += fmt.Sprintf("AddRoutesError %v;", err)
 		success = false
 	}
-	log.Printf("Apply L3 config %d; (%v)", tableID, success)
+	if !success {
+		log.Printf("Failed to apply L3 config %d; message: %s (%v)", tableID, res_msg, success)
+	}
 	response := RouteUpdateResponse{Success: success, Message: res_msg}
 	return response
 }
@@ -98,8 +102,8 @@ func AddRoute(r *http.Request) RouteUpdateResponse {
 	route, dev, err := getRouteFromRequest(r)
 	if err == nil {
 		exists, _ := isRouteExist(route, dev)
-		log.Printf("Add route %s; (%v)", route.String(), exists)
 		if !exists {
+			log.Printf("Add route %s", route.String())
 			// delete unequal existing route first
 			err = netlink.RouteDel(&netlink.Route{
 				Scope: netlink.SCOPE_UNIVERSE,
@@ -175,7 +179,7 @@ func isRouteExist(cmpRoute netlink.Route, dev netlink.Link) (bool, error) {
 }
 
 func getRoutesFromRequest(r *http.Request, addIfNotExists bool) (string, int, map[netlink.Link][]netlink.Route, error) {
-	reqBody, err := ioutil.ReadAll(r.Body)
+	reqBody, err := io.ReadAll(r.Body)
 	devRoutesMap := make(map[netlink.Link][]netlink.Route)
 
 	if err != nil {
@@ -226,7 +230,7 @@ func getRoutesFromRequest(r *http.Request, addIfNotExists bool) (string, int, ma
 }
 
 func getRouteFromRequest(r *http.Request) (netlink.Route, netlink.Link, error) {
-	reqBody, err := ioutil.ReadAll(r.Body)
+	reqBody, err := io.ReadAll(r.Body)
 	var route netlink.Route
 	var dev netlink.Link
 	if err != nil {
