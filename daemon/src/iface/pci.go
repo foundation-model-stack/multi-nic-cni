@@ -15,6 +15,7 @@ import (
 	"strings"
 
 	"github.com/jaypipes/ghw"
+	"github.com/vishvananda/netlink"
 	v1 "k8s.io/api/core/v1"
 )
 
@@ -167,6 +168,8 @@ func GetPfName(vf string) (string, error) {
 // GetTargetNetworks returns considering network information (existing PCI address)
 func GetTargetNetworks() []NetDeviceInfo {
 	netDevices := []NetDeviceInfo{}
+
+	// detect physical interface using pci information
 	pci, err := ghw.PCI()
 	if err != nil {
 		log.Printf("cannot get PCI info: %v", err)
@@ -202,6 +205,68 @@ func GetTargetNetworks() []NetDeviceInfo {
 			netDevices = append(netDevices, netDevice)
 		}
 	}
+
+	// Detect VLAN and other virtual interfaces
+	links, err := netlink.LinkList()
+	if err != nil {
+		log.Printf("cannot get network links: %v", err)
+		return netDevices
+	}
+
+	for _, link := range links {
+		devName := link.Attrs().Name
+
+		// Skip interfaces already detected via PCI
+		found := false
+		for _, dev := range netDevices {
+			if dev.Name == devName {
+				found = true
+				break
+			}
+		}
+		if found {
+			continue
+		}
+
+		// Detect VLAN interfaces (e.g., vlan1134@tenant-bond)
+		if strings.Contains(devName, "@") {
+			parts := strings.Split(devName, "@")
+			if len(parts) != 2 {
+				log.Printf("Invalid VLAN interface name: %s", devName)
+				continue
+			}
+			parent := parts[1]
+			if parent != "tenant-bond" {
+				log.Printf("Skipping VLAN interface %s (parent: %s)", devName, parent)
+				continue
+			}
+			log.Printf("Detected VLAN interface: %s (parent: %s)", devName, parent)
+		} else {
+			// Skip non-VLAN interfaces
+			continue
+		}
+
+		 // Check if the interface has an IP address
+		addrs, err := netlink.AddrList(link, netlink.FAMILY_V4) // Check for IPv4 addresses
+		if err != nil {
+			log.Printf("cannot list addresses for interface %s: %v", devName, err)
+			continue
+		}
+		if len(addrs) == 0 {
+			log.Printf("Interface %s has no IP address, skipping", devName)
+			continue
+		}
+
+		// Add virtual interfaces with IP addresses to the list
+		netDevice := NetDeviceInfo{
+			Name:       devName,
+			Vendor:     "", // VLANs do not have a vendor
+			Product:    "", // VLANs do not have a product
+			PciAddress: "", // VLANs do not have a PCI address
+		}
+		netDevices = append(netDevices, netDevice)
+	}
+
 	return netDevices
 }
 
