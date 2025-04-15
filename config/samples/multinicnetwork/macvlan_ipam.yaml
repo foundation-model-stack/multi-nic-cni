@@ -1,7 +1,7 @@
 apiVersion: multinic.fms.io/v1
 kind: MultiNicNetwork
 metadata:
-  name: multinic-ipvlanl3
+  name: multinic-macvlan
   namespace: default
 spec:
   subnet: "192.168.0.0/16"
@@ -12,11 +12,9 @@ spec:
       "interfaceBlock": 2,
       "vlanMode": "l2"
     }
-  multiNICIPAM: false
+  multiNICIPAM: true
   plugin:
-    cniVersion: "0.3.0"
+    cniVersion: "0.3.1"
     type: macvlan
     args: 
-      mode: l2
-  masterNets:
-    - "10.1.2.0/24"
+      mode: bridge
