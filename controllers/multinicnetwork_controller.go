@@ -38,10 +38,16 @@ type MultiNicNetworkReconciler struct {
 
 func GetPluginMap(config *rest.Config) map[string]*PluginInterface {
 	pluginMap := make(map[string]*PluginInterface)
+
+	// Add IPVLAN plugin
 	pluginMap[plugin.IPVLAN_TYPE] = new(PluginInterface)
 	*pluginMap[plugin.IPVLAN_TYPE] = &plugin.IPVLANPlugin{}
+
+	// Add MACVLAN plugin
 	pluginMap[plugin.MACVLAN_TYPE] = new(PluginInterface)
 	*pluginMap[plugin.MACVLAN_TYPE] = &plugin.MACVLANPlugin{}
+
+	// Add SRIOV plugin
 	pluginMap[plugin.SRIOV_TYPE] = new(PluginInterface)
 	sriovPlugin := &plugin.SriovPlugin{}
 	err := sriovPlugin.Init(config)
@@ -49,9 +55,13 @@ func GetPluginMap(config *rest.Config) map[string]*PluginInterface {
 		vars.NetworkLog.V(2).Info("Failed to init SR-IoV Plugin: %v", err)
 	}
 	*pluginMap[plugin.SRIOV_TYPE] = sriovPlugin
+
+	// Add AWS VPC CNI plugin
 	pluginMap[plugin.AWS_IPVLAN_TYPE] = new(PluginInterface)
 	awsVpcCNIPlugin := &plugin.AwsVpcCNIPlugin{}
 	*pluginMap[plugin.AWS_IPVLAN_TYPE] = awsVpcCNIPlugin
+
+	// Add Mellanox plugin
 	mellanoxPlugin := &plugin.MellanoxPlugin{}
 	err = mellanoxPlugin.Init(config)
 	if err != nil {
@@ -59,6 +69,7 @@ func GetPluginMap(config *rest.Config) map[string]*PluginInterface {
 	}
 	pluginMap[plugin.MELLANOX_TYPE] = new(PluginInterface)
 	*pluginMap[plugin.MELLANOX_TYPE] = mellanoxPlugin
+
 	return pluginMap
 }
 

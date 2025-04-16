@@ -131,6 +131,8 @@ func cmdAdd(args *skel.CmdArgs) error {
 	switch deviceType {
 	case "ipvlan":
 		confBytesArray, err = loadIPVANConf(args.StdinData, args.IfName, n, result.IPs)
+	case "macvlan":
+		confBytesArray, err = loadMACVLANConf(args.StdinData, args.IfName, n, result.IPs)
 	case "sriov":
 		confBytesArray, err = loadSRIOVConf(args.StdinData, args.IfName, n, result.IPs)
 	case "aws-ipvlan":
@@ -225,6 +227,8 @@ func cmdDel(args *skel.CmdArgs) error {
 	switch deviceType {
 	case "ipvlan":
 		confBytesArray, err = loadIPVANConf(args.StdinData, args.IfName, n, ips)
+	case "macvlan":
+		confBytesArray, err = loadMACVLANConf(args.StdinData, args.IfName, n, ips)
 	case "sriov":
 		confBytesArray, err = loadSRIOVConf(args.StdinData, args.IfName, n, ips)
 	case "aws-ipvlan":
@@ -286,6 +290,8 @@ func cmdCheck(args *skel.CmdArgs) error {
 	switch deviceType {
 	case "ipvlan":
 		confBytesArray, err = loadIPVANConf(args.StdinData, args.IfName, n, result.IPs)
+	case "macvlan":
+		confBytesArray, err = loadMACVLANConf(args.StdinData, args.IfName, n, result.IPs)
 	case "sriov":
 		confBytesArray, err = loadSRIOVConf(args.StdinData, args.IfName, n, result.IPs)
 	case "aws-ipvlan":
