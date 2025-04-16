@@ -15,7 +15,7 @@ import (
 	"errors"
 
 	multinicv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
-	"github.com/foundation-model-stack/multi-nic-cni/controllers/vars"
+	"github.com/foundation-model-stack/multi-nic-cni/internal/vars"
 	"k8s.io/client-go/kubernetes"
 )
 

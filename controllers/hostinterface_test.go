@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache2.0
  */
 
-package controllers
+package controllers_test
 
 import (
 	multinicv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"

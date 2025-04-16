@@ -8,7 +8,7 @@ package controllers
 import (
 	"errors"
 
-	"github.com/foundation-model-stack/multi-nic-cni/controllers/vars"
+	"github.com/foundation-model-stack/multi-nic-cni/internal/vars"
 )
 
 type DaemonPod struct {

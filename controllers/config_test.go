@@ -4,7 +4,7 @@ import (
 	"time"
 
 	multinicv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
-	"github.com/foundation-model-stack/multi-nic-cni/controllers/vars"
+	"github.com/foundation-model-stack/multi-nic-cni/internal/vars"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"go.uber.org/zap/zapcore"
