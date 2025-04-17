@@ -94,7 +94,7 @@ func checkSyncAllocationWithMap(allocationMap, crAllocationMap map[string]map[st
 	for interfaceIndex := range interfaceNames {
 		ippool := ippools[interfaceIndex]
 		fmt.Printf("befor %v \n", allocationMap)
-		changed, newAllocations := multinicnetworkReconciler.CIDRHandler.GetSyncAllocations(ippool, allocationMap, crAllocationMap)
+		changed, newAllocations := MultiNicnetworkReconcilerInstance.CIDRHandler.GetSyncAllocations(ippool, allocationMap, crAllocationMap)
 		fmt.Printf("after %v - %d\n", allocationMap, len(interfaceNames)-interfaceIndex-1)
 		fmt.Printf("allocations %v\n", newAllocations)
 		// must be updated (deleted)
@@ -188,7 +188,7 @@ var _ = Describe("Unsync IPPool Test", func() {
 		for interfaceIndex := range interfaceNames {
 			ippool := ippools[interfaceIndex]
 			fmt.Printf("befor %v \n", allocationMap)
-			changed, newAllocations := multinicnetworkReconciler.CIDRHandler.GetSyncAllocations(ippool, allocationMap, crAllocationMap)
+			changed, newAllocations := MultiNicnetworkReconcilerInstance.CIDRHandler.GetSyncAllocations(ippool, allocationMap, crAllocationMap)
 			fmt.Printf("after %v - %d\n", allocationMap, len(interfaceNames)-interfaceIndex-1)
 			fmt.Printf("allocations %v\n", newAllocations)
 			// must be changed

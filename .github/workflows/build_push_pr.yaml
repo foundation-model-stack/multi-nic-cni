@@ -9,8 +9,7 @@ on:
     paths:
       - .github/workflows/build_push_pr.yaml
       - controllers/**
-      - compute/**
-      - plugin/**
+      - internal/**
       - ./main.go
       - ./go.mod
       - config/**

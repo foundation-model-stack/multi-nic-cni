@@ -5,8 +5,6 @@
 
 /*
 Test Suite for Multi-NIC CNI operator
-- Deploy crd
--
 */
 
 package controllers
@@ -31,9 +29,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	multinicv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
-	"github.com/foundation-model-stack/multi-nic-cni/controllers"
-	"github.com/foundation-model-stack/multi-nic-cni/controllers/vars"
-	"github.com/foundation-model-stack/multi-nic-cni/plugin"
+	"github.com/foundation-model-stack/multi-nic-cni/internal/plugin"
+	"github.com/foundation-model-stack/multi-nic-cni/internal/vars"
 	ctrl "sigs.k8s.io/controller-runtime"
 	//+kubebuilder:scaffold:imports
 )
@@ -46,21 +43,21 @@ const (
 	fakeDaemonPodName = "fake-multi-nicd"
 )
 
-var k8sClient client.Client
+var K8sClient client.Client
 var testEnv *envtest.Environment
 var nodes []corev1.Node = generateNodes()
 var interfaceNames []string = []string{"eth1", "eth2"}
 var networkPrefixes []string = []string{"10.242.0.", "10.242.1."}
-var hifList map[string]multinicv1.HostInterface = generateHostInterfaceList(nodes)
+var HifList map[string]multinicv1.HostInterface = generateHostInterfaceList(nodes)
 
-var ipvlanPlugin *plugin.IPVLANPlugin
-var macvlanPlugin *plugin.MACVLANPlugin
-var sriovPlugin *plugin.SriovPlugin
+var IpvlanPlugin *plugin.IPVLANPlugin
+var MacvlanPlugin *plugin.MACVLANPlugin
+var SriovPlugin *plugin.SriovPlugin
 var mellanoxPlugin *plugin.MellanoxPlugin
 
-var multinicnetworkReconciler *controllers.MultiNicNetworkReconciler
-var configReconciler *controllers.ConfigReconciler
-var daemonWatcher *controllers.DaemonWatcher
+var MultiNicnetworkReconcilerInstance *MultiNicNetworkReconciler
+var configReconciler *ConfigReconciler
+var daemonWatcher *DaemonWatcher
 
 // Multi-NIC IPAM
 var globalSubnet string = "192.168.0.0/16"
@@ -107,9 +104,9 @@ var _ = BeforeSuite(func() {
 
 	//+kubebuilder:scaffold:scheme
 
-	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
+	K8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
 	Expect(err).NotTo(HaveOccurred())
-	Expect(k8sClient).NotTo(BeNil())
+	Expect(K8sClient).NotTo(BeNil())
 
 	// Start controllers
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
@@ -117,12 +114,12 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).ToNot(HaveOccurred())
 
-	daemonCacheHandler := &controllers.DaemonCacheHandler{SafeCache: controllers.InitSafeCache()}
+	daemonCacheHandler := &DaemonCacheHandler{SafeCache: InitSafeCache()}
 
 	quit := make(chan struct{})
 	defer close(quit)
 
-	hostInterfaceHandler := controllers.NewHostInterfaceHandler(cfg, mgr.GetClient())
+	hostInterfaceHandler := NewHostInterfaceHandler(cfg, mgr.GetClient())
 
 	defHandler, err := plugin.GetNetAttachDefHandler(cfg)
 	Expect(err).ToNot(HaveOccurred())
@@ -131,17 +128,17 @@ var _ = BeforeSuite(func() {
 	if err != nil {
 		fmt.Printf("Failed to NewForConfig: %v", err)
 	}
-	cidrHandler := controllers.NewCIDRHandler(mgr.GetClient(), cfg, hostInterfaceHandler, daemonCacheHandler, quit)
+	cidrHandler := NewCIDRHandler(mgr.GetClient(), cfg, hostInterfaceHandler, daemonCacheHandler, quit)
 	go cidrHandler.Run()
 
-	pluginMap := controllers.GetPluginMap(cfg)
+	pluginMap := GetPluginMap(cfg)
 
 	// Initialize daemon watcher
 	podQueue := make(chan *v1.Pod, vars.MaxQueueSize)
-	daemonWatcher = controllers.NewDaemonWatcher(mgr.GetClient(), cfg, hostInterfaceHandler, daemonCacheHandler, podQueue, quit)
+	daemonWatcher = NewDaemonWatcher(mgr.GetClient(), cfg, hostInterfaceHandler, daemonCacheHandler, podQueue, quit)
 	go daemonWatcher.Run()
 
-	err = (&controllers.CIDRReconciler{
+	err = (&CIDRReconciler{
 		Client:        mgr.GetClient(),
 		Scheme:        mgr.GetScheme(),
 		CIDRHandler:   cidrHandler,
@@ -149,7 +146,7 @@ var _ = BeforeSuite(func() {
 	}).SetupWithManager(mgr)
 	Expect(err).ToNot(HaveOccurred())
 
-	err = (&controllers.HostInterfaceReconciler{
+	err = (&HostInterfaceReconciler{
 		Client:               mgr.GetClient(),
 		Scheme:               mgr.GetScheme(),
 		HostInterfaceHandler: hostInterfaceHandler,
@@ -158,14 +155,14 @@ var _ = BeforeSuite(func() {
 	}).SetupWithManager(mgr)
 	Expect(err).ToNot(HaveOccurred())
 
-	err = (&controllers.IPPoolReconciler{
+	err = (&IPPoolReconciler{
 		Client:      mgr.GetClient(),
 		Scheme:      mgr.GetScheme(),
 		CIDRHandler: cidrHandler,
 	}).SetupWithManager(mgr)
 	Expect(err).ToNot(HaveOccurred())
 
-	configReconciler = &controllers.ConfigReconciler{
+	configReconciler = &ConfigReconciler{
 		Client:              mgr.GetClient(),
 		Clientset:           clientset,
 		Config:              cfg,
@@ -176,7 +173,7 @@ var _ = BeforeSuite(func() {
 	err = (configReconciler).SetupWithManager(mgr)
 	Expect(err).ToNot(HaveOccurred())
 
-	multinicnetworkReconciler = &controllers.MultiNicNetworkReconciler{
+	MultiNicnetworkReconcilerInstance = &MultiNicNetworkReconciler{
 		Client:              mgr.GetClient(),
 		NetAttachDefHandler: defHandler,
 		CIDRHandler:         cidrHandler,
@@ -184,7 +181,7 @@ var _ = BeforeSuite(func() {
 		PluginMap:           pluginMap,
 	}
 
-	err = (multinicnetworkReconciler).SetupWithManager(mgr)
+	err = (MultiNicnetworkReconcilerInstance).SetupWithManager(mgr)
 	Expect(err).ToNot(HaveOccurred())
 
 	//+kubebuilder:scaffold:builder
@@ -234,40 +231,40 @@ var _ = BeforeSuite(func() {
 
 	operatorNamespace := corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: controllers.OPERATOR_NAMESPACE,
+			Name: OPERATOR_NAMESPACE,
 		},
 	}
-	Expect(k8sClient.Create(context.TODO(), &operatorNamespace)).Should(Succeed())
+	Expect(K8sClient.Create(context.TODO(), &operatorNamespace)).Should(Succeed())
 
 	// Deploy daemon config
-	Expect(k8sClient.Create(context.TODO(), daemonConfig)).Should(Succeed())
+	Expect(K8sClient.Create(context.TODO(), daemonConfig)).Should(Succeed())
 	// Deploy host interface
-	for _, hif := range hifList {
-		Expect(k8sClient.Create(context.TODO(), &hif)).Should(Succeed())
+	for _, hif := range HifList {
+		Expect(K8sClient.Create(context.TODO(), &hif)).Should(Succeed())
 		cidrHandler.HostInterfaceHandler.SetCache(hif.Spec.HostName, hif)
 	}
 
 	// Deploy daemon pod
 	daemonPod := newDaemonPod(daemonConfig.Spec.Daemon)
-	Expect(k8sClient.Create(context.TODO(), daemonPod)).Should(Succeed())
-	Expect(k8sClient.Get(context.TODO(), types.NamespacedName{Name: daemonPod.Name, Namespace: daemonPod.Namespace}, daemonPod)).Should(Succeed())
+	Expect(K8sClient.Create(context.TODO(), daemonPod)).Should(Succeed())
+	Expect(K8sClient.Get(context.TODO(), types.NamespacedName{Name: daemonPod.Name, Namespace: daemonPod.Namespace}, daemonPod)).Should(Succeed())
 	updatePodReadyStatus(daemonPod)
-	Expect(k8sClient.Get(context.TODO(), types.NamespacedName{Name: daemonPod.Name, Namespace: daemonPod.Namespace}, daemonPod)).Should(Succeed())
-	Expect(controllers.IsContainerReady(*daemonPod)).To(Equal(true))
+	Expect(K8sClient.Get(context.TODO(), types.NamespacedName{Name: daemonPod.Name, Namespace: daemonPod.Namespace}, daemonPod)).Should(Succeed())
+	Expect(IsContainerReady(*daemonPod)).To(Equal(true))
 
 	// Deploy sriov dependency
-	ipvlanPlugin = &plugin.IPVLANPlugin{}
-	macvlanPlugin = &plugin.MACVLANPlugin{}
-	sriovPlugin = &plugin.SriovPlugin{}
+	IpvlanPlugin = &plugin.IPVLANPlugin{}
+	MacvlanPlugin = &plugin.MACVLANPlugin{}
+	SriovPlugin = &plugin.SriovPlugin{}
 	sriovNamespace := corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: plugin.SRIOV_NAMESPACE,
 		},
 	}
 
-	plugin.SRIOV_MANIFEST_PATH = "../plugin/template/cni-config"
-	Expect(k8sClient.Create(context.TODO(), &sriovNamespace)).Should(Succeed())
-	err = sriovPlugin.Init(cfg)
+	plugin.SRIOV_MANIFEST_PATH = "../internal/plugin/template/cni-config"
+	Expect(K8sClient.Create(context.TODO(), &sriovNamespace)).Should(Succeed())
+	err = SriovPlugin.Init(cfg)
 	Expect(err).ToNot(HaveOccurred())
 
 	// Deploy mellanox dependency
@@ -375,8 +372,8 @@ func generateHostInterfaceList(nodes []corev1.Node) map[string]multinicv1.HostIn
 	return hifList
 }
 
-// getMultiNicCNINetwork returns MultiNicNetwork object
-func getMultiNicCNINetwork(name string, cniVersion string, cniType string, cniArgs map[string]string) *multinicv1.MultiNicNetwork {
+// GetMultiNicCNINetwork returns MultiNicNetwork object
+func GetMultiNicCNINetwork(name string, cniVersion string, cniType string, cniArgs map[string]string) *multinicv1.MultiNicNetwork {
 	return &multinicv1.MultiNicNetwork{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
@@ -457,7 +454,7 @@ func newDaemonPod(daemonSpec multinicv1.DaemonSpec) *corev1.Pod {
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fakeDaemonPodName,
-			Namespace: controllers.OPERATOR_NAMESPACE,
+			Namespace: OPERATOR_NAMESPACE,
 			Labels:    labels,
 		},
 		Spec: corev1.PodSpec{
@@ -481,6 +478,6 @@ func updatePodReadyStatus(pod *corev1.Pod) {
 		Ready: true,
 	}
 	pod.Status.ContainerStatuses = []v1.ContainerStatus{readyStatus}
-	Expect(k8sClient.Status().Update(context.TODO(), pod)).Should(Succeed())
-	Expect(controllers.IsContainerReady(*pod)).To(Equal(true))
+	Expect(K8sClient.Status().Update(context.TODO(), pod)).Should(Succeed())
+	Expect(IsContainerReady(*pod)).To(Equal(true))
 }

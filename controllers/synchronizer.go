@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/foundation-model-stack/multi-nic-cni/controllers/vars"
+	"github.com/foundation-model-stack/multi-nic-cni/internal/vars"
 )
 
 func RunPeriodicUpdate(ticker *time.Ticker, daemonWatcher *DaemonWatcher, cidrHandler *CIDRHandler, hostInterfaceReconciler *HostInterfaceReconciler, quit chan struct{}) {

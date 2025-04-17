@@ -19,8 +19,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	multinicv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
-	"github.com/foundation-model-stack/multi-nic-cni/controllers/vars"
-	"github.com/foundation-model-stack/multi-nic-cni/plugin"
+	"github.com/foundation-model-stack/multi-nic-cni/internal/plugin"
+	"github.com/foundation-model-stack/multi-nic-cni/internal/vars"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"

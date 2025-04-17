@@ -3,15 +3,15 @@
  * SPDX-License-Identifier: Apache2.0
  */
 
-package controllers
+package controllers_test
 
 import (
 	"encoding/json"
 	"fmt"
 
 	"github.com/containernetworking/cni/pkg/types"
-	"github.com/foundation-model-stack/multi-nic-cni/controllers"
-	"github.com/foundation-model-stack/multi-nic-cni/plugin"
+	. "github.com/foundation-model-stack/multi-nic-cni/controllers"
+	"github.com/foundation-model-stack/multi-nic-cni/internal/plugin"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	//+kubebuilder:scaffold:imports
@@ -31,9 +31,9 @@ var _ = Describe("Test GetConfig of main plugins", func() {
 		cniArgs["mode"] = mode
 		cniArgs["mtu"] = fmt.Sprintf("%d", mtu)
 
-		multinicnetwork := getMultiNicCNINetwork("test-ipvlanl2", cniVersion, cniType, cniArgs)
+		multinicnetwork := GetMultiNicCNINetwork("test-ipvlanl2", cniVersion, cniType, cniArgs)
 
-		mainPlugin, _, err := ipvlanPlugin.GetConfig(*multinicnetwork, hifList)
+		mainPlugin, _, err := IpvlanPlugin.GetConfig(*multinicnetwork, HifList)
 		Expect(err).NotTo(HaveOccurred())
 		expected := plugin.IPVLANTypeNetConf{
 			NetConf: types.NetConf{
@@ -45,10 +45,10 @@ var _ = Describe("Test GetConfig of main plugins", func() {
 		}
 		expectedBytes, _ := json.Marshal(expected)
 		Expect(mainPlugin).To(Equal(string(expectedBytes)))
-		isMultiNicIPAM, err := controllers.IsMultiNICIPAM(multinicnetwork)
+		isMultiNicIPAM, err := IsMultiNICIPAM(multinicnetwork)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(isMultiNicIPAM).To(Equal(true))
-		err = ipvlanPlugin.CleanUp(*multinicnetwork)
+		err = IpvlanPlugin.CleanUp(*multinicnetwork)
 		Expect(err).NotTo(HaveOccurred())
 	})
 
@@ -60,9 +60,9 @@ var _ = Describe("Test GetConfig of main plugins", func() {
 		cniArgs["mode"] = mode
 		cniArgs["mtu"] = fmt.Sprintf("%d", mtu)
 
-		multinicnetwork := getMultiNicCNINetwork("test-macvlan", cniVersion, cniType, cniArgs)
+		multinicnetwork := GetMultiNicCNINetwork("test-macvlan", cniVersion, cniType, cniArgs)
 
-		mainPlugin, _, err := macvlanPlugin.GetConfig(*multinicnetwork, hifList)
+		mainPlugin, _, err := MacvlanPlugin.GetConfig(*multinicnetwork, HifList)
 		Expect(err).NotTo(HaveOccurred())
 		expected := plugin.MACVLANTypeNetConf{
 			NetConf: types.NetConf{
@@ -74,10 +74,10 @@ var _ = Describe("Test GetConfig of main plugins", func() {
 		}
 		expectedBytes, _ := json.Marshal(expected)
 		Expect(mainPlugin).To(Equal(string(expectedBytes)))
-		isMultiNicIPAM, err := controllers.IsMultiNICIPAM(multinicnetwork)
+		isMultiNicIPAM, err := IsMultiNICIPAM(multinicnetwork)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(isMultiNicIPAM).To(Equal(true))
-		err = macvlanPlugin.CleanUp(*multinicnetwork)
+		err = MacvlanPlugin.CleanUp(*multinicnetwork)
 		Expect(err).NotTo(HaveOccurred())
 	})
 
@@ -88,22 +88,22 @@ var _ = Describe("Test GetConfig of main plugins", func() {
 		isRdma := true
 		cniArgs["numVfs"] = fmt.Sprintf("%d", numVfs)
 		cniArgs["isRdma"] = fmt.Sprintf("%v", isRdma)
-		multinicnetwork := getMultiNicCNINetwork("test-sriov-default", cniVersion, cniType, cniArgs)
+		multinicnetwork := GetMultiNicCNINetwork("test-sriov-default", cniVersion, cniType, cniArgs)
 
-		_, annotations, err := sriovPlugin.GetConfig(*multinicnetwork, hifList)
+		_, annotations, err := SriovPlugin.GetConfig(*multinicnetwork, HifList)
 		Expect(err).NotTo(HaveOccurred())
 		defaultResourceName := plugin.ValidateResourceName(multinicnetwork.Name)
 
-		netName := sriovPlugin.SriovnetworkName(multinicnetwork.Name)
+		netName := SriovPlugin.SriovnetworkName(multinicnetwork.Name)
 		sriovpolicy := &plugin.SriovNetworkNodePolicy{}
-		err = sriovPlugin.SriovNetworkNodePolicyHandler.Get(multinicnetwork.Name, plugin.SRIOV_NAMESPACE, sriovpolicy)
+		err = SriovPlugin.SriovNetworkNodePolicyHandler.Get(multinicnetwork.Name, plugin.SRIOV_NAMESPACE, sriovpolicy)
 		// SriovPolicy is created
 		Expect(err).NotTo(HaveOccurred())
 		Expect(sriovpolicy.Spec.NumVfs).To(Equal(numVfs))
 		Expect(sriovpolicy.Spec.IsRdma).To(Equal(isRdma))
 
 		sriovnet := &plugin.SriovNetwork{}
-		err = sriovPlugin.SriovNetworkHandler.Get(netName, plugin.SRIOV_NAMESPACE, sriovnet)
+		err = SriovPlugin.SriovNetworkHandler.Get(netName, plugin.SRIOV_NAMESPACE, sriovnet)
 		// SriovNetwork is created
 		Expect(err).NotTo(HaveOccurred())
 		Expect(sriovnet.Spec.ResourceName).To(Equal(defaultResourceName))
@@ -111,7 +111,7 @@ var _ = Describe("Test GetConfig of main plugins", func() {
 		Expect(sriovnet.Spec.NetworkNamespace).To(Equal(multinicnetwork.Namespace))
 		Expect(annotations[plugin.RESOURCE_ANNOTATION]).To(Equal(plugin.SRIOV_RESOURCE_PREFIX + "/" + sriovnet.Spec.ResourceName))
 
-		err = sriovPlugin.CleanUp(*multinicnetwork)
+		err = SriovPlugin.CleanUp(*multinicnetwork)
 		Expect(err).NotTo(HaveOccurred())
 	})
 
@@ -124,26 +124,26 @@ var _ = Describe("Test GetConfig of main plugins", func() {
 		cniArgs["numVfs"] = fmt.Sprintf("%d", numVfs)
 		cniArgs["isRdma"] = fmt.Sprintf("%v", isRdma)
 		cniArgs["resourceName"] = resourceName
-		multinicnetwork := getMultiNicCNINetwork("test-sriov", cniVersion, cniType, cniArgs)
+		multinicnetwork := GetMultiNicCNINetwork("test-sriov", cniVersion, cniType, cniArgs)
 
-		_, annotations, err := sriovPlugin.GetConfig(*multinicnetwork, hifList)
+		_, annotations, err := SriovPlugin.GetConfig(*multinicnetwork, HifList)
 		Expect(err).NotTo(HaveOccurred())
-		netName := sriovPlugin.SriovnetworkName(multinicnetwork.Name)
+		netName := SriovPlugin.SriovnetworkName(multinicnetwork.Name)
 
 		sriovpolicy := &plugin.SriovNetworkNodePolicy{}
-		err = sriovPlugin.SriovNetworkNodePolicyHandler.Get(multinicnetwork.Name, plugin.SRIOV_NAMESPACE, sriovpolicy)
+		err = SriovPlugin.SriovNetworkNodePolicyHandler.Get(multinicnetwork.Name, plugin.SRIOV_NAMESPACE, sriovpolicy)
 		// SriovPolicy must not be created
 		Expect(err).To(HaveOccurred())
 
 		sriovnet := &plugin.SriovNetwork{}
-		err = sriovPlugin.SriovNetworkHandler.Get(netName, plugin.SRIOV_NAMESPACE, sriovnet)
+		err = SriovPlugin.SriovNetworkHandler.Get(netName, plugin.SRIOV_NAMESPACE, sriovnet)
 		// SriovNetwork is created
 		Expect(err).NotTo(HaveOccurred())
 		Expect(sriovnet.Spec.ResourceName).To(Equal(resourceName))
 		Expect(sriovnet.Spec.NetworkNamespace).To(Equal(multinicnetwork.Namespace))
 		Expect(annotations[plugin.RESOURCE_ANNOTATION]).To(Equal(plugin.SRIOV_RESOURCE_PREFIX + "/" + sriovnet.Spec.ResourceName))
 
-		err = sriovPlugin.CleanUp(*multinicnetwork)
+		err = SriovPlugin.CleanUp(*multinicnetwork)
 		Expect(err).NotTo(HaveOccurred())
 	})
 

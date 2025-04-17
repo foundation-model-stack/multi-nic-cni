@@ -18,9 +18,9 @@ import (
 	"sort"
 
 	multinicv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
-	"github.com/foundation-model-stack/multi-nic-cni/compute"
-	"github.com/foundation-model-stack/multi-nic-cni/controllers/vars"
-	"github.com/foundation-model-stack/multi-nic-cni/plugin"
+	"github.com/foundation-model-stack/multi-nic-cni/internal/compute"
+	"github.com/foundation-model-stack/multi-nic-cni/internal/plugin"
+	"github.com/foundation-model-stack/multi-nic-cni/internal/vars"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"

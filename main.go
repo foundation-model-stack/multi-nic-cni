@@ -32,8 +32,8 @@ import (
 	multinicv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
 	netv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
 	"github.com/foundation-model-stack/multi-nic-cni/controllers"
-	"github.com/foundation-model-stack/multi-nic-cni/controllers/vars"
-	"github.com/foundation-model-stack/multi-nic-cni/plugin"
+	"github.com/foundation-model-stack/multi-nic-cni/internal/plugin"
+	"github.com/foundation-model-stack/multi-nic-cni/internal/vars"
 	"github.com/operator-framework/operator-lib/leader"
 	//+kubebuilder:scaffold:imports
 )

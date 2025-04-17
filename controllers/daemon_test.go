@@ -8,9 +8,9 @@ import (
 
 func cleanCache() {
 	// clear cache to simulate when list cannot be updated at start
-	multinicnetworkReconciler.CIDRHandler.DaemonCacheHandler.UnsetCache(fakeNodeName)
+	MultiNicnetworkReconcilerInstance.CIDRHandler.DaemonCacheHandler.UnsetCache(fakeNodeName)
 	// no daemon pod in cache
-	daemonPods := multinicnetworkReconciler.CIDRHandler.DaemonCacheHandler.ListCache()
+	daemonPods := MultiNicnetworkReconcilerInstance.CIDRHandler.DaemonCacheHandler.ListCache()
 	Expect(len(daemonPods)).To(Equal(0))
 }
 
@@ -21,7 +21,7 @@ var _ = Describe("Daemon Test", func() {
 		Expect(err).Should(Succeed())
 		Expect(daemonPod.Name).Should(Equal(fakeDaemonPodName))
 		// daemonPods should be set
-		daemonPods := multinicnetworkReconciler.CIDRHandler.DaemonCacheHandler.ListCache()
+		daemonPods := MultiNicnetworkReconcilerInstance.CIDRHandler.DaemonCacheHandler.ListCache()
 		Expect(len(daemonPods)).To(Equal(1))
 	})
 
@@ -30,7 +30,7 @@ var _ = Describe("Daemon Test", func() {
 		_, err := daemonWatcher.TryGetDaemonPod(fakeNodeName + "-invalid")
 		Expect(err).NotTo(BeNil())
 		// daemonPods should not be set
-		daemonPods := multinicnetworkReconciler.CIDRHandler.DaemonCacheHandler.ListCache()
+		daemonPods := MultiNicnetworkReconcilerInstance.CIDRHandler.DaemonCacheHandler.ListCache()
 		Expect(len(daemonPods)).To(Equal(0))
 	})
 })
