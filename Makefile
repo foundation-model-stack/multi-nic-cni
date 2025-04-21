@@ -77,7 +77,47 @@ all: build
 help: ## Display this help.
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
+# go-get-tool will 'go get' any package $3 and install it to $2 in folder $1.
+define go-get-tool
+@[ -f $(2) ] || { \
+set -e ;\
+TMP_DIR=$$(mktemp -d) ;\
+cd $$TMP_DIR ;\
+go mod init tmp ;\
+echo "Downloading $(3)" ;\
+GOBIN=$(1) go install $(3) ;\
+ls $$TMP_DIR;\
+echo $(2);\
+rm -rf $$TMP_DIR ;\
+}
+endef
+
+BASE_DIR=$(shell pwd)
+
 ##@ Development
+DEV_BIN_DIR		= $(BASE_DIR)/tools/devbin
+GOLANGCI_LINT	?= $(DEV_BIN_DIR)/golangci-lint
+CONTROLLER_GEN 	?= $(DEV_BIN_DIR)/controller-gen
+KUSTOMIZE 		?= $(DEV_BIN_DIR)/kustomize
+
+$(DEV_BIN_DIR):
+	mkdir -p $(DEV_BIN_DIR)
+
+.PHONY: controller-gen
+controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary.
+$(CONTROLLER_GEN): $(DEV_BIN_DIR)
+	$(call go-get-tool,$(DEV_BIN_DIR),$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen@v0.16.1)
+
+.PHONY: kustomize
+kustomize: $(KUSTOMIZE)
+$(KUSTOMIZE): $(DEV_BIN_DIR) ## Download kustomize locally if necessary.
+	$(call go-get-tool,$(DEV_BIN_DIR),$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v4@v4.5.2)
+
+GOLANGCI_LINT_INSTALL_SCRIPT ?= 'https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh'
+.PHONY: golangci-lint
+golangci-lint: $(GOLANGCI_LINT) ### Download golangci-lint locally if necessary.
+$(GOLANGCI_LINT):$(DEV_BIN_DIR)
+	test -s $(GOLANGCI_LINT) || { curl -sSfL $(GOLANGCI_LINT_INSTALL_SCRIPT) | sh -s -- -b $(DEV_BIN_DIR)  v1.54.2; }
 
 .PHONY: manifests
 manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
@@ -95,13 +135,49 @@ vet: ## Run go vet against code.
 tidy:
 	go mod tidy
 
-BASE_DIR=$(shell pwd)
-ENVTEST_ASSETS_DIR=$(BASE_DIR)/testbin
-test: SHELL := /bin/bash
-test: tidy manifests generate fmt vet ## Run tests.
-	mkdir -p ${ENVTEST_ASSETS_DIR}
-	test -f ${ENVTEST_ASSETS_DIR}/setup-envtest.sh || curl -sSLo ${ENVTEST_ASSETS_DIR}/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.7.2/hack/setup-envtest.sh
-	source ${ENVTEST_ASSETS_DIR}/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); go test ./controllers/... ./internal/... -coverprofile cover.out
+.PHONY: fix
+fix: tidy fmt vet golangci-lint ## Fixup files in the repo.
+	$(GOLANGCI_LINT) run --fix
+
+.PHONY: lint
+lint: tidy fmt vet golangci-lint ## Run the lint check
+	$(GOLANGCI_LINT) run
+
+##@ Test
+TEST_BIN_DIR		= $(BASE_DIR)/tools/testbin
+TEST_RESULT_DIR 	= $(BASE_DIR)/testing
+ENVTEST				?= $(TEST_BIN_DIR)/setup-envtest
+GINKGO				?= $(TEST_BIN_DIR)/ginkgo
+ENVTEST_K8S_VERSION ?= 1.28.3
+
+$(TEST_BIN_DIR):
+	mkdir -p $(TEST_BIN_DIR)
+
+$(TEST_RESULT_DIR):
+	mkdir -p $(TEST_RESULT_DIR)
+
+.PHONY: ginkgo
+ginkgo: $(GINKGO) ## Download and install ginkgo locally if necessary.
+$(GINKGO): $(TEST_BIN_DIR)
+	$(call go-get-tool,$(TEST_BIN_DIR),$(GINKGO),github.com/onsi/ginkgo/v2/ginkgo@v2.20.1)
+
+.PHONY: envtest
+envtest: $(ENVTEST) ## Download and install setup-envtest locally if necessary.
+$(ENVTEST): $(TEST_BIN_DIR)
+	$(call go-get-tool,$(TEST_BIN_DIR),$(ENVTEST),sigs.k8s.io/controller-runtime/tools/setup-envtest@v0.0.0-20240624150636-162a113134de)
+
+.PHONY: test
+test: $(TEST_RESULT_DIR) fmt vet ginkgo manifests generate envtest
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" $(TEST_BIN_DIR)/ginkgo run --cover --coverprofile=cover.out --json-report unittest-report.json   ./controllers/...
+	@./hack/json-report-to-markdown.sh unittest-report "Unit Test"
+	@rm unittest-report.json
+
+.PHONY: test-sanity
+test-sanity: fmt vet generate fix ## Test repo formatting, linting, etc.
+	git diff --exit-code # fast-fail if generate or fix produced changes
+	make setup-lint
+	make lint
+	git diff --exit-code # diff again to ensure other checks don't change repo
 
 ##@ Build
 
@@ -110,14 +186,6 @@ build: generate fmt vet ## Build manager binary.
 
 run: manifests generate fmt vet ## Run a controller from your host.
 	go run ./main.go
-
-golint:
-	$(DOCKER) pull golangci/golangci-lint:v1.54.2
-	$(DOCKER) run --tty --rm \
-		--volume '$(BASE_DIR):/app' \
-		--workdir /app \
-		golangci/golangci-lint:v1.54.2 \
-		golangci-lint run --verbose
 
 docker-build: test ## Build docker image with the manager.
 	$(DOCKER) build -t ${IMG} .
@@ -174,30 +242,6 @@ clean-concheck:
 
 sample-concheck:
 	@cd ./live-migration && chmod +x live_migrate.sh && ./live_migrate.sh live_iperf3 ${SERVER_HOST_NAME} ${CLIENT_HOST_NAME} 5
-
-CONTROLLER_GEN = $(shell pwd)/bin/controller-gen
-controller-gen: ## Download controller-gen locally if necessary.
-	$(call go-get-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen@v0.16.5)
-
-KUSTOMIZE = $(shell pwd)/bin/kustomize
-kustomize: ## Download kustomize locally if necessary.
-	$(call go-get-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v4@v4.5.2)
-
-# go-get-tool will 'go get' any package $2 and install it to $1.
-PROJECT_DIR := $(shell dirname $(abspath $(firstword $(MAKEFILE_LIST))))
-define go-get-tool
-@[ -f $(1) ] || { \
-set -e ;\
-TMP_DIR=$$(mktemp -d) ;\
-cd $$TMP_DIR ;\
-go mod init tmp ;\
-echo "Downloading $(2)" ;\
-GOBIN=$(PROJECT_DIR)/bin go install $(2) ;\
-ls $$TMP_DIR;\
-echo $(PROJECT_DIR);\
-rm -rf $$TMP_DIR ;\
-}
-endef
 
 .PHONY: bundle
 bundle: manifests kustomize predeploy ## Generate bundle manifests and metadata, then validate generated files.
@@ -271,6 +315,8 @@ daemon-build: test-daemon ## Build docker image with the manager.
 
 daemon-push:
 	$(DOCKER) push $(IMAGE_TAG_BASE)-daemon:v$(VERSION)
+
+##@ Release
 
 # Determine correct 'sed' version to use based on OS
 ifeq ($(shell uname), Darwin)

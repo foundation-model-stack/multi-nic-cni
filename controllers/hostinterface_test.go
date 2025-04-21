@@ -8,7 +8,7 @@ package controllers_test
 import (
 	multinicv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
 	"github.com/foundation-model-stack/multi-nic-cni/controllers"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 

@@ -80,11 +80,11 @@
 
 ## Test
 ```bash
-# test golang linter (available after v1.0.4)
-make golint
+# test golang linter
+make lint
 # test controller 
 make test
-# test daemon (available after v1.0.3)
+# test daemon
 make test-daemon
 ```
 
