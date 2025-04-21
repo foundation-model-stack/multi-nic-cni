@@ -14,6 +14,24 @@ Test | Description | File
 | Host Interface Test/UpdateNewInterfaces - original with more than one devices | can leave old one | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/controllers/hostinterface_test.go |
 | Host Interface Test/UpdateNewInterfaces - original with more than one devices | can leave old one when some is missing | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/controllers/hostinterface_test.go |
 | Host Interface Test/UpdateNewInterfaces - original with more than one devices | can leave old one when some is missing and some with new info | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/controllers/hostinterface_test.go |
+| Test CIDRCompute/CheckIfTabuIndex | cover tabu index | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/internal/compute/compute_test.go |
+| Test CIDRCompute/CheckIfTabuIndex | no excludes | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/internal/compute/compute_test.go |
+| Test CIDRCompute/CheckIfTabuIndex | not tabu index | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/internal/compute/compute_test.go |
+| Test CIDRCompute/CheckIfTabuIndex | tabu index | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/internal/compute/compute_test.go |
+| Test CIDRCompute/ComputeNet | invalid CIDR | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/internal/compute/compute_test.go |
+| Test CIDRCompute/ComputeNet | invalid Index | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/internal/compute/compute_test.go |
+| Test CIDRCompute/ComputeNet | simple | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/internal/compute/compute_test.go |
+| Test CIDRCompute/FindAvailableIndex | available index in left part | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/internal/compute/compute_test.go |
+| Test CIDRCompute/FindAvailableIndex | available index in middle | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/internal/compute/compute_test.go |
+| Test CIDRCompute/FindAvailableIndex | available index in right part | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/internal/compute/compute_test.go |
+| Test CIDRCompute/FindAvailableIndex | empty indexes | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/internal/compute/compute_test.go |
+| Test CIDRCompute/FindAvailableIndex | multiple index assigned | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/internal/compute/compute_test.go |
+| Test CIDRCompute/FindAvailableIndex | single index assigned | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/internal/compute/compute_test.go |
+| Test CIDRCompute/FindAvailableIndex | single index available | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/internal/compute/compute_test.go |
+| Test CIDRCompute/GetIndexInRange | different CIDR and IP | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/internal/compute/compute_test.go |
+| Test CIDRCompute/GetIndexInRange | invalid CIDR and IP | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/internal/compute/compute_test.go |
+| Test CIDRCompute/GetIndexInRange | same CIDR and IP | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/internal/compute/compute_test.go |
+| Test CIDRCompute/GetIndexInRange | valid CIDR and IP | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/internal/compute/compute_test.go |
 | Test GetConfig of main plugins | ipvlan main plugin | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/controllers/plugin_test.go |
 | Test GetConfig of main plugins | macvlan main plugin | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/controllers/plugin_test.go |
 | Test GetConfig of main plugins | mellanox main plugin - GetSrIoVResource | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/controllers/plugin_test.go |

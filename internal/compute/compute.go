@@ -38,6 +38,8 @@ func (c CIDRCompute) appendMask(baseMask []byte, block int) [4]byte {
 	return output
 }
 
+// addAddress adds the addValue to the baseAddress with the mask.
+// It returns the new IP address and an error if the addValue is invalid.
 func (c CIDRCompute) addAddress(baseAddress []byte, mask []byte, block int, addValue int) ([4]byte, error) {
 	// check if valid sum value
 	maxValue := math.Pow(2, float64(block)) - 1
@@ -92,6 +94,7 @@ func (c CIDRCompute) addAddress(baseAddress []byte, mask []byte, block int, addV
 	return output, nil
 }
 
+// CheckIfTabuIndex checks if the given index is tabu in the context of the base CIDR and excludes.
 func (c CIDRCompute) CheckIfTabuIndex(baseCIDR string, index int, blocksize int, excludes []string) bool {
 	baseBlock, _ := strconv.ParseInt(strings.Split(baseCIDR, "/")[1], 10, 64)
 	for _, exclude := range excludes {
@@ -111,6 +114,7 @@ func (c CIDRCompute) CheckIfTabuIndex(baseCIDR string, index int, blocksize int,
 	return false
 }
 
+// FindAvailableIndex returns the first reusable index in the given range of indexes.
 func (c CIDRCompute) FindAvailableIndex(indexes []int, leftIndex int, startIndex int) int {
 	if len(indexes) == 0 {
 		return -1
@@ -135,6 +139,9 @@ func (c CIDRCompute) FindAvailableIndex(indexes []int, leftIndex int, startIndex
 	}
 }
 
+// ComputeNet computes the network address for a given CIDR and index.
+// It takes the base CIDR, index, and blocksize as input parameters.
+// It returns the network address as a [4]byte array and an error if any.
 func (c CIDRCompute) ComputeNet(baseCIDR string, index int, blocksize int) ([4]byte, error) {
 	startIPStr := strings.Split(baseCIDR, "/")[0]
 	startIP := net.ParseIP(startIPStr)
@@ -154,30 +161,15 @@ func (c CIDRCompute) ComputeNet(baseCIDR string, index int, blocksize int) ([4]b
 	return cidrInByte, nil
 }
 
-func (c CIDRCompute) GetIPVLANSubnet(interfaceNodeCIDR [4]byte, subnet string, interfaceBlock int) string {
-	baseBlock, _ := strconv.ParseInt(strings.Split(subnet, "/")[1], 10, 64)
-	_, subnetNet, _ := net.ParseCIDR(subnet)
-	mask := subnetNet.Mask
-	interfaceMask := c.appendMask(mask, interfaceBlock)
-	interfaceIPMask := net.IPv4Mask(interfaceMask[0], interfaceMask[1], interfaceMask[2], interfaceMask[3])
-	intefaceNodeIP := net.IPv4(interfaceNodeCIDR[0], interfaceNodeCIDR[1], interfaceNodeCIDR[2], interfaceNodeCIDR[3])
-	maskedInterfaceNodeIP := intefaceNodeIP.Mask(interfaceIPMask).To4()
-
-	return fmt.Sprintf("%s/%d", maskedInterfaceNodeIP, int(baseBlock)+interfaceBlock)
-}
-
-func (c CIDRCompute) GetPodSubnet(interfaceNodeCIDR [4]byte, subnet string, interfaceBlock int, nodeBlock int) string {
-	baseBlock, _ := strconv.ParseInt(strings.Split(subnet, "/")[1], 10, 64)
-	blockSize := int(baseBlock) + interfaceBlock + nodeBlock
-	return fmt.Sprintf("%s/%d", bytesToStr(interfaceNodeCIDR), blockSize)
-}
-
+// GetCIDRFromByte returns a CIDR string from a byte array, subnet, and block size.
 func (c CIDRCompute) GetCIDRFromByte(cidrInByte [4]byte, subnet string, blocksize int) string {
 	baseBlock, _ := strconv.ParseInt(strings.Split(subnet, "/")[1], 10, 64)
 	blockSize := int(baseBlock) + blocksize
 	return fmt.Sprintf("%s/%d", bytesToStr(cidrInByte), blockSize)
 }
 
+// GetIndexInRange returns a boolean indicating if the pod IP address is within the pod CIDR range,
+// and the index of the pod IP address within the range.
 func (c CIDRCompute) GetIndexInRange(podCIDR string, podIPAddress string) (bool, int) {
 	startPodIP, podNet, _ := net.ParseCIDR(podCIDR)
 	netIP, _, _ := net.ParseCIDR(podIPAddress + "/32")
