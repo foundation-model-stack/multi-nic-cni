@@ -19,7 +19,6 @@ func updateCIDR(multinicnetwork *multinicv1.MultiNicNetwork, cidr multinicv1.CID
 	def := cidr.Config
 	excludes := compute.SortAddress(def.ExcludeCIDRs)
 	entriesMap, changed := MultiNicnetworkReconcilerInstance.CIDRHandler.UpdateEntries(cidr, excludes, new)
-	fmt.Printf("EntryMap: %v\n", entriesMap)
 	Expect(changed).To(Equal(expectChange))
 
 	expectedPodCIDR := 0
@@ -40,9 +39,7 @@ func updateCIDR(multinicnetwork *multinicv1.MultiNicNetwork, cidr multinicv1.CID
 		totalPodCIDR := 0
 		for _, entry := range entriesMap {
 			totalPodCIDR += len(entry.Hosts)
-			fmt.Printf("hosts: %v\n", entry.Hosts)
 		}
-		fmt.Printf("cidr total pod: %d\n", totalPodCIDR)
 		Expect(totalPodCIDR).To(Equal(expectedPodCIDR))
 	}
 	reservedInterfaceIndex := make(map[int]bool)
@@ -77,35 +74,35 @@ var _ = Describe("Test Multi-NIC IPAM", func() {
 		cidr = updateCIDR(multinicnetwork, cidr, true, true)
 		cidr = updateCIDR(multinicnetwork, cidr, false, false)
 		// Add Host
-		fmt.Println("Add Host")
+		By("Add Host")
 		newHostName := "newHost"
 		newHostIndex := MultiNicnetworkReconcilerInstance.CIDRHandler.HostInterfaceHandler.SafeCache.GetSize()
 		newHif := generateNewHostInterface(newHostName, interfaceNames, networkPrefixes, newHostIndex)
 		MultiNicnetworkReconcilerInstance.CIDRHandler.HostInterfaceHandler.SetCache(newHostName, newHif)
 		cidr = updateCIDR(multinicnetwork, cidr, false, true)
 		// Add Interface
-		fmt.Println("Add Interface")
+		By("Add Interface")
 		newInterfaceName := "eth99"
 		newNetworkPrefix := "0.0.0.0"
 		newHif = generateNewHostInterface(newHostName, append(interfaceNames, newInterfaceName), append(networkPrefixes, newNetworkPrefix), newHostIndex)
 		MultiNicnetworkReconcilerInstance.CIDRHandler.HostInterfaceHandler.SetCache(newHostName, newHif)
 		cidr = updateCIDR(multinicnetwork, cidr, false, true)
 		// Remove Interface
-		fmt.Println("Remove Interface")
+		By("Remove Interface")
 		newHif = generateNewHostInterface(newHostName, interfaceNames, networkPrefixes, newHostIndex)
 		MultiNicnetworkReconcilerInstance.CIDRHandler.HostInterfaceHandler.SetCache(newHostName, newHif)
 		cidr = updateCIDR(multinicnetwork, cidr, false, true)
 		// Add Interface back
-		fmt.Println("Add Interface Back")
+		By("Add Interface Back")
 		newHif = generateNewHostInterface(newHostName, append(interfaceNames, newInterfaceName), append(networkPrefixes, newNetworkPrefix), newHostIndex)
 		MultiNicnetworkReconcilerInstance.CIDRHandler.HostInterfaceHandler.SetCache(newHostName, newHif)
 		cidr = updateCIDR(multinicnetwork, cidr, false, true)
 		// Remove Host
-		fmt.Println("Remove Host")
+		By("Remove Host")
 		MultiNicnetworkReconcilerInstance.CIDRHandler.HostInterfaceHandler.SafeCache.UnsetCache(newHostName)
 		cidr = updateCIDR(multinicnetwork, cidr, false, true)
 		// Add Host back
-		fmt.Println("Add Host Back")
+		By("Add Host Back")
 		MultiNicnetworkReconcilerInstance.CIDRHandler.HostInterfaceHandler.SetCache(newHostName, newHif)
 		updateCIDR(multinicnetwork, cidr, false, true)
 		// Clean up
@@ -147,7 +144,6 @@ var _ = Describe("Test Multi-NIC IPAM", func() {
 		cidrSpec, err := MultiNicnetworkReconcilerInstance.CIDRHandler.GenerateCIDRFromHostSubnet(*ipamConfig)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(len(cidrSpec.CIDRs)).To(Equal(len(interfaceNames)))
-		fmt.Println(cidrSpec)
 		hostIPs := MultiNicnetworkReconcilerInstance.CIDRHandler.GetHostAddressesToExclude()
 		Expect(len(hostIPs)).To(BeEquivalentTo(len(interfaceNames) * MultiNicnetworkReconcilerInstance.CIDRHandler.HostInterfaceHandler.GetSize()))
 	})

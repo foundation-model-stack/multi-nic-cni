@@ -90,13 +90,9 @@ func checkSyncAllocation(allocationMap map[string]map[string]multinicv1.Allocati
 }
 
 func checkSyncAllocationWithMap(allocationMap, crAllocationMap map[string]map[string]multinicv1.Allocation, ippools []multinicv1.IPPoolSpec, expectedChanged map[int]bool) {
-	fmt.Printf("crAllocationMap: %v\n", crAllocationMap)
 	for interfaceIndex := range interfaceNames {
 		ippool := ippools[interfaceIndex]
-		fmt.Printf("befor %v \n", allocationMap)
 		changed, newAllocations := MultiNicnetworkReconcilerInstance.CIDRHandler.GetSyncAllocations(ippool, allocationMap, crAllocationMap)
-		fmt.Printf("after %v - %d\n", allocationMap, len(interfaceNames)-interfaceIndex-1)
-		fmt.Printf("allocations %v\n", newAllocations)
 		// must be updated (deleted)
 		Expect(len(allocationMap[defName])).To(Equal(len(interfaceNames) - interfaceIndex - 1))
 		// must be changed
@@ -187,10 +183,7 @@ var _ = Describe("Unsync IPPool Test", func() {
 		}
 		for interfaceIndex := range interfaceNames {
 			ippool := ippools[interfaceIndex]
-			fmt.Printf("befor %v \n", allocationMap)
 			changed, newAllocations := MultiNicnetworkReconcilerInstance.CIDRHandler.GetSyncAllocations(ippool, allocationMap, crAllocationMap)
-			fmt.Printf("after %v - %d\n", allocationMap, len(interfaceNames)-interfaceIndex-1)
-			fmt.Printf("allocations %v\n", newAllocations)
 			// must be changed
 			Expect(changed).To(Equal(true))
 			Expect(len(newAllocations)).To(Equal(0))
