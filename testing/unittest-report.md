@@ -32,6 +32,10 @@ Test | Description | File
 | Test CIDRCompute/GetIndexInRange | invalid CIDR and IP | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/internal/compute/compute_test.go |
 | Test CIDRCompute/GetIndexInRange | same CIDR and IP | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/internal/compute/compute_test.go |
 | Test CIDRCompute/GetIndexInRange | valid CIDR and IP | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/internal/compute/compute_test.go |
+| Test Compute Utils/SortAddress | empty slice | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/internal/compute/util_test.go |
+| Test Compute Utils/SortAddress | single ip | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/internal/compute/util_test.go |
+| Test Compute Utils/SortAddress | sorted ips | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/internal/compute/util_test.go |
+| Test Compute Utils/SortAddress | unsorted ips | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/internal/compute/util_test.go |
 | Test GetConfig of main plugins | ipvlan main plugin | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/controllers/plugin_test.go |
 | Test GetConfig of main plugins | macvlan main plugin | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/controllers/plugin_test.go |
 | Test GetConfig of main plugins | mellanox main plugin - GetSrIoVResource | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/controllers/plugin_test.go |
