@@ -3,15 +3,15 @@
  * SPDX-License-Identifier: Apache2.0
  */
 
-package controllers
+package controllers_test
 
 import (
 	"context"
 	"fmt"
 
 	multinicv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
-	"github.com/foundation-model-stack/multi-nic-cni/controllers"
-	"github.com/foundation-model-stack/multi-nic-cni/plugin"
+	. "github.com/foundation-model-stack/multi-nic-cni/controllers"
+	"github.com/foundation-model-stack/multi-nic-cni/internal/plugin"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -32,14 +32,14 @@ var _ = Describe("Test deploying MultiNicNetwork", func() {
 	cniArgs["mode"] = mode
 	cniArgs["mtu"] = fmt.Sprintf("%d", mtu)
 
-	multinicnetwork := getMultiNicCNINetwork("test-mn", cniVersion, cniType, cniArgs)
+	multinicnetwork := GetMultiNicCNINetwork("test-mn", cniVersion, cniType, cniArgs)
 
 	It("successfully create/delete network attachment definition", func() {
-		mainPlugin, annotations, err := multinicnetworkReconciler.GetMainPluginConf(multinicnetwork)
+		mainPlugin, annotations, err := MultiNicnetworkReconcilerInstance.GetMainPluginConf(multinicnetwork)
 		Expect(err).NotTo(HaveOccurred())
-		err = multinicnetworkReconciler.NetAttachDefHandler.CreateOrUpdate(multinicnetwork, mainPlugin, annotations)
+		err = MultiNicnetworkReconcilerInstance.NetAttachDefHandler.CreateOrUpdate(multinicnetwork, mainPlugin, annotations)
 		Expect(err).NotTo(HaveOccurred())
-		err = multinicnetworkReconciler.NetAttachDefHandler.DeleteNets(multinicnetwork)
+		err = MultiNicnetworkReconcilerInstance.NetAttachDefHandler.DeleteNets(multinicnetwork)
 		Expect(err).NotTo(HaveOccurred())
 	})
 	It("successfully create/delete network attachment definition on new namespace", func() {
@@ -48,12 +48,12 @@ var _ = Describe("Test deploying MultiNicNetwork", func() {
 				Name: newNamespaceName,
 			},
 		}
-		mainPlugin, annotations, err := multinicnetworkReconciler.GetMainPluginConf(multinicnetwork)
+		mainPlugin, annotations, err := MultiNicnetworkReconcilerInstance.GetMainPluginConf(multinicnetwork)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(k8sClient.Create(context.TODO(), &newNamespace)).Should(Succeed())
-		err = multinicnetworkReconciler.NetAttachDefHandler.CreateOrUpdateOnNamespace(newNamespaceName, multinicnetwork, mainPlugin, annotations)
+		Expect(K8sClient.Create(context.TODO(), &newNamespace)).Should(Succeed())
+		err = MultiNicnetworkReconcilerInstance.NetAttachDefHandler.CreateOrUpdateOnNamespace(newNamespaceName, multinicnetwork, mainPlugin, annotations)
 		Expect(err).NotTo(HaveOccurred())
-		err = multinicnetworkReconciler.NetAttachDefHandler.Delete(multinicnetwork.Name, newNamespaceName)
+		err = MultiNicnetworkReconcilerInstance.NetAttachDefHandler.Delete(multinicnetwork.Name, newNamespaceName)
 		Expect(err).NotTo(HaveOccurred())
 	})
 })
@@ -67,9 +67,9 @@ var _ = Describe("Test definition changes check", func() {
 	cniArgs["mode"] = mode
 	cniArgs["mtu"] = fmt.Sprintf("%d", mtu)
 
-	multinicnetwork := getMultiNicCNINetwork("test-mn", cniVersion, cniType, cniArgs)
+	multinicnetwork := GetMultiNicCNINetwork("test-mn", cniVersion, cniType, cniArgs)
 	It("detect no change", func() {
-		mainPlugin, annotations, err := multinicnetworkReconciler.GetMainPluginConf(multinicnetwork)
+		mainPlugin, annotations, err := MultiNicnetworkReconcilerInstance.GetMainPluginConf(multinicnetwork)
 		Expect(err).NotTo(HaveOccurred())
 		def, err := plugin.NetToDef("", multinicnetwork, mainPlugin, annotations)
 		Expect(err).NotTo(HaveOccurred())
@@ -80,7 +80,7 @@ var _ = Describe("Test definition changes check", func() {
 	})
 
 	It("detect annotation change", func() {
-		mainPlugin, annotations, err := multinicnetworkReconciler.GetMainPluginConf(multinicnetwork)
+		mainPlugin, annotations, err := MultiNicnetworkReconcilerInstance.GetMainPluginConf(multinicnetwork)
 		Expect(err).NotTo(HaveOccurred())
 		def, err := plugin.NetToDef("", multinicnetwork, mainPlugin, annotations)
 		Expect(err).NotTo(HaveOccurred())
@@ -93,7 +93,7 @@ var _ = Describe("Test definition changes check", func() {
 	})
 
 	It("detect config change", func() {
-		mainPlugin, annotations, err := multinicnetworkReconciler.GetMainPluginConf(multinicnetwork)
+		mainPlugin, annotations, err := MultiNicnetworkReconcilerInstance.GetMainPluginConf(multinicnetwork)
 		Expect(err).NotTo(HaveOccurred())
 		def, err := plugin.NetToDef("", multinicnetwork, mainPlugin, annotations)
 		Expect(err).NotTo(HaveOccurred())
@@ -101,8 +101,8 @@ var _ = Describe("Test definition changes check", func() {
 		newCniArgs := make(map[string]string)
 		newCniArgs["mode"] = "l3"
 		newCniArgs["mtu"] = fmt.Sprintf("%d", mtu)
-		changedArgsNetwork := getMultiNicCNINetwork("test-mn", cniVersion, cniType, newCniArgs)
-		newMainPlugin, annotations, err := multinicnetworkReconciler.GetMainPluginConf(changedArgsNetwork)
+		changedArgsNetwork := GetMultiNicCNINetwork("test-mn", cniVersion, cniType, newCniArgs)
+		newMainPlugin, annotations, err := MultiNicnetworkReconcilerInstance.GetMainPluginConf(changedArgsNetwork)
 		Expect(err).NotTo(HaveOccurred())
 		defWithNewArgs, err := plugin.NetToDef("", changedArgsNetwork, newMainPlugin, annotations)
 		Expect(err).NotTo(HaveOccurred())
@@ -124,13 +124,13 @@ func getNetStatus(computeResults []multinicv1.NicNetworkResult, discoverStatus m
 
 func testNewNetStatus(multinicnetwork *multinicv1.MultiNicNetwork, newStatus multinicv1.MultiNicNetworkStatus, expectedChange bool) *multinicv1.MultiNicNetwork {
 	if expectedChange {
-		updated := controllers.NetStatusUpdated(multinicnetwork, newStatus)
+		updated := NetStatusUpdated(multinicnetwork, newStatus)
 		// check new update
 		Expect(updated).To(Equal(expectedChange))
 		// update status
 		multinicnetwork.Status = newStatus
 	}
-	updated := controllers.NetStatusUpdated(multinicnetwork, newStatus)
+	updated := NetStatusUpdated(multinicnetwork, newStatus)
 	// expect no update
 	Expect(updated).To(BeFalse())
 	return multinicnetwork
@@ -146,14 +146,14 @@ var _ = Describe("Test multinicnetwork status change check", func() {
 	cniArgs["mtu"] = fmt.Sprintf("%d", mtu)
 
 	It("detect change from no status", func() {
-		multinicnetwork := getMultiNicCNINetwork("test-mn", cniVersion, cniType, cniArgs)
+		multinicnetwork := GetMultiNicCNINetwork("test-mn", cniVersion, cniType, cniArgs)
 		initStatus := getNetStatus([]multinicv1.NicNetworkResult{}, multinicv1.DiscoverStatus{}, multinicv1.WaitForConfig, multinicv1.ApplyingRoute)
-		updated := controllers.NetStatusUpdated(multinicnetwork, initStatus)
+		updated := NetStatusUpdated(multinicnetwork, initStatus)
 		Expect(updated).To(BeTrue())
 	})
 
 	It("detect change on compute results", func() {
-		multinicnetwork := getMultiNicCNINetwork("test-mn", cniVersion, cniType, cniArgs)
+		multinicnetwork := GetMultiNicCNINetwork("test-mn", cniVersion, cniType, cniArgs)
 		multinicnetwork.Status = getNetStatus([]multinicv1.NicNetworkResult{}, multinicv1.DiscoverStatus{}, multinicv1.WaitForConfig, multinicv1.ApplyingRoute)
 
 		net1 := multinicv1.NicNetworkResult{
@@ -196,7 +196,7 @@ var _ = Describe("Test multinicnetwork status change check", func() {
 	})
 
 	It("detect change on simple status", func() {
-		multinicnetwork := getMultiNicCNINetwork("test-mn", cniVersion, cniType, cniArgs)
+		multinicnetwork := GetMultiNicCNINetwork("test-mn", cniVersion, cniType, cniArgs)
 		multinicnetwork.Status = getNetStatus([]multinicv1.NicNetworkResult{}, multinicv1.DiscoverStatus{}, multinicv1.WaitForConfig, multinicv1.ApplyingRoute)
 
 		// change discover status

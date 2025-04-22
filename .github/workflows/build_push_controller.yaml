@@ -6,8 +6,7 @@ on:
       - main
     paths:
       - controllers/**
-      - compute/**
-      - plugin/**
+      - internal/**
       - ./main.go
       - ./go.mod
       - config/**

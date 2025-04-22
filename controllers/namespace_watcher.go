@@ -14,7 +14,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/foundation-model-stack/multi-nic-cni/controllers/vars"
+	"github.com/foundation-model-stack/multi-nic-cni/internal/vars"
 )
 
 // NamespaceWatcher watches new namespace and generate net-attach-def

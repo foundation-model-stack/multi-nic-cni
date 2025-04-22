@@ -9,7 +9,7 @@ import (
 	"fmt"
 
 	multinicv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
-	"github.com/foundation-model-stack/multi-nic-cni/controllers/vars"
+	"github.com/foundation-model-stack/multi-nic-cni/internal/vars"
 )
 
 // RouteHandler handles routes according to CIDR by connecting DaemonConnector

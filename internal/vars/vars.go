@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"time"
 
-	logf "github.com/foundation-model-stack/multi-nic-cni/controllers/logr"
+	logf "github.com/foundation-model-stack/multi-nic-cni/internal/logr"
 	"github.com/go-logr/logr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
