@@ -12,7 +12,7 @@ import (
 	multinicv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
 	. "github.com/foundation-model-stack/multi-nic-cni/controllers"
 	"github.com/foundation-model-stack/multi-nic-cni/internal/plugin"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

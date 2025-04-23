@@ -12,7 +12,7 @@ import (
 	"github.com/containernetworking/cni/pkg/types"
 	. "github.com/foundation-model-stack/multi-nic-cni/controllers"
 	"github.com/foundation-model-stack/multi-nic-cni/internal/plugin"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	//+kubebuilder:scaffold:imports
 )

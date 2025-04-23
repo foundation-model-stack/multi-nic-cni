@@ -23,8 +23,8 @@ type MACVLANPlugin struct {
 type MACVLANTypeNetConf struct {
 	types.NetConf
 	Master string `json:"master"` // Name of the master interfce (e.g., eth0)
-	Mode string `json:"mode"`  // Mod of the macvlan interface (e.g., bridge, private)
-	MTU  int    `json:"mtu"`
+	Mode   string `json:"mode"`   // Mod of the macvlan interface (e.g., bridge, private)
+	MTU    int    `json:"mtu"`
 }
 
 func (p *MACVLANPlugin) Init(config *rest.Config) error {
@@ -37,7 +37,7 @@ func (p *MACVLANPlugin) GetConfig(net multinicv1.MultiNicNetwork, hifList map[st
 	conf := &MACVLANTypeNetConf{}
 	conf.CNIVersion = net.Spec.MainPlugin.CNIVersion
 	conf.Type = MACVLAN_TYPE
-	conf.Master = args["master"]  //Populate the master field
+	conf.Master = args["master"] // Populate the master field
 	conf.Mode = args["mode"]
 	val, err := getInt(args, "mtu")
 	if err == nil {
