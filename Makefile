@@ -169,9 +169,10 @@ $(ENVTEST): $(TEST_BIN_DIR)
 
 .PHONY: test
 test: $(TEST_RESULT_DIR) fmt vet ginkgo manifests generate envtest
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" $(TEST_BIN_DIR)/ginkgo run --cover --coverprofile=cover.out --json-report unittest-report.json   ./controllers/...  ./internal/...
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" $(TEST_BIN_DIR)/ginkgo run --cover --coverprofile=coverage --json-report unittest-report.json   ./controllers/...  ./internal/...
 	@./hack/json-report-to-markdown.sh unittest-report "Unit Test"
 	@rm unittest-report.json
+	@./hack/coverage-to-markdown.sh coverage "Unit Test Coverage"
 
 .PHONY: test-sanity
 test-sanity: fmt vet generate fix ## Test repo formatting, linting, etc.
