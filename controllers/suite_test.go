@@ -57,7 +57,7 @@ var SriovPlugin *plugin.SriovPlugin
 var mellanoxPlugin *plugin.MellanoxPlugin
 
 var MultiNicnetworkReconcilerInstance *MultiNicNetworkReconciler
-var configReconciler *ConfigReconciler
+var ConfigReconcilerInstance *ConfigReconciler
 var daemonWatcher *DaemonWatcher
 
 // Multi-NIC IPAM
@@ -163,7 +163,7 @@ var _ = BeforeSuite(func() {
 	}).SetupWithManager(mgr)
 	Expect(err).ToNot(HaveOccurred())
 
-	configReconciler = &ConfigReconciler{
+	ConfigReconcilerInstance = &ConfigReconciler{
 		Client:              mgr.GetClient(),
 		Clientset:           clientset,
 		Config:              cfg,
@@ -171,7 +171,7 @@ var _ = BeforeSuite(func() {
 		NetAttachDefHandler: defHandler,
 		Scheme:              mgr.GetScheme(),
 	}
-	err = (configReconciler).SetupWithManager(mgr)
+	err = (ConfigReconcilerInstance).SetupWithManager(mgr)
 	Expect(err).ToNot(HaveOccurred())
 
 	MultiNicnetworkReconcilerInstance = &MultiNicNetworkReconciler{
