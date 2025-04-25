@@ -83,49 +83,8 @@ func (h *IPPoolHandler) DeleteIPPool(netAttachDef string, podCIDR string) error 
 //
 // IPPool name is composed of NetworkAttachmentDefinition name and PodCIDR
 func (h *IPPoolHandler) UpdateIPPool(netAttachDef string, podCIDR string, vlanCIDR string, hostName string, interfaceName string, excludes []compute.IPValue) error {
-	excludesInterface := []string{}
 	labels := map[string]string{vars.HostNameLabel: hostName, vars.DefNameLabel: netAttachDef}
-
-	// find CIDR ranges that excluded in the PodCIDR range
-	for _, item := range excludes {
-		excludeCIDR := item.Address
-		_, podSubnet, _ := net.ParseCIDR(podCIDR)
-		// split network address of excluded CIDR and CIDR block (bits)
-		excludeIPSplits := strings.Split(excludeCIDR, "/")
-		excludeIPStr := excludeIPSplits[0]
-		// default CIDR block bits
-		excludeBlock := int64(32)
-		if len(excludeIPSplits) >= 2 {
-			// update excludeBlock to defined CIDR block bits
-			// convert block string to number
-			excludeBlock, _ = strconv.ParseInt(excludeIPSplits[1], 10, 64)
-		}
-		// split network address of pod CIDR and CIDR block (bits)
-		podBlockStr := strings.Split(podCIDR, "/")[1]
-		// convert block string to number
-		podBlock, _ := strconv.ParseInt(podBlockStr, 10, 64)
-		if podBlock >= excludeBlock {
-			// excludeBlock covers podBlock, should be handled by interface indexing step, continue
-			continue
-		}
-		excludeIP, _, _ := net.ParseCIDR(fmt.Sprintf("%s/%d", excludeIPStr, excludeBlock))
-		if podSubnet.Contains(excludeIP) {
-			// exclude CIDR is in pod CIDR, append to the exclude list of this pod CIDR
-			excludesInterface = append(excludesInterface, excludeCIDR)
-		}
-	}
-
-	// init spec
-	spec := multinicv1.IPPoolSpec{
-		PodCIDR:          podCIDR,
-		VlanCIDR:         vlanCIDR,
-		NetAttachDefName: netAttachDef,
-		HostName:         hostName,
-		InterfaceName:    interfaceName,
-		Excludes:         excludesInterface,
-	}
-
-	ippoolName := h.GetIPPoolName(netAttachDef, podCIDR)
+	ippoolName, spec, excludesInterface := h.initIPPool(netAttachDef, podCIDR, vlanCIDR, hostName, interfaceName, excludes)
 
 	ippool, err := h.GetIPPool(ippoolName)
 	if err == nil {
@@ -164,6 +123,58 @@ func (h *IPPoolHandler) UpdateIPPool(netAttachDef string, podCIDR string, vlanCI
 		vars.IPPoolLog.V(5).Info(fmt.Sprintf("New IPPool %s: %v, %v", ippoolName, newIPPool, err))
 	}
 	return err
+}
+
+// initIPPool creates IPPool name and spec from provided parameters.
+func (h *IPPoolHandler) initIPPool(netAttachDef string, podCIDR string,
+	vlanCIDR string, hostName string, interfaceName string, excludes []compute.IPValue) (string, multinicv1.IPPoolSpec, []string) {
+	excludesInterface := h.extractMatchExcludesFromPodCIDR(excludes, podCIDR)
+
+	spec := multinicv1.IPPoolSpec{
+		PodCIDR:          podCIDR,
+		VlanCIDR:         vlanCIDR,
+		NetAttachDefName: netAttachDef,
+		HostName:         hostName,
+		InterfaceName:    interfaceName,
+		Excludes:         excludesInterface,
+	}
+
+	ippoolName := h.GetIPPoolName(netAttachDef, podCIDR)
+
+	return ippoolName, spec, excludesInterface
+}
+
+func (h *IPPoolHandler) extractMatchExcludesFromPodCIDR(excludes []compute.IPValue, podCIDR string) []string {
+	excludesInterface := []string{}
+	// find CIDR ranges that excluded in the PodCIDR range
+	for _, item := range excludes {
+		excludeCIDR := item.Address
+		_, podSubnet, _ := net.ParseCIDR(podCIDR)
+		// split network address of excluded CIDR and CIDR block (bits)
+		excludeIPSplits := strings.Split(excludeCIDR, "/")
+		excludeIPStr := excludeIPSplits[0]
+		// default CIDR block bits
+		excludeBlock := int64(32)
+		if len(excludeIPSplits) >= 2 {
+			// update excludeBlock to defined CIDR block bits
+			// convert block string to number
+			excludeBlock, _ = strconv.ParseInt(excludeIPSplits[1], 10, 64)
+		}
+		// split network address of pod CIDR and CIDR block (bits)
+		podBlockStr := strings.Split(podCIDR, "/")[1]
+		// convert block string to number
+		podBlock, _ := strconv.ParseInt(podBlockStr, 10, 64)
+		if podBlock >= excludeBlock {
+			// excludeBlock covers podBlock, should be handled by interface indexing step, continue
+			continue
+		}
+		excludeIP, _, _ := net.ParseCIDR(fmt.Sprintf("%s/%d", excludeIPStr, excludeBlock))
+		if podSubnet.Contains(excludeIP) {
+			// exclude CIDR is in pod CIDR, append to the exclude list of this pod CIDR
+			excludesInterface = append(excludesInterface, excludeCIDR)
+		}
+	}
+	return excludesInterface
 }
 
 // GetIPPoolName returns IPPool name = <NetworkAttachmentDefinition name> - <Pod CIDR IP> - <Pod CIDR block>

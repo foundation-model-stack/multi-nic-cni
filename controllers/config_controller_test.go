@@ -15,6 +15,8 @@ import (
 )
 
 var _ = Describe("Test Config Controller", func() {
+	ConfigReady = true
+
 	It("default config", func() {
 		dummyConfigName := "dummy-config"
 		spec := ConfigReconcilerInstance.GetDefaultConfigSpec()
