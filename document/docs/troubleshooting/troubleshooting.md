@@ -222,7 +222,9 @@ Zero config occurs when CNI cannot generate configurations from the network-atta
 ### Ping failed
 **Issue:** Pods cannot ping each other.
 
-Check route status in multinicnetworks.multinic.fms.io.
+If the CNI operates at Layer 2, please confirm whether the defined Pod CIDR is routable within your cluster.
+
+If the CNI operates at Layer 3, check route status in `multinicnetworks.multinic.fms.io`.
 ```bash
 kubectl get multinicnetwork.multinic.fms.io multinic-ipvlanl3 -o json\ 
 | jq -r .status.routeStatus
@@ -231,9 +233,9 @@ kubectl get multinicnetwork.multinic.fms.io multinic-ipvlanl3 -o json\
 - *WaitForRoutes*:  the new cidr is just recomputed and waiting for route update.
 - *Failed*: some route cannot be applied, need attention. Check [multi-nicd log](#get-multi-nicd-log)
 - *Unknown*: some daemon cannot be connected. 
-- *N/A*: there is no L3 configuration applied. Check whether multinicnetwork.multinic.fms.io is defined with L3 mode and cidrs.multinic.fms.io is created. 
+- *N/A*: there is no L3 configuration applied. Check whether multinicnetwork.multinic.fms.io is defined with L3 mode and cidrs.multinic.fms.io is created.  
 
-      kubectl get cidrs.multinic.fms.io
+        kubectl get cidrs.multinic.fms.io
 
 - *Success*: check [set required security group rules](#set-security-groups)
 ### TCP/UDP communication failed.
