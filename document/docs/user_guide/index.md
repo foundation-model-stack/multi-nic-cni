@@ -146,26 +146,35 @@ L3 Route configuration|&check;|X|X|&check;
 - [IPVLAN L3](https://github.com/foundation-model-stack/multi-nic-cni/tree/main/config/samples/multinicnetwork/ipvlanl3.yaml)
 
         kubectl apply -f config/samples/multinicnetwork/ipvlanl3.yaml
+
+- [Mellanox Host Device with Host Device IPAM](https://github.com/foundation-model-stack/multi-nic-cni/tree/main/config/samples/multinicnetwork/mellanox_hostdevice.yaml)
+
+        kubectl apply -f config/samples/multinicnetwork/mellanox_hostdevice.yaml
+
         
 ### BareMetal
+- [MACVLAN with whereabout IPAM](https://github.com/foundation-model-stack/multi-nic-cni/tree/main/config/samples/multinicnetwork/macvlan.yaml)
+
+        kubectl apply -f config/samples/multinicnetwork/macvlan.yaml
+
+- [MACVLAN with Multi-NIC IPAM](https://github.com/foundation-model-stack/multi-nic-cni/tree/main/config/samples/multinicnetwork/macvlan_ipam.yaml)
+
+        kubectl apply -f config/samples/multinicnetwork/macvlan_ipam.yaml
+
 - [IPVLAN L2 with whereabout IPAM](https://github.com/foundation-model-stack/multi-nic-cni/tree/main/config/samples/multinicnetwork/ipvlanl2.yaml)
 
         kubectl apply -f config/samples/multinicnetwork/ipvlanl2.yaml
 
-- [SR-IoV with Multi-NIC IPAM](https://github.com/foundation-model-stack/multi-nic-cni/tree/main/config/samples/multinicnetwork/sriov.yaml) ( from v1.2.0 )
+- [SR-IoV with Multi-NIC IPAM](https://github.com/foundation-model-stack/multi-nic-cni/tree/main/config/samples/multinicnetwork/sriov.yaml)
 
         kubectl apply -f config/samples/multinicnetwork/sriov.yaml
 
-- [Mellanox Host Device without IPAM](https://github.com/foundation-model-stack/multi-nic-cni/tree/main/config/samples/multinicnetwork/mellanox_hostdevice.yaml) ( from v1.2.0 )
+- [Mellanox Host Device with Host Device IPAM](https://github.com/foundation-model-stack/multi-nic-cni/tree/main/config/samples/multinicnetwork/mellanox_hostdevice.yaml)
 
         kubectl apply -f config/samples/multinicnetwork/mellanox_hostdevice.yaml
 
-- [IPVLAN L2 with unmanaged HostInterface](https://github.com/foundation-model-stack/multi-nic-cni/tree/main/config/samples/multinicnetwork/ipvlanl2_unmanaged.yaml) ( from v1.2.1 )
-
-        kubectl apply -f config/samples/multinicnetwork/ipvlanl2_unmanaged.yaml
-
 ### AWS
-- [IPVLAN L2 with AWS-VPC-connecting IPAM](https://github.com/foundation-model-stack/multi-nic-cni/tree/main/config/samples/multinicnetwork/awsipvlan.yaml) ( from v1.1.0 )
+- [IPVLAN L2 with AWS-VPC-connecting IPAM](https://github.com/foundation-model-stack/multi-nic-cni/tree/main/config/samples/multinicnetwork/awsipvlan.yaml)
 
         kubectl apply -f config/samples/multinicnetwork/awsipvlan.yaml
 

@@ -13,7 +13,7 @@ Reported multinicnetwork status
   |N/A|`mode!=l3`
   lastSyncTime|Date Time|timestamp at last synchronization of interfaces and CIDR
 
-- v1.0.3
+- v1.0.3 or later
   
   Field|Value|Description
   ---|---|---

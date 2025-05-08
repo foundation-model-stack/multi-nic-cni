@@ -23,10 +23,10 @@ In addition to as-is main CNI (ipvlan and macvlan), we implement a new main CNI 
 
 Scenario|Multi-NIC main|IPAM|(generated)<br>Single-NIC main|(generated)<br>Single-NIC IPAM
 ---|---|---|---|---
-On-premise with L2|ipvlan (L2)|whereabouts|ipvlan (L2)|whereabouts
-|ipvlan (L2)|multi-nic-ipam|ipvlan (L2)|static
+On-premise with L2|ipvlan (L2), macvlan|whereabouts|ipvlan (L2), macvlan|whereabouts
+|ipvlan (L2), macvlan|multi-nic-ipam|ipvlan (L2), macvlan|static
 VPC with L3 (IBM Cloud, Azure)|ipvlan (L3)|multi-nic-ipam|ipvlan (L3)|static
-AWS |aws-ipvlan|multi-nic-ipam|ipvlan (L2)|static
+AWS |aws-ipvlan|multi-nic-ipam|ipvlan (L2), macvlan|static
 
 ## Multi-NIC CNI with network devices dynamically provided by device plugin
 
