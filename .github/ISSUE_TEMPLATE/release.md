@@ -1,7 +1,7 @@
 ---
-name: Release
+name: Release Checklist
 about: Create a release checklist
-title: 'Release v[X.Y.Z]'
+title: 'Release v<X.Y.Z>'
 labels: epic
 assignees: ''
 
@@ -15,8 +15,5 @@ assignees: ''
 - [ ] Create a release on GitHub repository: https://github.com/foundation-model-stack/multi-nic-cni/releases
 - [ ] Set new version with the following command and push a PR upgrade version: X.Y.Z to the main branch.
 - [ ] Update catalog template file and push PR to community operator hub - [OpenShift](https://github.com/redhat-openshift-ecosystem/community-operators-prod)
-         - https://github.com/redhat-openshift-ecosystem/community-operators-prod/pull/6236
 - [ ] Update catalog template file and push PR to community operator hub - [OperatorHub.io](https://github.com/k8s-operatorhub/community-operators)
-        - https://github.com/k8s-operatorhub/community-operators/pull/5896
-- [ ] Update release page in documentation. Check [documentation update guide](https://foundation-model-stack.github.io/multi-nic-cni/contributing/local_build_push/#documentation-update).
-         - https://github.com/foundation-model-stack/multi-nic-cni/pull/255
+- [ ] Update release page in documentation. Check [documentation update guide](https://foundation-model-stack.github.io/multi-nic-cni/contributing/local_build_push/#documentation-update)
