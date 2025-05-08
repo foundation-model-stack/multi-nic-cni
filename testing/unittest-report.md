@@ -14,6 +14,14 @@ Test | Description | File
 | Host Interface Test/UpdateNewInterfaces - original with more than one devices | can leave old one | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/controllers/hostinterface_test.go |
 | Host Interface Test/UpdateNewInterfaces - original with more than one devices | can leave old one when some is missing | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/controllers/hostinterface_test.go |
 | Host Interface Test/UpdateNewInterfaces - original with more than one devices | can leave old one when some is missing and some with new info | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/controllers/hostinterface_test.go |
+| NetAttachDef test/handler | create and delete | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/internal/plugin/net_attach_def_test.go |
+| Test CIDR Handler\t/Handler functions/IPAM | Dynamically compute CIDR | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/controllers/cidr_handler_test.go |
+| Test CIDR Handler\t/Handler functions/IPAM | Empty subnet | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/controllers/cidr_handler_test.go |
+| Test CIDR Handler\t/Handler functions/Sync/CIDR and IPPool | hasActivePod | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/controllers/cidr_handler_test.go |
+| Test CIDR Handler\t/Handler functions/Sync/CIDR and IPPool | hasNewHost | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/controllers/cidr_handler_test.go |
+| Test CIDR Handler\t/Handler functions/Sync/CIDR and IPPool | hasNewHost and hasActivePod | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/controllers/cidr_handler_test.go |
+| Test CIDR Handler\t/Handler functions/Sync/CIDR and IPPool | simple | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/controllers/cidr_handler_test.go |
+| Test CIDR Handler\t/Util functions | Sync CIDR/IPPool | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/controllers/cidr_handler_test.go |
 | Test CIDRCompute/CheckIfTabuIndex | cover tabu index | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/internal/compute/compute_test.go |
 | Test CIDRCompute/CheckIfTabuIndex | no excludes | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/internal/compute/compute_test.go |
 | Test CIDRCompute/CheckIfTabuIndex | not tabu index | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/internal/compute/compute_test.go |
@@ -32,14 +40,18 @@ Test | Description | File
 | Test CIDRCompute/GetIndexInRange | invalid CIDR and IP | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/internal/compute/compute_test.go |
 | Test CIDRCompute/GetIndexInRange | same CIDR and IP | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/internal/compute/compute_test.go |
 | Test CIDRCompute/GetIndexInRange | valid CIDR and IP | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/internal/compute/compute_test.go |
-| Test GetConfig of main plugins | ipvlan main plugin | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/controllers/plugin_test.go |
-| Test GetConfig of main plugins | macvlan main plugin | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/controllers/plugin_test.go |
-| Test GetConfig of main plugins | mellanox main plugin - GetSrIoVResource | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/controllers/plugin_test.go |
-| Test GetConfig of main plugins | sriov main plugin with resource name | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/controllers/plugin_test.go |
-| Test GetConfig of main plugins | sriov main plugin without resource name | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/controllers/plugin_test.go |
-| Test Multi-NIC IPAM | Dynamically compute CIDR | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/controllers/multinicipam_test.go |
-| Test Multi-NIC IPAM | Empty subnet | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/controllers/multinicipam_test.go |
-| Test Multi-NIC IPAM | Sync CIDR/IPPool | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/controllers/multinicipam_test.go |
+| Test Compute Utils/SortAddress | empty slice | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/internal/compute/util_test.go |
+| Test Compute Utils/SortAddress | single ip | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/internal/compute/util_test.go |
+| Test Compute Utils/SortAddress | sorted ips | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/internal/compute/util_test.go |
+| Test Compute Utils/SortAddress | unsorted ips | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/internal/compute/util_test.go |
+| Test Config Controller | default config | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/controllers/config_controller_test.go |
+| Test Config Controller/Multus | get CNI path | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/controllers/config_controller_test.go |
+| Test GetConfig of main plugins | aws-ipvlan main plugin | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/internal/plugin/plugin_test.go |
+| Test GetConfig of main plugins | ipvlan main plugin | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/internal/plugin/plugin_test.go |
+| Test GetConfig of main plugins | macvlan main plugin | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/internal/plugin/plugin_test.go |
+| Test GetConfig of main plugins | mellanox main plugin - GetSrIoVResource | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/internal/plugin/plugin_test.go |
+| Test GetConfig of main plugins/SR-IoV | with resource name | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/internal/plugin/plugin_test.go |
+| Test GetConfig of main plugins/SR-IoV | without resource name | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/internal/plugin/plugin_test.go |
 | Test definition changes check | detect annotation change | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/controllers/multinicnetwork_test.go |
 | Test definition changes check | detect config change | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/controllers/multinicnetwork_test.go |
 | Test definition changes check | detect no change | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/controllers/multinicnetwork_test.go |

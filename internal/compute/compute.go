@@ -24,7 +24,7 @@ func (c CIDRCompute) appendMask(baseMask []byte, block int) [4]byte {
 			output[index] = value
 			continue
 		}
-		mIndex := MaskIndex(value)
+		mIndex := maskIndex(value)
 		addable := BYTE_SIZE - mIndex
 
 		if remain > addable {
@@ -59,7 +59,7 @@ func (c CIDRCompute) addAddress(baseAddress []byte, mask []byte, block int, addV
 			output[index] = baseAddress[index]
 			continue
 		}
-		mIndex := MaskIndex(value)
+		mIndex := maskIndex(value)
 		addable := BYTE_SIZE - mIndex
 		target := ""
 		if block > addable {
