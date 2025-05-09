@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>Local Development - Multi-NIC CNI</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Local Development";
+        var mkdocs_page_input_path = "contributing/local_build_push.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/yaml.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/rust.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> Multi-NIC CNI
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">Multi-NIC CNI</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../Maintainers/">Maintainers</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Concept</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../concept/">Key Concept</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../concept/multi-cloud-support/">Multi-Cloud Support</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../concept/multi-nic-ipam/">Built-in Multi-NIC Network</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../concept/network-status/">Network Status</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../concept/policy/">Policy-based secondary network attachment</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Contributing</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../">Contributor Guide</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../architecture/">Architecture</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Local Development</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#build-images">Build images</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#build-cni-operator">Build CNI operator</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#build-cni-daemon">Build CNI daemon</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#test">Test</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#install-operator">Install operator</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#uninstall-operator">Uninstall operator</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#documentation-update">Documentation update</a>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../maintainer/">Upstream Development</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Release</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../release/">Release</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../release/alpha-1.2/">Alpha 1.2 Channel</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../release/alpha/">Alpha Channel</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../release/beta/">Beta Channel</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../release/stable-1.2/">Stable 1.2 Channel</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../release/stable/">Stable Channel (default)</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Troubleshooting</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../troubleshooting/health-checker/">Troubleshooting with Multi-NIC CNI Health Checker Service</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../troubleshooting/troubleshooting/">Manual Troubleshooting (Common Issues)</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">User guide</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../user_guide/">Installation</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../user_guide/user/">MultiNicNetwork Usage and Testing</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">Multi-NIC CNI</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Contributing</li>
+      <li class="breadcrumb-item active">Local Development</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="local-development">Local Development</h1>
+<h2 id="build-images">Build images</h2>
+<h3 id="build-cni-operator">Build CNI operator</h3>
+<ol>
+<li>
+<p>Set <code>IMAGE_REGISTRY</code> and <code>VERSION</code> environment to target image repository for operator</p>
+<pre><code> export IMAGE_REGISTRY=&lt;registry&gt;
+ export VERSION=&lt;version&gt;
+</code></pre>
+</li>
+<li>
+<p>For private image registry, follow these additional steps to add image-pulling secret</p>
+<ul>
+<li>
+<p>Put your secret for pulling operator image (<code>operator-secret.yaml</code>) to the secret folder</p>
+<pre><code>mv operator-secret.yaml config/secret
+</code></pre>
+</li>
+<li>
+<p>Run script to update relevant kustomization files</p>
+<pre><code>export OPERATOR_SECRET_NAME=$(cat config/secret/operator-secret.yaml|yq .metadata.name)
+make operator-secret
+</code></pre>
+</li>
+</ul>
+</li>
+<li>
+<p>Build and push operator image</p>
+<pre><code> go mod tidy
+ make docker-build docker-push
+</code></pre>
+</li>
+<li>
+<p>Build and push bundle image (optional)</p>
+<pre><code> make bundle
+ make bundle-build bundle-push
+</code></pre>
+<p>To test the bundle, run</p>
+<pre><code> operator-sdk run bundle ${IMAGE_REGISTRY}/multi-nic-cni-bundle:v${VERSION}
+</code></pre>
+</li>
+<li>
+<p>Build and use catalog source image (optional)</p>
+<pre><code> make catalog-build catalog-push
+</code></pre>
+<p>To test deploy with customized catalog, deploy the catalogsource resource.</p>
+<pre><code> apiVersion: operators.coreos.com/v1alpha1
+ kind: CatalogSource
+ metadata:
+   name: multi-nic-cni-operator
+   namespace: openshift-marketplace
+ spec:
+   displayName: Multi-NIC CNI Operator
+   publisher: IBM
+   sourceType: grpc
+   image: # &lt;YOUR_CATALOG_IMAGE&gt;
+   updateStrategy:
+     registryPoll:
+       interval: 10m
+</code></pre>
+<p>Then, you can deploy via console or subscription resource.</p>
+</li>
+</ol>
+<h3 id="build-cni-daemon">Build CNI daemon</h3>
+<ol>
+<li>
+<p>Set <code>IMAGE_REGISTRY</code> and <code>VERSION</code> environment to target image repository for daemon</p>
+<pre><code> export IMAGE_REGISTRY=&lt;registry&gt;
+ export VERSION=&lt;version&gt;
+</code></pre>
+</li>
+<li>
+<p>For private image registry, follow these additional steps to add image-pulling secret</p>
+<ul>
+<li>
+<p>Put your secret for pulling daemon image (<code>daemon-secret.yaml</code>) to the secret folder</p>
+<pre><code>mv daemon-secret.yaml config/secret
+</code></pre>
+</li>
+<li>
+<p>Run script to update relevant kustomization files</p>
+<pre><code>export DAEMON_SECRET_NAME=$(cat config/secret/daemon-secret.yaml|yq .metadata.name)
+make daemon-secret
+</code></pre>
+</li>
+</ul>
+</li>
+<li>
+<p>Build and push daemon image</p>
+<pre><code>    # build environment: 
+    #   Linux systems with netlink library
+    cd daemon
+    go mod tidy
+    make docker-build-push
+</code></pre>
+<p>This will also build the cni binary and copy the built binary to daemon component.</p>
+</li>
+</ol>
+<h2 id="test">Test</h2>
+<pre><code class="language-bash"># test golang linter
+make lint
+# test controller 
+make test
+# test daemon
+make test-daemon
+</code></pre>
+<h2 id="install-operator">Install operator</h2>
+<pre><code class="language-bash">make deploy
+</code></pre>
+<h2 id="uninstall-operator">Uninstall operator</h2>
+<pre><code class="language-bash">make undeploy
+</code></pre>
+<h2 id="documentation-update">Documentation update</h2>
+<p>We build the document website using GitHub Page site which is based on <a href="https://squidfunk.github.io/mkdocs-material/publishing-your-site/">mkdocs</a>.</p>
+<p>The material for building the website is under the folder <code>documentation</code>.
+To test the updated document locally, please <a href="https://www.mkdocs.org/getting-started/">install <code>mkdocs</code></a> in your local environment and test with <code>mkdocs serve</code> under the folder <code>documentation</code>.</p>
+<p>Please do not include any changes outside <code>documentation</code> folder and push the PR towards <code>doc</code> branch instead of <code>main</code> branch. </p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../architecture/" class="btn btn-neutral float-left" title="Architecture"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../maintainer/" class="btn btn-neutral float-right" title="Upstream Development">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../architecture/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../maintainer/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

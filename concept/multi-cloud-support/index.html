@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>Multi-Cloud Support - Multi-NIC CNI</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Multi-Cloud Support";
+        var mkdocs_page_input_path = "concept/multi-cloud-support.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/yaml.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/rust.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> Multi-NIC CNI
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">Multi-NIC CNI</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../Maintainers/">Maintainers</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Concept</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../">Key Concept</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Multi-Cloud Support</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#multi-nic-cni-with-static-network-devices">Multi-NIC CNI with static network devices</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#multi-nic-cni-with-network-devices-dynamically-selected-by-multi-nic-daemon">Multi-NIC CNI with network devices dynamically selected by Multi-NIC daemon</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#multi-nic-cni-with-network-devices-dynamically-provided-by-device-plugin">Multi-NIC CNI with network devices dynamically provided by device plugin</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#hybrid-secondary-network-solution">Hybrid secondary network solution</a>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../multi-nic-ipam/">Built-in Multi-NIC Network</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../network-status/">Network Status</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../policy/">Policy-based secondary network attachment</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Contributing</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../contributing/">Contributor Guide</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../contributing/architecture/">Architecture</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../contributing/local_build_push/">Local Development</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../contributing/maintainer/">Upstream Development</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Release</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../release/">Release</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../release/alpha-1.2/">Alpha 1.2 Channel</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../release/alpha/">Alpha Channel</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../release/beta/">Beta Channel</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../release/stable-1.2/">Stable 1.2 Channel</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../release/stable/">Stable Channel (default)</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Troubleshooting</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../troubleshooting/health-checker/">Troubleshooting with Multi-NIC CNI Health Checker Service</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../troubleshooting/troubleshooting/">Manual Troubleshooting (Common Issues)</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">User guide</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../user_guide/">Installation</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../user_guide/user/">MultiNicNetwork Usage and Testing</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">Multi-NIC CNI</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Concept</li>
+      <li class="breadcrumb-item active">Multi-Cloud Support</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="multi-cloud-support">Multi-Cloud Support</h1>
+<p>The key benefit of Multi-NIC CNI is that it configures multiple network devices for secondary network solutions on a single CNI call from Kubelet which is delegated by Multus. As a result, Multi-NIC CNI has an extensibility to assign IP address based on both static and dynamic network device selection. </p>
+<p>We separate secondary network solutions on Cloud into three categories based on the network device selection methods: (i) static selection, (ii) dynamic selection performed by Multi-NIC daemon, and (iii) dynamic selection provided by device plugins such as Mellanox OFED device plugin in <a href="https://docs.nvidia.com/networking/display/COKAN10/Network+Operator">NVIDIA network operator</a>. </p>
+<h2 id="multi-nic-cni-with-static-network-devices">Multi-NIC CNI with static network devices</h2>
+<p>By default, Multi-NIC CNI will have Multi-NIC daemon select a set of network devices based on user-defined <a href="../policy/">strategy</a> (MultiNicNetwork Policy). Then, it will generate a new CNI config per each selected device based on user-defined multi-NIC main and IPAM configurations. IPAM can be either multi-nic-ipam or supported single-NIC IPAM such as whereabouts. The generated config is composed of single-NIC main and single-NIC IPAM configurations.</p>
+<p>If no strategy is set, Multi-NIC CNI will automatically select all devices in the master network list specified by <code>.spec.masterNets</code> in MultiNicNetwork CR. If the master network list is not set by user, it will be automatically filled by the operator with all available network devices. </p>
+<p><img alt="" src="../../img/multicloud-00.png" /></p>
+<h2 id="multi-nic-cni-with-network-devices-dynamically-selected-by-multi-nic-daemon">Multi-NIC CNI with network devices dynamically selected by Multi-NIC daemon</h2>
+<p>If selection policy is set, the Multi-NIC daemon will apply dynamically and return a list of selected list to the CNI. For example, if the pod is annotated with <code>cni-args.nics=2</code>, only two NICs those are available on the nodes will be selected. </p>
+<p><img alt="" src="../../img/multicloud-0.png" /></p>
+<p>In addition to as-is main CNI (ipvlan and macvlan), we implement a new main CNI for AWS support called <code>aws-ipvlan</code>. <code>aws-ipvlan</code> connects to EC2 backend to assign and unassign a private IP addresses on ENA network device. <code>aws-ipvlan</code> is available from <code>v1.1.0</code>. The following table shows the current supported deployment scenarios and corresponding configurations using default network device selection by Multi-NIC daemon (for both static and dynamic).</p>
+<table>
+<thead>
+<tr>
+<th>Scenario</th>
+<th>Multi-NIC main</th>
+<th>IPAM</th>
+<th>(generated)<br>Single-NIC main</th>
+<th>(generated)<br>Single-NIC IPAM</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>On-premise with L2</td>
+<td>ipvlan (L2), macvlan</td>
+<td>whereabouts</td>
+<td>ipvlan (L2), macvlan</td>
+<td>whereabouts</td>
+</tr>
+<tr>
+<td></td>
+<td>ipvlan (L2), macvlan</td>
+<td>multi-nic-ipam</td>
+<td>ipvlan (L2), macvlan</td>
+<td>static</td>
+</tr>
+<tr>
+<td>VPC with L3 (IBM Cloud, Azure)</td>
+<td>ipvlan (L3)</td>
+<td>multi-nic-ipam</td>
+<td>ipvlan (L3)</td>
+<td>static</td>
+</tr>
+<tr>
+<td>AWS</td>
+<td>aws-ipvlan</td>
+<td>multi-nic-ipam</td>
+<td>ipvlan (L2), macvlan</td>
+<td>static</td>
+</tr>
+</tbody>
+</table>
+<h2 id="multi-nic-cni-with-network-devices-dynamically-provided-by-device-plugin">Multi-NIC CNI with network devices dynamically provided by device plugin</h2>
+<p>If network devices are previously allocated by the device plugin such as SR-IoV or RDMA shared device plugin according to the network operator policy (NetworkPolicy), the Multi-NIC daemon will be aware of that by the resource annotation <code>k8s.v1.cni.cncf.io/resourceName</code> when perform selection. </p>
+<p><img alt="" src="../../img/multicloud-1.png" /></p>
+<p>There are two supported single-NIC main CNI those are <code>sriov</code> and <code>host-device</code>. <code>sriov</code> plugin is used as-is. For <code>host-device</code>, we further implement <code>mellanox</code> for main CNI for extensible supports of NVIDIA network operator and <code>host-device-ipam</code> for IPAM to assign the host IP address to the pod device. The following table shows the current supported deployment scenarios and corresponding configurations which depend on network resource allocation from the device plugin. <code>mellanox</code> and <code>host-device-ipam</code> are available from <code>v1.2.0</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Scenario</th>
+<th>Multi-NIC main</th>
+<th>IPAM</th>
+<th>(generated)<br>Single-NIC main</th>
+<th>(generated)<br>Single-NIC IPAM</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>On-premise with SR-IoV</td>
+<td>sriov</td>
+<td>whereabouts</td>
+<td>sriov</td>
+<td>whereabouts</td>
+</tr>
+<tr>
+<td></td>
+<td>sriov</td>
+<td>multi-nic-ipam</td>
+<td>sriov</td>
+<td>static</td>
+</tr>
+<tr>
+<td>On-premise with Mellanox OFED</td>
+<td>mellanox</td>
+<td>whereabouts</td>
+<td>host-device</td>
+<td>whereabouts</td>
+</tr>
+<tr>
+<td></td>
+<td>mellanox</td>
+<td>host-device-ipam</td>
+<td>host-device</td>
+<td>static</td>
+</tr>
+<tr>
+<td>VPC with Mellanox OFED</td>
+<td>mellanox</td>
+<td>host-device-ipam</td>
+<td>host-device</td>
+<td>static</td>
+</tr>
+</tbody>
+</table>
+<h2 id="hybrid-secondary-network-solution">Hybrid secondary network solution</h2>
+<p>Multi-NIC CNI also allows the cluster to have more than one MultiNicNetwork defintitions. For example, the node can define a set of dedicated network devices limited by <code>pciAddresses</code> in <a href="https://github.com/Mellanox/network-operator#nicclusterpolicy-crd">NICClusterPolicy</a> for full ability of GDR with <code>mellanox</code> main plugin. At the same time, the node can have another set of network devices limited by <code>masterNets</code> in <a href="../policy/#none-strategy-none">MultiNicNetwork</a> to be shared between pods without GDR need using <code>ipvlan</code> main plugin.</p>
+<p><img alt="" src="../../img/multicloud-2.png" /></p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../" class="btn btn-neutral float-left" title="Key Concept"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../multi-nic-ipam/" class="btn btn-neutral float-right" title="Built-in Multi-NIC Network">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../multi-nic-ipam/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

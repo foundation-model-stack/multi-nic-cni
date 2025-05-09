@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>Troubleshooting with Multi-NIC CNI Health Checker Service - Multi-NIC CNI</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Troubleshooting with Multi-NIC CNI Health Checker Service";
+        var mkdocs_page_input_path = "troubleshooting/health-checker.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/yaml.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/rust.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> Multi-NIC CNI
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">Multi-NIC CNI</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../Maintainers/">Maintainers</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Concept</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../concept/">Key Concept</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../concept/multi-cloud-support/">Multi-Cloud Support</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../concept/multi-nic-ipam/">Built-in Multi-NIC Network</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../concept/network-status/">Network Status</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../concept/policy/">Policy-based secondary network attachment</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Contributing</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../contributing/">Contributor Guide</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../contributing/architecture/">Architecture</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../contributing/local_build_push/">Local Development</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../contributing/maintainer/">Upstream Development</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Release</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../release/">Release</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../release/alpha-1.2/">Alpha 1.2 Channel</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../release/alpha/">Alpha Channel</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../release/beta/">Beta Channel</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../release/stable-1.2/">Stable 1.2 Channel</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../release/stable/">Stable Channel (default)</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Troubleshooting</span></p>
+              <ul class="current">
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Troubleshooting with Multi-NIC CNI Health Checker Service</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#check-full-error-message">Check full error message</a>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../troubleshooting/">Manual Troubleshooting (Common Issues)</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">User guide</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../user_guide/">Installation</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../user_guide/user/">MultiNicNetwork Usage and Testing</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">Multi-NIC CNI</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Troubleshooting</li>
+      <li class="breadcrumb-item active">Troubleshooting with Multi-NIC CNI Health Checker Service</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="troubleshooting-with-multi-nic-cni-health-checker-service">Troubleshooting with Multi-NIC CNI Health Checker Service</h1>
+<p>See <a href="https://github.com/foundation-model-stack/multi-nic-cni/tree/main/health-check">installation steps and usage</a>.</p>
+<table>
+<thead>
+<tr>
+<th>StatusCode</th>
+<th>Message</th>
+<th>Potential causes</th>
+<th>Actions</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>200</td>
+<td>Success</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>400</td>
+<td>NetworkNotFound</td>
+<td>NetworkAttachmentDefinition is not created.</td>
+<td>Check multinicnetwork CR whether <br>the <code>.spec.namespaces</code> is limited to specific list.<br> If included your namespace, check <a href="../troubleshooting/#get-controller-log">controller log</a>.</td>
+</tr>
+<tr>
+<td>401</td>
+<td>PluginNotFound</td>
+<td>CNI binary file is not available.</td>
+<td>Check <a href="../troubleshooting/#cni-binary-not-exist">CNI binary file</a>.</td>
+</tr>
+<tr>
+<td>500</td>
+<td>ConfigFailure</td>
+<td>Configuration input is not valid.</td>
+<td>Check <code>NetworkAttachmentDefinition.spec.config</code><br> comparing with full error message from <a href="../troubleshooting/#check-full-error-message">/status response</a>.</td>
+</tr>
+<tr>
+<td>501</td>
+<td>PluginNotSupport</td>
+<td>CNI plugin is not supported <br>in the running environment.</td>
+<td>Check <a href="https://github.com/foundation-model-stack/multi-nic-cni#requirements">requirements of CNI</a>.</td>
+</tr>
+<tr>
+<td>600</td>
+<td>NetNSFailured</td>
+<td>The agent process faces restriction<br>to open a new network Linux namespace <br>(e.g., privileges, namespace limited)</td>
+<td>Check full error message from <a href="../troubleshooting/#check-full-error-message">/status response</a>.</td>
+</tr>
+<tr>
+<td>601</td>
+<td>IPAMFailure</td>
+<td>IPAM CNI fails to assign an IP</td>
+<td>Check <a href="../troubleshooting/#ipam-execadd-failed">IPAM CNI log</a> and full error message from <a href="../troubleshooting/#check-full-error-message">/status response</a>.</td>
+</tr>
+<tr>
+<td>602</td>
+<td>PluginExecFailure</td>
+<td>(depends on failed CNI)</td>
+<td>Check <a href="../troubleshooting/#ipam-execadd-failed">CNI log</a> and full error message from <a href="../troubleshooting/#check-full-error-message">/status response</a>.</td>
+</tr>
+<tr>
+<td>603</td>
+<td>PartialFailure</td>
+<td>Only some network device is not healthy</td>
+<td>Identify failed network address from <a href="#check-full-error-message">/status response</a>.<br> Check <a href="../troubleshooting/#ping-failed">connectivity failure</a>.</td>
+</tr>
+<tr>
+<td>700</td>
+<td>DaemonConnectionFailure</td>
+<td>Daemon pod is not running <br>or fails to response.</td>
+<td>Check if <a href="../troubleshooting/#hostinterface-not-created">multi-nicd is deployed</a> ).<br> If yes, check <a href="../troubleshooting/#get-multi-nicd-log">multi-nicd log</a>.</td>
+</tr>
+<tr>
+<td>999</td>
+<td>Unknown</td>
+<td>No health agent running by <a href="https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/">taint</a><br>or checker failed to get response.</td>
+<td>If agent is normally running, <br>check full error message from <a href="#check-full-error-message">/status response</a>.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="check-full-error-message">Check full error message</h3>
+<pre><code class="language-bash"># port-forward checker pod on one terminal
+checker=$(kubectl get po -n multi-nic-cni-operator|grep multi-nic-cni-health-checker|awk '{ print $1 }')
+kubectl port-forward ${checker} -n multi-nic-cni-operator 8080:8080
+
+# request status on specific node
+export FAILED_NODE= # failed node name
+curl &quot;localhost:8080/status?host=${FAILED_NODE}&quot;
+</code></pre>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../../release/stable/" class="btn btn-neutral float-left" title="Stable Channel (default)"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../troubleshooting/" class="btn btn-neutral float-right" title="Manual Troubleshooting (Common Issues)">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../../release/stable/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../troubleshooting/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>
