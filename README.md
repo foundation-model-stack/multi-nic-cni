@@ -41,7 +41,7 @@ Leveraging advantage point of managing multiple CNIs together with auto-discover
 
   <img src="./document/docs/img/multi-nic-cni-feature-3.png" alt="drawing" style="width:600px;"/>
 
-The Multi-NIC CNI architecture can be found [here](./document/docs/Developer%20Guide/architecture.md).
+The Multi-NIC CNI architecture can be found [here](./document/docs/contributing/architecture.md).
 
 ## MultiNicNetwork
 The Multi-NIC operator operates over a custom resource named *MultiNicNetwork* defined by users.

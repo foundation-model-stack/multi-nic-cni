@@ -144,6 +144,9 @@ fix: tidy fmt vet golangci-lint ## Fixup files in the repo.
 lint: tidy fmt vet golangci-lint ## Run the lint check
 	$(GOLANGCI_LINT) run
 
+.PHONY: pr
+pr: lint test yaml ## Run targets required for PR
+
 ##@ Test
 TEST_BIN_DIR		= $(BASE_DIR)/tools/testbin
 TEST_RESULT_DIR 	= $(BASE_DIR)/testing

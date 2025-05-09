@@ -89,7 +89,25 @@ There are two common root causes.
 2. Network interfaces are not configured as expected.
       * Check [multi-nicd log](#get-multi-nicd-log).
     
-        - If getting `cannot list address on <SECONDARY INTERFACE>`, please confirm whether IPv4 address on the host. 
+        - If getting `cannot list address on <SECONDARY INTERFACE>`, please confirm whether IPv4 address on the host.
+        - If getting `cannot get PCI info: Get "https://pci-ids.ucw.cz/v2.2/pci.ids.gz": net/http: TLS handshake timeout`, some environment variables need to be set in the config for the multi-nicd container to reach the above address via proxy settings.
+
+                apiVersion: multinic.fms.io/v1
+                kind: Config
+                metadata:
+                  name: multi-nicd
+                ...
+                spec:
+                ...
+                  daemon:
+                  env:    
+                - name: HTTP_PROXY
+                  value: <REPLACE WITH YOUR HTTPS_PROXY>
+                - name: HTTPS_PROXY
+                  value: <REPLACE WITH YOUR HTTPS_PROXY>
+                - name: NO_PROXY
+                  value: <REPLACE WITH YOUR NO_PROXY>
+
         - Otherwise, please refer to [check interfaces at node's host network](#check-host-secondary-interfaces).
 
 ### Pod failed to start
@@ -222,20 +240,36 @@ Zero config occurs when CNI cannot generate configurations from the network-atta
 ### Ping failed
 **Issue:** Pods cannot ping each other.
 
-Check route status in multinicnetworks.multinic.fms.io.
-```bash
-kubectl get multinicnetwork.multinic.fms.io multinic-ipvlanl3 -o json\ 
-| jq -r .status.routeStatus
-```
+* If the CNI operates at Layer 2 (such as MACVLAN or IPVLAN with L2), please confirm whether the defined Pod CIDR is routable within your cluster.
 
-- *WaitForRoutes*:  the new cidr is just recomputed and waiting for route update.
-- *Failed*: some route cannot be applied, need attention. Check [multi-nicd log](#get-multi-nicd-log)
-- *Unknown*: some daemon cannot be connected. 
-- *N/A*: there is no L3 configuration applied. Check whether multinicnetwork.multinic.fms.io is defined with L3 mode and cidrs.multinic.fms.io is created. 
+    For bare metal cluster which has only a certain VLAN range opened on the switch, 
+    please define a VLAN interface instead of the physical NIC on the node.
+    Usually for a bare metal node with a secondary interface,
+    the two ports of NIC2 will be defined as tenant-bond for redundancy,
+    the VLAN interface should be defined following the naming vlanXXX@tenant-bond,
+    where XXX represents a valid open VLAN ID. 
+    
+    Please see the following example:
 
-      kubectl get cidrs.multinic.fms.io
+        13769: tenant-bond: <BROADCAST,MULTICAST,MASTER,UP,LOWER_UP> mtu 9000 qdisc noqueue state UP group
+        default qlen 1000 link/ether 98:03:9b:8c:55:e4 brd ff:ff:ff:ff:ff:ff
+        14688: vlan1134@tenant-bond: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 9000 qdisc noqueue state UP group
+        default qlen 1000 inet 172.11.3.3/16 brd 172.11.255.255 scope global noprefixroute vlan1134 
 
-- *Success*: check [set required security group rules](#set-security-groups)
+* If the CNI operates at Layer 3, check route status in `multinicnetworks.multinic.fms.io`.
+
+        kubectl get multinicnetwork.multinic.fms.io multinic-ipvlanl3 -o json\ 
+        | jq -r .status.routeStatus
+
+    - *WaitForRoutes*:  the new cidr is just recomputed and waiting for route update.
+    - *Failed*: some route cannot be applied, need attention. Check [multi-nicd log](#get-multi-nicd-log)
+    - *Unknown*: some daemon cannot be connected. 
+    - *N/A*: there is no L3 configuration applied. Check whether multinicnetwork.multinic.fms.io is defined with L3 mode and cidrs.multinic.fms.io is created.  
+
+            kubectl get cidrs.multinic.fms.io
+
+    - *Success*: check [set required security group rules](#set-security-groups)
+
 ### TCP/UDP communication failed.
 **Issue:** Pods can ping each other but do not get response from TCP/UDP communication such as iPerf.
 
