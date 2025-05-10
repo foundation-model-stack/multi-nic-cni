@@ -8,9 +8,32 @@ on:
       - cni/**
       - Makefile
 
+env:
+  OLD_VERSION: "1.2.7"
+  VERSION: "1.2.8"
+  IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
+
 jobs:
+  retag-kbuilder:
+    runs-on: ubuntu-latest
+    permissions: write-all
+    steps:
+      - name: Log in to docker
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Pull the current latest kbuilder image
+        run: docker pull ghcr.io/${{ github.repository }}-kbuilder:v${{ env.OLD_VERSION }}
+      - name: Tag the kbuilder image with the new version
+        run: docker tag ghcr.io/${{ github.repository }}-kbuilder:v${{ env.OLD_VERSION }} ghcr.io/${{ github.repository }}-kbuilder:v${{ env.VERSION }}
+      - name: Push the new kbuilder image
+        run: docker push ghcr.io/${{ github.repository }}-kbuilder:v${{ env.VERSION }}
+
   daemon-test:
     runs-on: ubuntu-latest
+    needs: retag-kbuilder # This makes daemon-test dependent on retag-kbuilder
     env:
       IMAGE_NAME: ghcr.io/${{ github.repository }}-daemon
     steps:
@@ -22,3 +45,4 @@ jobs:
         uses: docker/setup-buildx-action@v1
       - name: Test
         run: make test-daemon
+
