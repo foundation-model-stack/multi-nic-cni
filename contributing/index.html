@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Contributor Guide - Multi-NIC CNI</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Contributor Guide";
+        var mkdocs_page_input_path = "contributing/index.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/yaml.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/rust.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> Multi-NIC CNI
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Multi-NIC CNI</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Maintainers/">Maintainers</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Concept</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../concept/">Key Concept</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../concept/multi-cloud-support/">Multi-Cloud Support</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../concept/multi-nic-ipam/">Built-in Multi-NIC Network</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../concept/network-status/">Network Status</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../concept/policy/">Policy-based secondary network attachment</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Contributing</span></p>
+              <ul class="current">
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Contributor Guide</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#onboarding-multi-nic-cni">Onboarding Multi-NIC CNI</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#contributing-in-general">Contributing In General</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#proposing-new-features">Proposing new features</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#fixing-bugs">Fixing bugs</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#merge-approval">Merge approval</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#legal">Legal</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#setup">Setup</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#clone-the-repo-and-enter-the-workspace">Clone the repo and enter the workspace</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#requirements">Requirements</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#testing">Testing</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#coding-style-guidelines">Coding style guidelines</a>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="architecture/">Architecture</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="local_build_push/">Local Development</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="maintainer/">Upstream Development</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Release</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../release/">Release</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../release/alpha-1.2/">Alpha 1.2 Channel</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../release/alpha/">Alpha Channel</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../release/beta/">Beta Channel</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../release/stable-1.2/">Stable 1.2 Channel</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../release/stable/">Stable Channel (default)</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Troubleshooting</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../troubleshooting/health-checker/">Troubleshooting with Multi-NIC CNI Health Checker Service</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../troubleshooting/troubleshooting/">Manual Troubleshooting (Common Issues)</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">User guide</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../user_guide/">Installation</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../user_guide/user/">MultiNicNetwork Usage and Testing</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">Multi-NIC CNI</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Contributing</li>
+      <li class="breadcrumb-item active">Contributor Guide</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="contributor-guide">Contributor Guide</h1>
+<h2 id="onboarding-multi-nic-cni">Onboarding Multi-NIC CNI</h2>
+<ol>
+<li>Learn about Multi-NIC CNI. Recommend the blog post <a href="https://medium.com/@sunyanan.choochotkaew1/multi-nic-cni-operator-101-deep-dive-into-container-multi-nic-simplification-1b0cf5f67bb5">Multi-NIC CNI Operator 101: Deep Dive into Container Multi-NIC Simplification</a>. </li>
+<li>Deep dive into <a href="architecture/">Multi-NIC CNI architecture</a> and <a href="../concept/multi-nic-ipam/#workflows">communication flow</a>.</li>
+<li>Prepare Cluster with required environments. Check <a href="../user_guide/#requirements">the requirements</a>.</li>
+<li>Install Multi-NIC CNI with common MultiNicNetwork definition. Check <a href="../user_guide/#installation">installation guide</a>.</li>
+<li>Test network connection. Check <a href="../user_guide/user/">user guide</a>.</li>
+<li>Check <a href="local_build_push/">development guide</a>.</li>
+</ol>
+<h2 id="contributing-in-general">Contributing In General</h2>
+<p>Our project welcomes external contributions. If you have an itch, please feel
+free to scratch it.</p>
+<p>To contribute code or documentation, please submit a <a href="https://github.com/foundation-model-stack/multi-nic-cni/pulls">pull request</a>.</p>
+<p>A good way to familiarize yourself with the codebase and contribution process is
+to look for and tackle low-hanging fruit in the <a href="https://github.com/foundation-model-stack/multi-nic-cni/issues">issue tracker</a>.
+Before embarking on a more ambitious contribution, please quickly <a href="#communication">get in touch</a> with us.</p>
+<p><strong>Note: We appreciate your effort, and want to avoid a situation where a contribution
+requires extensive rework (by you or by us), sits in backlog for a long time, or
+cannot be accepted at all!</strong></p>
+<h3 id="proposing-new-features">Proposing new features</h3>
+<p>If you would like to implement a new feature, please <a href="https://github.com/foundation-model-stack/multi-nic-cni/issues">raise an issue</a>
+before sending a pull request so the feature can be discussed. This is to avoid
+you wasting your valuable time working on a feature that the project developers
+are not interested in accepting into the code base.</p>
+<h3 id="fixing-bugs">Fixing bugs</h3>
+<p>If you would like to fix a bug, please <a href="https://github.com/foundation-model-stack/multi-nic-cni/issues">raise an issue</a> before sending a
+pull request so it can be tracked.</p>
+<h3 id="merge-approval">Merge approval</h3>
+<p>The project maintainers use LGTM (Looks Good To Me) in comments on the code
+review to indicate acceptance. A change requires LGTMs from two of the
+maintainers of each component affected.</p>
+<p>For a list of the maintainers, see the <a href="../Maintainers/">MAINTAINERS.md</a> page.</p>
+<h2 id="legal">Legal</h2>
+<p>Each source file must include a license header for the Apache
+Software License 2.0. Using the SPDX format is the simplest approach.
+e.g.</p>
+<pre><code>/*
+Copyright &lt;holder&gt; All Rights Reserved.
+
+SPDX-License-Identifier: Apache-2.0
+*/
+</code></pre>
+<p>We have tried to make it as easy as possible to make contributions. This
+applies to how we handle the legal aspects of contribution. We use the
+same approach - the <a href="https://github.com/hyperledger/fabric/blob/master/docs/source/DCO1.1.txt">Developer's Certificate of Origin 1.1 (DCO)</a> - that the Linux® Kernel <a href="https://elinux.org/Developer_Certificate_Of_Origin">community</a>
+uses to manage code contributions.</p>
+<p>We simply ask that when submitting a patch for review, the developer
+must include a sign-off statement in the commit message.</p>
+<p>Here is an example Signed-off-by line, which indicates that the
+submitter accepts the DCO:</p>
+<pre><code>Signed-off-by: John Doe &lt;john.doe@example.com&gt;
+</code></pre>
+<p>You can include this automatically when you commit a change to your
+local git repository using the following command:</p>
+<pre><code>git commit -s
+</code></pre>
+<h2 id="setup">Setup</h2>
+<h4 id="clone-the-repo-and-enter-the-workspace">Clone the repo and enter the workspace</h4>
+<pre><code class="language-bash">git clone https://github.com/foundation-model-stack/multi-nic-cni.git
+cd multi-nic-cni-operator
+</code></pre>
+<h4 id="requirements">Requirements</h4>
+<ul>
+<li><a href="https://go.dev/doc/install">go</a></li>
+<li><a href="https://sdk.operatorframework.io/docs/installation/">operator-sdk</a></li>
+<li>utility tools</li>
+<li>environment substitution <em>envsubst</em> (<a href="https://www.gnu.org/software/gettext/">gettext</a>)</li>
+<li>YAML processor <em>yq</em> (<a href="https://mikefarah.gitbook.io/yq/">yq</a>)</li>
+</ul>
+<h2 id="testing">Testing</h2>
+<ul>
+<li>Unit test</li>
+</ul>
+<pre><code class="language-bash">make test
+</code></pre>
+<ul>
+<li>Local functional test in your local cluster
+<a href="local_build_push/">Build and deploy locally</a><ul>
+<li><a href="../user_guide/#deploy-multinicnetwork-resource">Deploy network</a></li>
+<li><a href="../user_guide/#check-connections">Check all-to-all connections</a></li>
+<li>Test your new feature (if proposing new feature)</li>
+</ul>
+</li>
+</ul>
+<h2 id="coding-style-guidelines">Coding style guidelines</h2>
+<p>Follow <a href="https://go.dev/doc/effective_go">effective GO</a>.</p>
+<p>Please run <code>make pr</code> before submitting PRs.</p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../concept/policy/" class="btn btn-neutral float-left" title="Policy-based secondary network attachment"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="architecture/" class="btn btn-neutral float-right" title="Architecture">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../concept/policy/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="architecture/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

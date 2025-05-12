@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>Network Status - Multi-NIC CNI</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Network Status";
+        var mkdocs_page_input_path = "concept/network-status.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/yaml.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/rust.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> Multi-NIC CNI
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">Multi-NIC CNI</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../Maintainers/">Maintainers</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Concept</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../">Key Concept</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../multi-cloud-support/">Multi-Cloud Support</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../multi-nic-ipam/">Built-in Multi-NIC Network</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Network Status</a>
+    <ul class="current">
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../policy/">Policy-based secondary network attachment</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Contributing</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../contributing/">Contributor Guide</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../contributing/architecture/">Architecture</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../contributing/local_build_push/">Local Development</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../contributing/maintainer/">Upstream Development</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Release</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../release/">Release</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../release/alpha-1.2/">Alpha 1.2 Channel</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../release/alpha/">Alpha Channel</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../release/beta/">Beta Channel</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../release/stable-1.2/">Stable 1.2 Channel</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../release/stable/">Stable Channel (default)</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Troubleshooting</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../troubleshooting/health-checker/">Troubleshooting with Multi-NIC CNI Health Checker Service</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../troubleshooting/troubleshooting/">Manual Troubleshooting (Common Issues)</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">User guide</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../user_guide/">Installation</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../user_guide/user/">MultiNicNetwork Usage and Testing</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">Multi-NIC CNI</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Concept</li>
+      <li class="breadcrumb-item active">Network Status</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="network-status">Network Status</h1>
+<p>Reported multinicnetwork status</p>
+<ul>
+<li>v1.0.2</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Value</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>computeResults</td>
+<td>netAddress, numOfHosts</td>
+<td>summary of CIDR computation if <code>multiNICIPAM=true</code></td>
+</tr>
+<tr>
+<td>routeStatus</td>
+<td>Success</td>
+<td><code>mode=l3</code> and all routes are applied</td>
+</tr>
+<tr>
+<td></td>
+<td>WaitForRoutes</td>
+<td><code>mode=l3</code> but the new CIDR is just recomputed and waiting for route update</td>
+</tr>
+<tr>
+<td></td>
+<td>Failed</td>
+<td><code>mode=l3</code> but some route cannot be applied, need attention</td>
+</tr>
+<tr>
+<td></td>
+<td>Unknown</td>
+<td><code>mode=l3</code> but some daemon cannot be connected</td>
+</tr>
+<tr>
+<td></td>
+<td>N/A</td>
+<td><code>mode!=l3</code></td>
+</tr>
+<tr>
+<td>lastSyncTime</td>
+<td>Date Time</td>
+<td>timestamp at last synchronization of interfaces and CIDR</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>v1.0.3 or later</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Value</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>discovery</td>
+<td>existDaemon,<br>infoAvailable,<br>cidrProcessed</td>
+<td>results of hostinterface discovery</td>
+</tr>
+<tr>
+<td>computeResults</td>
+<td>netAddress, numOfHosts</td>
+<td>summary of CIDR computation if <code>multiNICIPAM=true</code></td>
+</tr>
+<tr>
+<td>configStatus</td>
+<td>Success<br></td>
+<td>network plugin has been configured.</td>
+</tr>
+<tr>
+<td></td>
+<td>WaitForConfig<br></td>
+<td>plugin configuration has not completed yet.</td>
+</tr>
+<tr>
+<td></td>
+<td>Failed</td>
+<td>failed to configure network plugin</td>
+</tr>
+<tr>
+<td>routeStatus</td>
+<td>Success</td>
+<td><code>mode=l3</code> and all routes are applied</td>
+</tr>
+<tr>
+<td></td>
+<td>WaitForRoutes</td>
+<td><code>mode=l3</code> but the new CIDR is just recomputed and waiting for route update</td>
+</tr>
+<tr>
+<td></td>
+<td>Failed</td>
+<td><code>mode=l3</code> but some route cannot be applied, need attention</td>
+</tr>
+<tr>
+<td></td>
+<td>Unknown</td>
+<td><code>mode=l3</code> but some daemon cannot be connected</td>
+</tr>
+<tr>
+<td></td>
+<td>N/A</td>
+<td><code>mode!=l3</code></td>
+</tr>
+<tr>
+<td>message</td>
+<td>ConfigError/RouteError</td>
+<td>error message (if exists)</td>
+</tr>
+<tr>
+<td>lastSyncTime</td>
+<td>Date Time</td>
+<td>timestamp at last synchronization of interfaces and CIDR</td>
+</tr>
+</tbody>
+</table>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../multi-nic-ipam/" class="btn btn-neutral float-left" title="Built-in Multi-NIC Network"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../policy/" class="btn btn-neutral float-right" title="Policy-based secondary network attachment">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../multi-nic-ipam/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../policy/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

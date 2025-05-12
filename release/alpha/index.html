@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>Alpha Channel - Multi-NIC CNI</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Alpha Channel";
+        var mkdocs_page_input_path = "release/alpha.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/yaml.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/rust.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> Multi-NIC CNI
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">Multi-NIC CNI</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../Maintainers/">Maintainers</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Concept</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../concept/">Key Concept</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../concept/multi-cloud-support/">Multi-Cloud Support</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../concept/multi-nic-ipam/">Built-in Multi-NIC Network</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../concept/network-status/">Network Status</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../concept/policy/">Policy-based secondary network attachment</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Contributing</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../contributing/">Contributor Guide</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../contributing/architecture/">Architecture</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../contributing/local_build_push/">Local Development</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../contributing/maintainer/">Upstream Development</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Release</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../">Release</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../alpha-1.2/">Alpha 1.2 Channel</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Alpha Channel</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#v130-based-on-v122">v1.3.0 (based on v1.2.2)</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#v122">v1.2.2</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#v121">v1.2.1</a>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../beta/">Beta Channel</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../stable-1.2/">Stable 1.2 Channel</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../stable/">Stable Channel (default)</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Troubleshooting</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../troubleshooting/health-checker/">Troubleshooting with Multi-NIC CNI Health Checker Service</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../troubleshooting/troubleshooting/">Manual Troubleshooting (Common Issues)</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">User guide</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../user_guide/">Installation</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../user_guide/user/">MultiNicNetwork Usage and Testing</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">Multi-NIC CNI</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Release</li>
+      <li class="breadcrumb-item active">Alpha Channel</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="alpha-channel">Alpha Channel</h1>
+<p><img alt="" src="../../img/alpha-release.png" /></p>
+<blockquote>
+<p><strong>FIX-ME:</strong> <br>
+This channel does not include no bug fixes for incompability to newer version of network operator in https://github.com/foundation-model-stack/multi-nic-cni/pull/182.</p>
+</blockquote>
+<h2 id="v130-based-on-v122">v1.3.0 (based on v1.2.2)</h2>
+<p><strong>Improvements:</strong></p>
+<ul>
+<li>Make all fields except interfaceName in <code>HostInterface.Interfaces</code> optional</li>
+<li>Add <strong>namespace watcher</strong> to add <code>NetworkAttachmentDefinition</code> when new namespace is created</li>
+<li>Set <code>manager</code> container as default container in controller</li>
+</ul>
+<h2 id="v122">v1.2.2</h2>
+<p><strong>Improvements:</strong></p>
+<ul>
+<li>
+<p>Multi-config IPAM (<code>multi-config</code>) </p>
+<pre><code>ipam: |
+    { 
+    "type": "multi-config",
+    "ipam_type": "whereabouts",
+    "args": {
+            "eth1": {
+                "range": "192.168.0.0/18"
+            },
+            "eth2": {
+                "range": "192.168.64.0/18"
+            }
+        }
+    }
+</code></pre>
+</li>
+<li>
+<p>Static IP support</p>
+<pre><code>annotations:
+        k8s.v1.cni.cncf.io/networks: |
+            [{
+                    "name": "multinic-network",
+                    "cni-args": {
+                    "masters": ["eth1", "eth2"]
+                    },
+                    "ips": [ "192.168.0.1/18", "192.168.64.1/18" ]
+            }]
+</code></pre>
+</li>
+</ul>
+<h2 id="v121">v1.2.1</h2>
+<p><strong>Improvements:</strong></p>
+<ul>
+<li>
+<p>Unmanaged HostNetworkInterface for IP-less network device </p>
+<ul>
+<li>
+<p>zero host block/zero interface block</p>
+<pre><code>apiVersion: multinic.fms.io/v1
+kind: MultiNicNetwork
+metadata:
+    name: multinic-unmanaged
+spec:
+    ipam: |
+        {
+        "type": "multi-nic-ipam",
+        "hostBlock": 0, 
+        "interfaceBlock": 0,
+        "vlanMode": "l2"
+        }
+    multiNICIPAM: true
+    plugin:
+        cniVersion: "0.3.0"
+        type: ipvlan
+        args: 
+            mode: l2
+</code></pre>
+</li>
+<li>
+<p>specify static cidr of each host</p>
+<pre><code>apiVersion: multinic.fms.io/v1
+kind: HostInterface
+metadata:
+    name: node-1
+    labels:
+      multi-nic-unmanaged: "true"
+spec:
+    hostName: node-1
+    interfaces:
+    -   hostIP: ""
+        interfaceName: eth1
+        netAddress: 192.168.0.0/24
+        pciAddress: ""
+        product: ""
+        vendor: ""
+    -   hostIP: ""
+        interfaceName: eth2
+        netAddress: 192.168.1.0/24
+        pciAddress: ""
+        product: ""
+        vendor: ""
+</code></pre>
+</li>
+</ul>
+</li>
+<li>
+<p>Multi-gateway route configuration support</p>
+<pre><code>apiVersion: multinic.fms.io/v1
+kind: MultiNicNetwork
+metadata:
+    name: multinic-multi-gateway
+spec:
+    ipam: |
+        {
+        "type": "multi-nic-ipam",
+        ...
+        "routes": [{"dst": "10.0.0.0/24","gw": "1.1.1.1"}, {"dst": "10.0.0.0/24","gw": "2.2.2.2"}]
+        }
+    multiNICIPAM: true
+</code></pre>
+<p>The above definition will generate the following route on pod:</p>
+<p><code>10.0.0.0/24 nexthop via 1.1.1.1 nexthop via 2.2.2.2</code></p>
+</li>
+</ul>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../alpha-1.2/" class="btn btn-neutral float-left" title="Alpha 1.2 Channel"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../beta/" class="btn btn-neutral float-right" title="Beta Channel">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../alpha-1.2/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../beta/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>Built-in Multi-NIC Network - Multi-NIC CNI</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Built-in Multi-NIC Network";
+        var mkdocs_page_input_path = "concept/multi-nic-ipam.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/yaml.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/rust.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> Multi-NIC CNI
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">Multi-NIC CNI</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../Maintainers/">Maintainers</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Concept</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../">Key Concept</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../multi-cloud-support/">Multi-Cloud Support</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Built-in Multi-NIC Network</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#common-nat-bypassing-network-solution">Common NAT-bypassing network solution</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#vpc-cluster-requirements">VPC Cluster Requirements</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#ipam-configuration">IPAM Configuration</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#workflows">Workflows</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#interface-discovery">Interface Discovery</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#cidr-generation-and-l3-route-auto-configuration-clean-up">CIDR Generation and L3 Route Auto-configuration / Clean up</a>
+    </li>
+        </ul>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../network-status/">Network Status</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../policy/">Policy-based secondary network attachment</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Contributing</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../contributing/">Contributor Guide</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../contributing/architecture/">Architecture</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../contributing/local_build_push/">Local Development</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../contributing/maintainer/">Upstream Development</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Release</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../release/">Release</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../release/alpha-1.2/">Alpha 1.2 Channel</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../release/alpha/">Alpha Channel</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../release/beta/">Beta Channel</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../release/stable-1.2/">Stable 1.2 Channel</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../release/stable/">Stable Channel (default)</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Troubleshooting</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../troubleshooting/health-checker/">Troubleshooting with Multi-NIC CNI Health Checker Service</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../troubleshooting/troubleshooting/">Manual Troubleshooting (Common Issues)</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">User guide</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../user_guide/">Installation</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../user_guide/user/">MultiNicNetwork Usage and Testing</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">Multi-NIC CNI</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Concept</li>
+      <li class="breadcrumb-item active">Built-in Multi-NIC Network</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="built-in-multi-nic-network">Built-in Multi-NIC Network</h1>
+<p>The built-in multi-NIC network is a common NAT-bypassing network solution without underlay infrastructure dependency based on L3 IPVLAN and neighbor routing table.
+The target is to attach secondary network interface cards at hosts to the container pods and bypass the costly network address translation to efficiently deliver network packets between pods on different hosts. </p>
+<p><img alt="" src="../../img/illustrate.PNG" /></p>
+<p>IPVLAN is a software multiplexing tool that exposes Pod packet and Pod IP directly to master interface (NIC) on the host. In most cases, Pod IPs are not routable by the underlay virtual Cloud infrastructure. Configuring a neighbor route entry (L3 routes) on the host will enable communication between endpoints on the different hosts.</p>
+<p>Multi-NIC CNI computes a specific CIDR range for each interface and each host  incrementally from the user-defined global subnet limiting by defined block sizes. </p>
+<p>In the above example, as the global subnet is 192.168.0.0/16 with 2 interface bits and 6 host bits, the IP addresses assigned to the first master interface (eth1) will start with 192.168.0.x - 192.168.63.x while that assigned to the second one (eth2) will start with 192.168.64.x - 192.168.127.x. </p>
+<p>The IP addresses assigned to the first master interface in the first host are further specified to the range 192.168.1.0 - 192.168.1.255. The first and the last addresses are reserved for network address and broadcast address to be managed later.</p>
+<p>With this blocking range of IP, the L3 routes on each host and interface can be configured without conflict.</p>
+<h2 id="common-nat-bypassing-network-solution">Common NAT-bypassing network solution</h2>
+<p>The built-in Multi-NIC IPAM and L3 route auto-configuration performs by collaboration of the controller with <a href="https://github.com/foundation-model-stack/multi-nic-cni/tree/main/cni">Multi-NIC CNI</a> and <a href="https://github.com/foundation-model-stack/multi-nic-cni/tree/main/daemon">Multi-NIC daemon</a>. </p>
+<p>The CNI uses orchrestrator storage to keep data synchronize by defining new three custom resources: </p>
+<pre><code class="language-bash">NAME             APIVERSION                                    NAMESPACED   KIND
+cidrs            multinic.fms.io/v1                          false        CIDR
+hostinterfaces   multinic.fms.io/v1                          false        HostInterface
+ippools          multinic.fms.io/v1                          false        IPPool
+</code></pre>
+<ul>
+<li><strong>CIDR</strong> for recording the computed CIDRs. This resource is created or updated when</li>
+<li><em>MultiNicNetwork</em> is created or updated with IPAM type <code>multi-nic-ipam</code>. </li>
+<li><em>HostInterface</em> is updated</li>
+<li><strong>HostInterface</strong> for keeping discoveried host interface data. This resource is updated if there is a change of host interfaces checked every minute.</li>
+<li><strong>IPPool</strong> for managing IP allocation/deallocation. This resource is created or updated at the same time when CIDR is created or updated.</li>
+</ul>
+<h2 id="vpc-cluster-requirements">VPC Cluster Requirements</h2>
+<p>**Minimum requirement: **</p>
+<ul>
+<li>main plugin support (e.g., kernel version &gt;= 4.2 for ipvlan)</li>
+</ul>
+<p><strong>L3 mode:</strong></p>
+<ul>
+<li>enable allowing IP spoofing for each attached interface</li>
+<li>security group</li>
+<li>allow target global subnet on secondary subnets</li>
+<li>allow daemon port (default: 11000) on primary subnet</li>
+</ul>
+<h2 id="ipam-configuration">IPAM Configuration</h2>
+<p>In addition to global <em>subnet</em> and designated <em>masterNets</em>, Multi-NIC IPAM requires the following arguments to compute CIDR for each host and each interface.</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Description</th>
+<th>Value</th>
+<th>Remarks</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>vlanMode</td>
+<td>mode for creating ipvlan</td>
+<td>l2, l3, l3s</td>
+<td>For ls3 and l3s mode, the cni will automatically create corresponding host routes in level 3</td>
+</tr>
+<tr>
+<td>hostBlock</td>
+<td>number of address bits for host indexing</td>
+<td>int (n)</td>
+<td>the number of assignable host = 2^n</td>
+</tr>
+<tr>
+<td>interfaceBlock</td>
+<td>number of address bits for interface indexing</td>
+<td>int (m)</td>
+<td>the number of assignable interfaces = 2^m</td>
+</tr>
+<tr>
+<td>excludeCIDRs</td>
+<td>list of ip range (CIDR) to exclude</td>
+<td>list of string</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>example of IPAM-related spec in <em>MultiNicNetwork</em> resource:</p>
+<pre><code class="language-yaml">spec:
+  subnet: &quot;192.168.0.0/16&quot;
+  ipam: |
+    {
+      &quot;type&quot;: &quot;multi-nic-ipam&quot;,
+      &quot;hostBlock&quot;: 6, 
+      &quot;interfaceBlock&quot;: 2,
+      &quot;vlanMode&quot;: &quot;l3&quot;
+    }
+  multiNICIPAM: true
+  masterNets:
+    - &quot;10.0.1.0/24&quot;
+    - &quot;10.0.2.0/24&quot;
+</code></pre>
+<h2 id="workflows">Workflows</h2>
+<h3 id="interface-discovery">Interface Discovery</h3>
+<p><img alt="" src="../../img/interface_discovery.png" /></p>
+<h3 id="cidr-generation-and-l3-route-auto-configuration-clean-up">CIDR Generation and L3 Route Auto-configuration / Clean up</h3>
+<p><img alt="" src="../../img/cidr_gen.png" /></p>
+<p><strong>CIDR Generation</strong></p>
+<p>The current version of CIDR is based on IPv4 which contains 32 bits.</p>
+<p>Given,</p>
+<pre><code class="language-json">hosts=[&quot;Host1&quot;, &quot;Host2&quot;]
+subnet=192.168.0.0/16
+hostBlock=6
+interfaceBlock=2
+masterNets=[&quot;10.0.1.0/24&quot;, &quot;10.0.2.0/24&quot;]
+</code></pre>
+<p>Host1 and Host2 are assigned with index 0 and 1 respectively and, at the same time, interfaces with 10.0.1.0/24 and with 10.0.2.0/24 are assigned with index 0 and 1 respectively. 
+The first 16 bits are reserved for global subnet. 
+The next 2 bits are reserved for interface index.
+The next 6 bits are reserved for host index.
+The rest 8 bits are for pod-specific IP address. 
+Accordingly,
+the pod CIDR for Host1 with network addresss 10.0.1.0/24 is 192.168.0.0/24. (00|000000 from bit 17 to 24)
+the pod CIDR for Host1 with network addresss 10.0.2.0/24 is 192.168.64.0/24. (01|000000 from bit 17 to 24)
+the pod CIDR for Host2 with network addresss 10.0.1.0/24 is 192.168.1.0/24. (00|000001 from bit 17 to 24)
+the pod CIDR for Host2 with network addresss 10.0.2.0/24 is 192.168.65.0/24. (01|000001 from bit 17 to 24)</p>
+<p><strong>L3 Route Auto-configuration</strong></p>
+<p>If the vlanMode is set to l3 or l3s, the CNI will configure route table on Pod and Host when the <em>CIDR</em> resource is created as follows.
+On Pod, the vlan CIDR of each interface is set up to interface block.
+On Host, the next-hop route is set up to host block.</p>
+<p>For example, routes configured regarding the above example,</p>
+<pre><code class="language-bash"># On Pod index 1 at Host1 (IPs = 192.168.0.1, 192.168.64.1)
+&gt; ip route
+192.168.0.0/18 dev net1-0 proto kernel scope link src 192.168.0.1
+192.168.64.0/18 dev net1-1 proto kernel scope link src 192.168.64.1
+# On Host1 (IPs = 10.0.1.1, 10.0.2.1) when Host2 has IPs 10.0.1.2, 10.0.2.2, 
+&gt; ip route
+192.168.1.0/24 via 10.0.1.2 dev eth1
+192.168.65.0/24 via 10.0.2.2 dev eth2
+</code></pre>
+<p><strong>IP Allocation / Deallocation</strong></p>
+<p><img alt="" src="../../img/ip_allocate.png" />
+The CNI will send a request to daemon running on the deployed host to get a set of IP addresses regarding a set of the interface names. This is a locked operation within the daemon function to prevent allocating the same IP address to different pods at the same time.</p>
+<p><strong>Host/Interface Block Definition</strong></p>
+<p>Since the current supported IP is v4 with 32 bits, size of allocatable pods in a single host is limited the subnet block,interface block, and host block as example below.</p>
+<table>
+<thead>
+<tr>
+<th>Subnet CIDR (Addresss/Block)</th>
+<th>Interface Block (Max #Interface)</th>
+<th>Host Block (Max #Host)</th>
+<th>Pod/host Size</th>
+<th>Use case</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>192.168.0.0/16</td>
+<td>2 (4)</td>
+<td>6 (64)</td>
+<td>256</td>
+<td>Small-size application</td>
+</tr>
+<tr>
+<td>192.168.0.0/16</td>
+<td>2 (4)</td>
+<td>8 (256)</td>
+<td>64</td>
+<td>Medium-size application</td>
+</tr>
+<tr>
+<td>192.168.0.0/16</td>
+<td>2 (4)</td>
+<td>9 (512)</td>
+<td>32</td>
+<td>Large-size application</td>
+</tr>
+<tr>
+<td>192.168.0.0/16</td>
+<td>2 (4)</td>
+<td>10 (1024)</td>
+<td>16</td>
+<td>Large-size application</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>The common number of interface is 4 (block=2). The default limitation by hypervisor is 8 (block=3). The current limitation on bare metal is 32 (block=5).</li>
+<li>A network attachment definition can be defined per application group . However, Each cannot connect to across different application group. </li>
+</ul>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../multi-cloud-support/" class="btn btn-neutral float-left" title="Multi-Cloud Support"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../network-status/" class="btn btn-neutral float-right" title="Network Status">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../multi-cloud-support/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../network-status/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

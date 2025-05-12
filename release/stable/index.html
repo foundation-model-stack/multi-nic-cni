@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>Stable Channel (default) - Multi-NIC CNI</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Stable Channel (default)";
+        var mkdocs_page_input_path = "release/stable.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/yaml.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/rust.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> Multi-NIC CNI
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">Multi-NIC CNI</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../Maintainers/">Maintainers</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Concept</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../concept/">Key Concept</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../concept/multi-cloud-support/">Multi-Cloud Support</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../concept/multi-nic-ipam/">Built-in Multi-NIC Network</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../concept/network-status/">Network Status</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../concept/policy/">Policy-based secondary network attachment</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Contributing</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../contributing/">Contributor Guide</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../contributing/architecture/">Architecture</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../contributing/local_build_push/">Local Development</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../contributing/maintainer/">Upstream Development</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Release</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../">Release</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../alpha-1.2/">Alpha 1.2 Channel</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../alpha/">Alpha Channel</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../beta/">Beta Channel</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../stable-1.2/">Stable 1.2 Channel</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Stable Channel (default)</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#v105">v1.0.5</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#v104">v1.0.4</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#v103">v1.0.3</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#v102">v1.0.2</a>
+    </li>
+    </ul>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Troubleshooting</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../troubleshooting/health-checker/">Troubleshooting with Multi-NIC CNI Health Checker Service</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../troubleshooting/troubleshooting/">Manual Troubleshooting (Common Issues)</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">User guide</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../user_guide/">Installation</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../user_guide/user/">MultiNicNetwork Usage and Testing</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">Multi-NIC CNI</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Release</li>
+      <li class="breadcrumb-item active">Stable Channel (default)</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="stable-channel-default">Stable Channel (default)</h1>
+<p><img alt="" src="../../img/stable-release.png" /></p>
+<h2 id="v105">v1.0.5</h2>
+<p><strong>Improvements:</strong></p>
+<ul>
+<li>allow own namespace and single namespace</li>
+</ul>
+<p><strong>Bug fixes</strong></p>
+<ul>
+<li>unavailability of unrelated subnet <a href="https://github.com/foundation-model-stack/multi-nic-cni/issues/117">Issue #117</a></li>
+<li>try getting daemon pod if cache not found when calling interface update <a href="https://github.com/foundation-model-stack/multi-nic-cni/issues/118">Issue #118</a></li>
+<li>continue after net-attach-def create/udpate error in <a href="https://github.com/foundation-model-stack/multi-nic-cni/pull/114">PR #114</a></li>
+</ul>
+<hr />
+<h2 id="v104">v1.0.4</h2>
+<p><strong>CRD changes:</strong></p>
+<ul>
+<li>config:<ul>
+<li>add following dynamic config values<pre><code>// type ConfigSpec struct
+UrgentReconcileSeconds int        `json:"urgentReconcileSeconds,omitempty"`
+NormalReconcileMinutes int        `json:"normalReconcileMinutes,omitempty"`
+LongReconcileMinutes   int        `json:"longReconcileMinutes,omitempty"`
+ContextTimeoutMinutes  int        `json:"contextTimeoutMinutes,omitempty"`
+LogLevel               int        `json:"logLevel,omitempty"`
+</code></pre>
+</li>
+</ul>
+</li>
+</ul>
+<p><strong>Improvements:</strong></p>
+<ul>
+<li>apply linter code analysis removing unused function, handling errors</li>
+<li>allow changing reconciler time and log level on the fly from config.multinic</li>
+<li>change file strcuture<ul>
+<li>separate unit-test folder</li>
+<li>move constatnt and shared varaible to vars package</li>
+</ul>
+</li>
+<li>allow changing synchronization ticker period (TickerIntervalKey) and maximum size of daemon pod watching queue (MAX_QSIZE) from environment variable </li>
+<li>change logger time encoder to ISO 8601</li>
+<li>support OwnNamespace/SingleNamespace namespace deployment</li>
+</ul>
+<p><strong>Bug fixes:</strong></p>
+<ul>
+<li>computeResult is reset at one point after CIDR update with no change</li>
+<li>potentially hang at scale due to API server never return for large amount of listing</li>
+<li>continue creating NetworkAttachmentDefinition even if it is failed to create/update NetworkAttachmentDefinition in some namespaces</li>
+</ul>
+<hr />
+<h2 id="v103">v1.0.3</h2>
+<p><strong>CRD changes:</strong></p>
+<ul>
+<li>cidrs: <ul>
+<li>add corresponding IPPool to CIDR spec (<code>spec.cidr.hosts[*].ippool</code>)</li>
+</ul>
+</li>
+<li>multinicnetwork: <ul>
+<li>add host discovery and processing progress (<code>status.discovery</code>)</li>
+<li>add network config status (<code>status.configStatus</code>)</li>
+</ul>
+</li>
+<li>config:<ul>
+<li>add toleration spec for e2e integration test and future taint usecases (<code>spec.daemon.tolerations</code>)</li>
+</ul>
+</li>
+</ul>
+<p><strong>Improvements:</strong></p>
+<ul>
+<li>
+<p>separate log level on controller manager</p>
+<table>
+<thead>
+<tr>
+<th>Verbose Level</th>
+<th>Information</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>- critical error (cannot create/update resource by k8s API) <br> - "Set Config" key <br> - set up log <br>- config error</td>
+</tr>
+<tr>
+<td>2</td>
+<td>- significant events/failures of multinicnetwork</td>
+</tr>
+<tr>
+<td>3</td>
+<td>- significant events/failures of cidr</td>
+</tr>
+<tr>
+<td>4 (default)</td>
+<td>- significant events/failures of hostinterface</td>
+</tr>
+<tr>
+<td>5</td>
+<td>- significant events/failures of ippools</td>
+</tr>
+<tr>
+<td>6</td>
+<td>- significant events/failures of route configurations</td>
+</tr>
+<tr>
+<td>7</td>
+<td>- requeue <br> - get deleted resource <br> - debug pointers (e.g., start point of function call)</td>
+</tr>
+</tbody>
+</table>
+</li>
+<li>
+<p>log CNI message on host</p>
+<ul>
+<li>main plugin: <code>/var/log/multi-nic-cni.log</code></li>
+<li>IPAM plugin: <code>/var/log/multi-nic-ipam.log</code></li>
+</ul>
+</li>
+<li>add CI tests<ul>
+<li>multi-nicd test (daemon and CNI components)</li>
+<li>end-to-end 200-node scale test on kind cluster using kwok </li>
+</ul>
+</li>
+</ul>
+<p><strong>Bug fixes:</strong></p>
+<ul>
+<li>sequential CIDR update blocking in scale (scale issue)</li>
+<li>unexpected HostInterface deletion when API server is stressed (scale issue)</li>
+<li>unexpected interface updates on HostInterface when API server is stressed (scale issue)</li>
+<li>missing HostInterface at initialization (fault-tolerance issue)</li>
+</ul>
+<hr />
+<h2 id="v102">v1.0.2</h2>
+<ul>
+<li>First release (as open source)</li>
+</ul>
+<p><strong>Core Features:</strong></p>
+<ul>
+<li>Host-interface auto-discovery</li>
+<li>Single definition for multiple secondary network attachments</li>
+<li>Multi-NIC IPAM (CIDR computation, IP allocation/deallocation) for multiple secondary subnets</li>
+<li>L3 configurations on host neighbour route table corresponding to ipvlan CNI plugin with l3 mode</li>
+</ul>
+<p><strong>Supplementary Features:</strong></p>
+<ul>
+<li>NIC selection based on specific requested number or specific interface name list</li>
+<li>Dynamic CIDR updates when<ul>
+<li>detecting added/removed hosts at creation/deletion of multi-nic daemon</li>
+<li>(periodically) discovering added/removed secondary interfaces</li>
+</ul>
+</li>
+<li>Fault tolerance in scale (tested upto 100 nodes x 2 secondary interfaces) with<ul>
+<li>initial synchronization of CIDR, IPPool after controller restarted</li>
+<li>periodic synchronization of L3 routes for hosts which were restarted and lost the configuration</li>
+</ul>
+</li>
+</ul>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../stable-1.2/" class="btn btn-neutral float-left" title="Stable 1.2 Channel"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../../troubleshooting/health-checker/" class="btn btn-neutral float-right" title="Troubleshooting with Multi-NIC CNI Health Checker Service">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../stable-1.2/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../../troubleshooting/health-checker/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>
