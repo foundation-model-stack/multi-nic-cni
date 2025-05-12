@@ -25,6 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -45,11 +46,10 @@ const (
 )
 
 var K8sClient client.Client
+var Cfg *rest.Config
 var testEnv *envtest.Environment
-var nodes []corev1.Node = generateNodes()
 var interfaceNames []string = []string{"eth1", "eth2"}
 var networkPrefixes []string = []string{"10.242.0.", "10.242.1."}
-var HifList map[string]multinicv1.HostInterface = generateHostInterfaceList(nodes)
 
 var IpvlanPlugin *plugin.IPVLANPlugin
 var MacvlanPlugin *plugin.MACVLANPlugin
@@ -57,7 +57,7 @@ var SriovPlugin *plugin.SriovPlugin
 var mellanoxPlugin *plugin.MellanoxPlugin
 
 var MultiNicnetworkReconcilerInstance *MultiNicNetworkReconciler
-var configReconciler *ConfigReconciler
+var ConfigReconcilerInstance *ConfigReconciler
 var daemonWatcher *DaemonWatcher
 
 // Multi-NIC IPAM
@@ -70,7 +70,7 @@ var multiNicIPAMConfig string = `{
 	"vlanMode":       "l2"
    }`
 
-var networkAddresses []string = []string{"10.242.0.0/24", "10.242.1.0/24", "10.242.2.0/24", "10.242.1.0/24"}
+var networkAddresses []string = []string{"10.242.0.0/24", "10.242.1.0/24", "10.242.2.0/24", "10.242.3.0/24"}
 
 // MultiNicNetwork (IPVLAN L2)
 
@@ -97,6 +97,7 @@ var _ = BeforeSuite(func() {
 	}
 
 	cfg, err := testEnv.Start()
+	Cfg = cfg
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
 
@@ -163,7 +164,7 @@ var _ = BeforeSuite(func() {
 	}).SetupWithManager(mgr)
 	Expect(err).ToNot(HaveOccurred())
 
-	configReconciler = &ConfigReconciler{
+	ConfigReconcilerInstance = &ConfigReconciler{
 		Client:              mgr.GetClient(),
 		Clientset:           clientset,
 		Config:              cfg,
@@ -171,7 +172,7 @@ var _ = BeforeSuite(func() {
 		NetAttachDefHandler: defHandler,
 		Scheme:              mgr.GetScheme(),
 	}
-	err = (configReconciler).SetupWithManager(mgr)
+	err = (ConfigReconcilerInstance).SetupWithManager(mgr)
 	Expect(err).ToNot(HaveOccurred())
 
 	MultiNicnetworkReconcilerInstance = &MultiNicNetworkReconciler{
@@ -239,11 +240,6 @@ var _ = BeforeSuite(func() {
 
 	// Deploy daemon config
 	Expect(K8sClient.Create(context.TODO(), daemonConfig)).Should(Succeed())
-	// Deploy host interface
-	for _, hif := range HifList {
-		Expect(K8sClient.Create(context.TODO(), &hif)).Should(Succeed())
-		cidrHandler.HostInterfaceHandler.SetCache(hif.Spec.HostName, hif)
-	}
 
 	// Deploy daemon pod
 	daemonPod := newDaemonPod(daemonConfig.Spec.Daemon)
@@ -320,25 +316,19 @@ var _ = AfterSuite(func() {
 	}).WithTimeout(60 * time.Second).WithPolling(1000 * time.Millisecond).Should(Succeed())
 })
 
-func generateNodes() []corev1.Node {
-	nodes := []corev1.Node{}
-	hostNamePrefix := "worker-"
-	hostNum := 5
-
-	for i := 0; i < hostNum; i++ {
-		hostName := fmt.Sprintf("%s%d", hostNamePrefix, i)
-		node := corev1.Node{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: hostName,
-			},
-		}
-		nodes = append(nodes, node)
+// GenerateHostInterfaceList generates stub host and interfaces
+func GenerateHostInterfaceList(nodes []corev1.Node) map[string]multinicv1.HostInterface {
+	hifList := make(map[string]multinicv1.HostInterface)
+	for i, node := range nodes {
+		hostName := node.GetName()
+		hif := GenerateNewHostInterface(hostName, interfaceNames, networkPrefixes, i)
+		hifList[hostName] = hif
 	}
-	return nodes
+	return hifList
 }
 
-// generateNewHostInterface generates new host
-func generateNewHostInterface(hostName string, interfaceNames []string, networkPrefixes []string, i int) multinicv1.HostInterface {
+// GenerateNewHostInterface generates new host
+func GenerateNewHostInterface(hostName string, interfaceNames []string, networkPrefixes []string, i int) multinicv1.HostInterface {
 	ifaces := []multinicv1.InterfaceInfoType{}
 	for index, ifaceName := range interfaceNames {
 		iface := multinicv1.InterfaceInfoType{
@@ -361,18 +351,6 @@ func generateNewHostInterface(hostName string, interfaceNames []string, networkP
 		},
 	}
 	return hif
-}
-
-// generateHostInterfaceList generates stub host and interfaces
-func generateHostInterfaceList(nodes []corev1.Node) map[string]multinicv1.HostInterface {
-
-	hifList := make(map[string]multinicv1.HostInterface)
-	for i, node := range nodes {
-		hostName := node.GetName()
-		hif := generateNewHostInterface(hostName, interfaceNames, networkPrefixes, i)
-		hifList[hostName] = hif
-	}
-	return hifList
 }
 
 // GetMultiNicCNINetwork returns MultiNicNetwork object

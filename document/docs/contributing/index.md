@@ -107,4 +107,4 @@ make test
 ## Coding style guidelines
 Follow [effective GO](https://go.dev/doc/effective_go).
 
-Please run `go fmt` for every packages before submitting PRs.
+Please run `make pr` before submitting PRs.

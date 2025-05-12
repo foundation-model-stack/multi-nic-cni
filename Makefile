@@ -144,6 +144,9 @@ fix: tidy fmt vet golangci-lint ## Fixup files in the repo.
 lint: tidy fmt vet golangci-lint ## Run the lint check
 	$(GOLANGCI_LINT) run
 
+.PHONY: pr
+pr: lint test yaml ## Run targets required for PR
+
 ##@ Test
 TEST_BIN_DIR		= $(BASE_DIR)/tools/testbin
 TEST_RESULT_DIR 	= $(BASE_DIR)/testing
@@ -169,9 +172,10 @@ $(ENVTEST): $(TEST_BIN_DIR)
 
 .PHONY: test
 test: $(TEST_RESULT_DIR) fmt vet ginkgo manifests generate envtest
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" $(TEST_BIN_DIR)/ginkgo run --cover --coverprofile=cover.out --json-report unittest-report.json   ./controllers/...  ./internal/...
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" $(TEST_BIN_DIR)/ginkgo run --cover --coverprofile=coverage --json-report unittest-report.json   ./controllers/...  ./internal/...
 	@./hack/json-report-to-markdown.sh unittest-report "Unit Test"
 	@rm unittest-report.json
+	@./hack/coverage-to-markdown.sh coverage "Unit Test Coverage"
 
 .PHONY: test-sanity
 test-sanity: fmt vet generate fix ## Test repo formatting, linting, etc.

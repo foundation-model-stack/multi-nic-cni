@@ -16,4 +16,4 @@ CSV=$(mktemp)
 jq -r '.[]|select(.SpecReports!=null)|.SpecReports[]|select(.ContainerHierarchyTexts!=null) | [(.ContainerHierarchyTexts | join("/")), .LeafNodeText, .LeafNodeLocation.FileName] | @tsv ' \
  < ${FILENAME}.json | sort | awk -F'\t' '{ printf "| %s | %s | %s |\n", $1, $2, $3 }'  >> ${OUTPUT}
 
-echo "Report saved in ${OUTPUT}"
+echo "Report ${TITLE} saved in ${OUTPUT}"

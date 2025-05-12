@@ -27,7 +27,7 @@ var _ = Describe("Config Test", func() {
 			LogLevel:               expectedLogLevel,
 		}
 		Expect(vars.ConfigLog.V(expectedLogLevel).Enabled()).To(Equal(false))
-		configReconciler.UpdateConfigBySpec(spec)
+		ConfigReconcilerInstance.UpdateConfigBySpec(spec)
 		Expect(vars.UrgentReconcileTime).To(BeEquivalentTo(expectedUrgentReconcileTime))
 		Expect(vars.NormalReconcileTime).To(BeEquivalentTo(expectedNormalReconcileTime))
 		Expect(vars.LongReconcileTime).To(BeEquivalentTo(expectedLongReconcileTime))

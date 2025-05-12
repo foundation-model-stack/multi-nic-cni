@@ -134,51 +134,80 @@ func (h *CIDRHandler) ListCIDR() (map[string]multinicv1.CIDR, error) {
 func (h *CIDRHandler) SyncAllPendingCustomCR(defHandler *plugin.NetAttachDefHandler) {
 	h.InitCustomCRCache()
 	cidrMap, err := h.ListCIDR()
-	ippoolSnapshot := h.IPPoolHandler.ListCache()
 	if err == nil {
-		daemonSize := h.DaemonCacheHandler.SafeCache.GetSize()
-		infoAvailableSize := h.HostInterfaceHandler.GetInfoAvailableSize()
 		vars.CIDRLog.V(3).Info(fmt.Sprintf("Checking %d cidrs", len(cidrMap)))
-		for name, cidr := range cidrMap {
-			multinicnetwork, err := h.MultiNicNetworkHandler.GetNetwork(name)
-			if err != nil && k8serrors.IsNotFound(err) {
-				// not found
-				vars.CIDRLog.V(3).Info(fmt.Sprintf("%v, delete pending resources (CIDR)", err))
-				err = defHandler.Delete(name, metav1.NamespaceAll)
+		validCIDRs := h.syncWithMultinicNetwork(defHandler, cidrMap)
+		_ = h.syncIPPools(validCIDRs)
+	} else {
+		vars.CIDRLog.V(3).Info(fmt.Sprintf("Failed to list cidr: %v", err))
+	}
+}
+
+// syncWithMultinicNetwork patches status of MultiNicNetwork with CIDR spec
+// and delete CIDR if no corresponding MultiNicNetwork
+func (h *CIDRHandler) syncWithMultinicNetwork(defHandler *plugin.NetAttachDefHandler, cidrMap map[string]multinicv1.CIDR) map[string]multinicv1.CIDR {
+	daemonSize := h.DaemonCacheHandler.SafeCache.GetSize()
+	infoAvailableSize := h.HostInterfaceHandler.GetInfoAvailableSize()
+	validCIDRs := make(map[string]multinicv1.CIDR, 0)
+	for name, cidr := range cidrMap {
+		multinicnetwork, err := h.MultiNicNetworkHandler.GetNetwork(name)
+		if err != nil && k8serrors.IsNotFound(err) {
+			vars.CIDRLog.V(3).Info(fmt.Sprintf("%v, delete pending resources (CIDR)", err))
+			h.deletePendingCIDR(defHandler, name, cidr)
+		} else if err == nil {
+			_, err = h.MultiNicNetworkHandler.SyncAllStatus(name, cidr.Spec, multinicnetwork.Status.RouteStatus, daemonSize, infoAvailableSize, true)
+			if err != nil {
+				vars.CIDRLog.V(3).Info(fmt.Sprintf("Failed to SyncAllStatus: %v", err))
+			}
+			validCIDRs[name] = cidr
+		} else {
+			vars.CIDRLog.V(3).Info(fmt.Sprintf("Failed to get MultiNicNetwork: %v", err))
+		}
+	}
+	return validCIDRs
+}
+
+// syncIPPools creates/updates/deletes IPPool corresponding to MultiNicNetwork and active Pods
+// defHandler is used for deleting NAD which has no corresponding MultiNicNetwork
+func (h *CIDRHandler) syncIPPools(validCIDRs map[string]multinicv1.CIDR) map[string][]multinicv1.Allocation {
+	ippoolSnapshot := h.IPPoolHandler.ListCache()
+	for name, cidr := range validCIDRs {
+		h.CleanPendingIPPools(ippoolSnapshot, name, cidr.Spec)
+		h.createOrUpdateIPPool(ippoolSnapshot, name, cidr)
+	}
+	newAllocationMap := h.SyncIPPoolWithActivePods(validCIDRs, ippoolSnapshot)
+	return newAllocationMap
+}
+
+// deletePendingCIDR deletes NAD that has corresponding multinicnetwork
+func (h *CIDRHandler) deletePendingCIDR(defHandler *plugin.NetAttachDefHandler, name string, cidr multinicv1.CIDR) {
+	err := defHandler.Delete(name, metav1.NamespaceAll)
+	if err != nil {
+		vars.CIDRLog.V(3).Info(fmt.Sprintf("Failed to delete NetworkAttachmentDefinition %s: %v", name, err))
+	}
+	err = h.DeleteCIDR(cidr)
+	if err != nil {
+		vars.CIDRLog.V(3).Info(fmt.Sprintf("Failed to delete CIDR %s: %v", name, err))
+	}
+}
+
+// createOrUpdateIPPool creates or updates IPPool in the snapshot corresponding to the given CIDR
+func (h *CIDRHandler) createOrUpdateIPPool(ippoolSnapshot map[string]multinicv1.IPPoolSpec, name string, cidr multinicv1.CIDR) {
+	h.SetCache(name, cidr.Spec)
+	excludes := compute.SortAddress(cidr.Spec.Config.ExcludeCIDRs)
+	for _, entry := range cidr.Spec.CIDRs {
+		for _, host := range entry.Hosts {
+			ippoolName := host.IPPool
+			if ippoolName == "" {
+				ippoolName = h.IPPoolHandler.GetIPPoolName(name, host.PodCIDR)
+			}
+			if _, found := ippoolSnapshot[ippoolName]; !found {
+				err := h.UpdateIPPool(name, host.PodCIDR, entry.VlanCIDR, host.HostName, host.InterfaceName, excludes)
 				if err != nil {
-					vars.CIDRLog.V(3).Info(fmt.Sprintf("Failed to delete NetworkAttachmentDefinition %s: %v", name, err))
-				}
-				err = h.DeleteCIDR(cidr)
-				if err != nil {
-					vars.CIDRLog.V(3).Info(fmt.Sprintf("Failed to delete CIDR %s: %v", name, err))
-				}
-			} else {
-				h.CleanPendingIPPools(ippoolSnapshot, name, cidr.Spec)
-				h.SetCache(name, cidr.Spec)
-				excludes := compute.SortAddress(cidr.Spec.Config.ExcludeCIDRs)
-				for _, entry := range cidr.Spec.CIDRs {
-					for _, host := range entry.Hosts {
-						ippoolName := host.IPPool
-						if ippoolName == "" {
-							ippoolName = h.IPPoolHandler.GetIPPoolName(name, host.PodCIDR)
-						}
-						if _, found := ippoolSnapshot[ippoolName]; !found {
-							err = h.UpdateIPPool(name, host.PodCIDR, entry.VlanCIDR, host.HostName, host.InterfaceName, excludes)
-							if err != nil {
-								vars.CIDRLog.V(5).Info(fmt.Sprintf("Failed to update IPPool %s: %v", ippoolName, err))
-							}
-						}
-					}
-				}
-				_, err = h.MultiNicNetworkHandler.SyncAllStatus(name, cidr.Spec, multinicnetwork.Status.RouteStatus, daemonSize, infoAvailableSize, true)
-				if err != nil {
-					vars.CIDRLog.V(3).Info(fmt.Sprintf("Failed to SyncAllStatus: %v", err))
+					vars.CIDRLog.V(5).Info(fmt.Sprintf("Failed to update IPPool %s: %v", ippoolName, err))
 				}
 			}
 		}
-		h.SyncIPPoolWithActivePods(cidrMap, ippoolSnapshot)
-	} else {
-		vars.CIDRLog.V(3).Info(fmt.Sprintf("Failed to list cidr: %v", err))
 	}
 }
 
@@ -376,7 +405,7 @@ func (h *CIDRHandler) UpdateEntries(cidrSpec multinicv1.CIDRSpec, excludes []com
 			changed = true
 		}
 		if len(entry.Hosts) == 0 || len(newHostList) > 0 {
-			// new or has some in  newHostList
+			// new or has some in newHostList
 			entry.Hosts = newHostList
 			entriesMap[entry.NetAddress] = entry
 		}
@@ -484,9 +513,13 @@ func (h *CIDRHandler) UpdateEntries(cidrSpec multinicv1.CIDRSpec, excludes []com
 				}
 			}
 			entry.Hosts = aliveHosts
+			if len(aliveHosts) == 0 {
+				continue
+			}
 			entriesMap[interfaceNetAddress] = entry
 		}
 	}
+
 	vars.CIDRLog.V(7).Info("UpdateEntries done")
 
 	return entriesMap, changed
@@ -547,7 +580,6 @@ func (h *CIDRHandler) updateCIDR(cidrSpec multinicv1.CIDRSpec, new bool) (bool, 
 				err = fmt.Errorf("TryInitExistingConfig")
 			}
 		}
-
 		if err != nil {
 			vars.CIDRLog.V(3).Info(fmt.Sprintf("Cannot create or update CIDR %s: error=%v", def.Name, err))
 			h.Mutex.Unlock()
@@ -662,7 +694,9 @@ func (h *CIDRHandler) GetSyncAllocations(ippool multinicv1.IPPoolSpec, allocatio
 }
 
 // SyncIPPoolWithActivePods adds assigned IP to the IPPool and reported unsync IPs
-func (h *CIDRHandler) SyncIPPoolWithActivePods(cidrMap map[string]multinicv1.CIDR, ippoolSnapshot map[string]multinicv1.IPPoolSpec) {
+// returns mapping from IPPool name to new allocation list
+func (h *CIDRHandler) SyncIPPoolWithActivePods(cidrMap map[string]multinicv1.CIDR, ippoolSnapshot map[string]multinicv1.IPPoolSpec) map[string][]multinicv1.Allocation {
+	outputs := make(map[string][]multinicv1.Allocation, 0)
 	vars.CIDRLog.V(5).Info("SyncIPPoolWithActivePods")
 	crAllocationMap := make(map[string]map[string]multinicv1.Allocation)
 	// delete pending ippool
@@ -697,7 +731,7 @@ func (h *CIDRHandler) SyncIPPoolWithActivePods(cidrMap map[string]multinicv1.CID
 	allocationMap, err := h.getCurrentAllocationMap(cidrMap)
 	if err != nil {
 		vars.CIDRLog.V(5).Info(fmt.Sprintf("Cannot getCurrentAllocationMap: %v", err))
-		return
+		return outputs
 	}
 	vars.CIDRLog.V(5).Info(fmt.Sprintf("allocationMap: %v", allocationMap))
 	vars.CIDRLog.V(5).Info(fmt.Sprintf("crAllocationMap: %v", crAllocationMap))
@@ -712,12 +746,14 @@ func (h *CIDRHandler) SyncIPPoolWithActivePods(cidrMap map[string]multinicv1.CID
 				vars.CIDRLog.V(5).Info(fmt.Sprintf("Patch IPPool %s, new allocations: %v", ippoolName, newAllocations))
 			}
 		}
+		outputs[ippoolName] = newAllocations
 	}
 	for defName, ipMap := range allocationMap {
 		if len(ipMap) > 0 {
 			vars.CIDRLog.V(5).Info(fmt.Sprintf("List of IPs still unsync for %s: %v", defName, ipMap))
 		}
 	}
+	return outputs
 }
 
 // getCurrentAllocationMap returns mapping of deName->allocations
@@ -838,9 +874,18 @@ func (h *CIDRHandler) getInterfaceEntry(def multinicv1.PluginConfig, entriesMap 
 	maxInterfaceIndex := int(math.Pow(2, float64(def.InterfaceBlock)) - 1)
 	vlanCIDR := ""
 	for vlanCIDR == "" {
-		masterIndex = h.CIDRCompute.FindAvailableIndex(excludedIndexes, -1, 0)
+		sort.Ints(excludedIndexes)
+		masterIndex = h.CIDRCompute.FindAvailableIndex(excludedIndexes, 0, 0)
 		if masterIndex < 0 {
-			masterIndex = len(excludedIndexes)
+			if len(excludedIndexes) > 0 {
+				masterIndex = excludedIndexes[len(excludedIndexes)-1] + 1
+			} else {
+				masterIndex = 0
+			}
+		}
+		if masterIndex > maxInterfaceIndex {
+			vars.CIDRLog.V(3).Info("cannot add new interface (no available index)")
+			return false, multinicv1.CIDREntry{}
 		}
 		tabu := h.CIDRCompute.CheckIfTabuIndex(def.Subnet, masterIndex, def.InterfaceBlock, def.ExcludeCIDRs)
 		if tabu {
@@ -853,10 +898,6 @@ func (h *CIDRHandler) getInterfaceEntry(def multinicv1.PluginConfig, entriesMap 
 			}
 			vlanCIDR = h.CIDRCompute.GetCIDRFromByte(vlanInByte, def.Subnet, def.InterfaceBlock)
 			break
-		}
-		if masterIndex > maxInterfaceIndex {
-			vars.CIDRLog.V(3).Info("cannot add new interface (no available index)")
-			return false, multinicv1.CIDREntry{}
 		}
 	}
 	return true, multinicv1.CIDREntry{
