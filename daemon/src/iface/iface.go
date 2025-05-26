@@ -24,6 +24,10 @@ type InterfaceInfoType struct {
 	PciAddress    string `json:"pciAddress"`
 }
 
+const (
+	zombiePrefix = "net1"
+)
+
 var interfaceInfoCache = InitSafeCache()
 
 func GetInterfaceInfoCache() map[string]InterfaceInfoType {
@@ -121,9 +125,14 @@ func GetInterfaces() []InterfaceInfoType {
 	if err != nil {
 		log.Printf("cannot get default subnet: %v", err)
 	}
-
 	for _, netDevice := range netDevices {
 		devName := netDevice.Name
+		if strings.HasPrefix(devName, zombiePrefix) {
+			if netDevice.PciAddress != "" {
+				log.Printf("found zombie interface name %s, skip", devName)
+			}
+			continue
+		}
 		devLink, err := netlink.LinkByName(devName)
 		if err != nil {
 			log.Printf("cannot find link %s: %v", devName, err)
