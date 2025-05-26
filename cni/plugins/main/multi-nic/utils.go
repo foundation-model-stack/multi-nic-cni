@@ -7,6 +7,9 @@ package main
 
 import (
 	"encoding/json"
+	"log"
+	"net"
+	"os/exec"
 	"strings"
 
 	"fmt"
@@ -85,11 +88,16 @@ func injectMaster(inData []byte, selectedNetAddrs []string, selectedMasters []st
 	return outBytes
 }
 
-// getHostIPConfig returns IP of host for a specific devName
-func getHostIPConfig(index int, devName string) *current.IPConfig {
-	devLink, err := netlink.LinkByName(devName)
+// getHostIPConfig returns IP of host for a specific device ID and correct devName if needed
+func getHostIPConfig(index int, devName, deviceID string) *current.IPConfig {
+	presentName, err := getLinkNameFromPciAddress(deviceID)
 	if err != nil {
-		utils.Logger.Debug(fmt.Sprintf("cannot find link %s: %v", devName, err))
+		utils.Logger.Debug(fmt.Sprintf("failed to get link name from device ID %s: %v", deviceID, err))
+		return nil
+	}
+	devLink, err := netlink.LinkByName(presentName)
+	if err != nil {
+		utils.Logger.Debug(fmt.Sprintf("cannot find link %s: %v", presentName, err))
 		return nil
 	}
 	addrs, err := netlink.AddrList(devLink, netlink.FAMILY_V4)
@@ -102,5 +110,41 @@ func getHostIPConfig(index int, devName string) *current.IPConfig {
 		Address:   *addr,
 		Interface: current.Int(index),
 	}
+	if devName != "" && presentName != devName {
+		if devLink.Attrs().Flags&net.FlagUp == net.FlagUp {
+			if err = netlink.LinkSetDown(devLink); err != nil {
+				log.Printf("WARNING: cannot set link down: %v", err)
+			}
+			defer func() {
+				_ = netlink.LinkSetUp(devLink)
+			}()
+		}
+		if err = netlink.LinkSetAlias(devLink, ""); err != nil {
+			log.Printf("WARNING: cannot reset alias: %v", err)
+		}
+
+		if err = delAltName(presentName, devName); err != nil {
+			log.Printf("WARNING: cannot del altname: %v", err)
+		} else {
+			log.Printf("successfully delete altname %s (%s)", devName, presentName)
+		}
+
+		// correct the device to the expected name
+		if err = netlink.LinkSetName(devLink, devName); err != nil {
+			utils.Logger.Debug(fmt.Sprintf("failed to rename host device %s to %s: %v", presentName, devName, err))
+		} else {
+			utils.Logger.Debug(fmt.Sprintf("successfully rename host device %s to %s", presentName, devName))
+		}
+	}
 	return ipConf
+}
+
+// delAltName
+// temporary solution, need upgrade to netlink 1.3.1 for using LinkDelAltName
+func delAltName(presentName, devName string) error {
+	cmd := exec.Command("ip", "link", "property", "del", "dev", presentName, "altname", devName)
+	if err := cmd.Run(); err != nil {
+		return err
+	}
+	return nil
 }
