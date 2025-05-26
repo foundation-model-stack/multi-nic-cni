@@ -8,6 +8,8 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/containernetworking/cni/pkg/types"
 	current "github.com/containernetworking/cni/pkg/types/100"
@@ -16,6 +18,7 @@ import (
 
 const (
 	HostDeviceIPAMType = "host-device-ipam"
+	sysBusPCI          = "/sys/bus/pci/devices"
 )
 
 type HostDeviceTypeNetConf struct {
@@ -70,7 +73,7 @@ func loadHostDeviceConf(bytes []byte, ifName string, n *NetConf, ipConfigs []*cu
 			return confBytesArray, err
 		}
 		if n.IPAM.Type == HostDeviceIPAMType {
-			ipConfig := getHostIPConfig(index, n.Masters[index])
+			ipConfig := getHostIPConfig(index, n.Masters[index], deviceID)
 			if ipConfig == nil {
 				utils.Logger.Debug(fmt.Sprintf("skip %d: no host IP", index))
 				confBytes = replaceEmptyIPAM(confBytes)
@@ -99,4 +102,31 @@ func copyHostDeviceConfig(original *HostDeviceNetConf) (*HostDeviceNetConf, erro
 		return copiedObject, err
 	}
 	return copiedObject, nil
+}
+
+func getLinkNameFromPciAddress(pciaddr string) (string, error) {
+	netDir := filepath.Join(sysBusPCI, pciaddr, "net")
+	if _, err := os.Lstat(netDir); err != nil {
+		virtioNetDir := filepath.Join(sysBusPCI, pciaddr, "virtio*", "net")
+		matches, err := filepath.Glob(virtioNetDir)
+		if matches == nil || err != nil {
+			return "", fmt.Errorf("no net directory under pci device %s", pciaddr)
+		}
+		netDir = matches[0]
+	}
+	return linkNameFromPath(netDir)
+}
+
+// linkNameFromPath is modified from linkFromPath in HostDevice plugin CNI
+// https://github.com/containernetworking/plugins/blob/main/plugins/main/host-device/host-device.go#L499
+func linkNameFromPath(path string) (string, error) {
+	entries, err := os.ReadDir(path)
+	if err != nil {
+		return "", fmt.Errorf("failed to read directory %s: %q", path, err)
+	}
+	if len(entries) > 0 {
+		// grab the first net device
+		return entries[0].Name(), nil
+	}
+	return "", fmt.Errorf("failed to find network device in path %s", path)
 }
