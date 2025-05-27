@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - release-v1.2.7-hotfix-278
     paths:
       - daemon/**
       - cni/**
