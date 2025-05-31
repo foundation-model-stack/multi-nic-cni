@@ -74,106 +74,106 @@ var _ = Describe("NetAttachDef test", func() {
 		})
 
 		Context("CheckDefChanged", func() {
-			It("should identify unchanged definitions", func() {
-				def1 := &NetworkAttachmentDefinition{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: multinicnetworkName,
-					},
-					Spec: NetworkAttachmentDefinitionSpec{
-						Config: `{"cniVersion":"0.3.0","type":"ipvlan","mode":"l2","mtu":"1500"}`,
-					},
-				}
-				def2 := &NetworkAttachmentDefinition{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: multinicnetworkName,
-					},
-					Spec: NetworkAttachmentDefinitionSpec{
-						Config: `{"cniVersion":"0.3.0","type":"ipvlan","mode":"l2","mtu":"1500"}`,
-					},
-				}
+			type testCase struct {
+				description string
+				def1        *NetworkAttachmentDefinition
+				def2        *NetworkAttachmentDefinition
+				expected    bool
+			}
 
-				changed := CheckDefChanged(def1, def2)
-				Expect(changed).To(BeFalse())
-			})
-
-			It("should detect changed configurations", func() {
-				def1 := &NetworkAttachmentDefinition{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: multinicnetworkName,
-					},
-					Spec: NetworkAttachmentDefinitionSpec{
-						Config: `{"cniVersion":"0.3.0","type":"ipvlan","mode":"l2","mtu":"1500"}`,
-					},
-				}
-				def2 := &NetworkAttachmentDefinition{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: multinicnetworkName,
-					},
-					Spec: NetworkAttachmentDefinitionSpec{
-						Config: `{"cniVersion":"0.3.0","type":"ipvlan","mode":"l3","mtu":"1500"}`,
-					},
-				}
-
-				changed := CheckDefChanged(def1, def2)
-				Expect(changed).To(BeTrue())
-			})
-
-			It("should detect changes in annotations", func() {
-				def1 := &NetworkAttachmentDefinition{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: multinicnetworkName,
-						Annotations: map[string]string{
-							"key1": "value1",
+			DescribeTable("comparing network attachment definitions",
+				func(tc testCase) {
+					changed := CheckDefChanged(tc.def1, tc.def2)
+					Expect(changed).To(Equal(tc.expected))
+				},
+				Entry("identical definitions", testCase{
+					description: "should not detect changes in identical definitions",
+					def1: &NetworkAttachmentDefinition{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: multinicnetworkName,
+						},
+						Spec: NetworkAttachmentDefinitionSpec{
+							Config: `{"cniVersion":"0.3.0","type":"ipvlan","mode":"l2","mtu":"1500"}`,
 						},
 					},
-					Spec: NetworkAttachmentDefinitionSpec{
-						Config: `{"cniVersion":"0.3.0","type":"ipvlan","mode":"l2","mtu":"1500"}`,
-					},
-				}
-				def2 := &NetworkAttachmentDefinition{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: multinicnetworkName,
-						Annotations: map[string]string{
-							"key1": "value2",
+					def2: &NetworkAttachmentDefinition{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: multinicnetworkName,
+						},
+						Spec: NetworkAttachmentDefinitionSpec{
+							Config: `{"cniVersion":"0.3.0","type":"ipvlan","mode":"l2","mtu":"1500"}`,
 						},
 					},
-					Spec: NetworkAttachmentDefinitionSpec{
-						Config: `{"cniVersion":"0.3.0","type":"ipvlan","mode":"l2","mtu":"1500"}`,
-					},
-				}
-
-				changed := CheckDefChanged(def1, def2)
-				Expect(changed).To(BeTrue())
-			})
-
-			It("should detect changes in annotation count", func() {
-				def1 := &NetworkAttachmentDefinition{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: multinicnetworkName,
-						Annotations: map[string]string{
-							"key1": "value1",
+					expected: false,
+				}),
+				Entry("different configurations", testCase{
+					description: "should detect changes in configuration",
+					def1: &NetworkAttachmentDefinition{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: multinicnetworkName,
+						},
+						Spec: NetworkAttachmentDefinitionSpec{
+							Config: `{"cniVersion":"0.3.0","type":"ipvlan","mode":"l2","mtu":"1500"}`,
 						},
 					},
-					Spec: NetworkAttachmentDefinitionSpec{
-						Config: `{"cniVersion":"0.3.0","type":"ipvlan","mode":"l2","mtu":"1500"}`,
-					},
-				}
-				def2 := &NetworkAttachmentDefinition{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: multinicnetworkName,
-						Annotations: map[string]string{
-							"key1": "value1",
-							"key2": "value2",
+					def2: &NetworkAttachmentDefinition{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: multinicnetworkName,
+						},
+						Spec: NetworkAttachmentDefinitionSpec{
+							Config: `{"cniVersion":"0.3.0","type":"ipvlan","mode":"l3","mtu":"1500"}`,
 						},
 					},
-					Spec: NetworkAttachmentDefinitionSpec{
-						Config: `{"cniVersion":"0.3.0","type":"ipvlan","mode":"l2","mtu":"1500"}`,
+					expected: true,
+				}),
+				Entry("different annotation values", testCase{
+					description: "should detect changes in annotation values",
+					def1: &NetworkAttachmentDefinition{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:        multinicnetworkName,
+							Annotations: map[string]string{"key1": "value1"},
+						},
+						Spec: NetworkAttachmentDefinitionSpec{
+							Config: `{"cniVersion":"0.3.0","type":"ipvlan","mode":"l2","mtu":"1500"}`,
+						},
 					},
-				}
-
-				changed := CheckDefChanged(def1, def2)
-				Expect(changed).To(BeTrue())
-			})
+					def2: &NetworkAttachmentDefinition{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:        multinicnetworkName,
+							Annotations: map[string]string{"key1": "value2"},
+						},
+						Spec: NetworkAttachmentDefinitionSpec{
+							Config: `{"cniVersion":"0.3.0","type":"ipvlan","mode":"l2","mtu":"1500"}`,
+						},
+					},
+					expected: true,
+				}),
+				Entry("different annotation count", testCase{
+					description: "should detect changes in annotation count",
+					def1: &NetworkAttachmentDefinition{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:        multinicnetworkName,
+							Annotations: map[string]string{"key1": "value1"},
+						},
+						Spec: NetworkAttachmentDefinitionSpec{
+							Config: `{"cniVersion":"0.3.0","type":"ipvlan","mode":"l2","mtu":"1500"}`,
+						},
+					},
+					def2: &NetworkAttachmentDefinition{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: multinicnetworkName,
+							Annotations: map[string]string{
+								"key1": "value1",
+								"key2": "value2",
+							},
+						},
+						Spec: NetworkAttachmentDefinitionSpec{
+							Config: `{"cniVersion":"0.3.0","type":"ipvlan","mode":"l2","mtu":"1500"}`,
+						},
+					},
+					expected: true,
+				}),
+			)
 		})
 	})
 })

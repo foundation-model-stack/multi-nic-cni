@@ -20,13 +20,13 @@ Test | Description | File
 | Mellanox Plugin/Init | should initialize successfully with valid config | /home/cbis-admin/set_version/multi-nic-cni/internal/plugin/mellanox_test.go |
 | Mellanox Plugin/Init/when config is invalid | should return error | /home/cbis-admin/set_version/multi-nic-cni/internal/plugin/mellanox_test.go |
 | NetAttachDef test/handler | create and delete | /home/cbis-admin/set_version/multi-nic-cni/internal/plugin/net_attach_def_test.go |
-| NetAttachDef test/handler/CheckDefChanged | should detect changed configurations | /home/cbis-admin/set_version/multi-nic-cni/internal/plugin/net_attach_def_test.go |
-| NetAttachDef test/handler/CheckDefChanged | should detect changes in annotation count | /home/cbis-admin/set_version/multi-nic-cni/internal/plugin/net_attach_def_test.go |
-| NetAttachDef test/handler/CheckDefChanged | should detect changes in annotations | /home/cbis-admin/set_version/multi-nic-cni/internal/plugin/net_attach_def_test.go |
-| NetAttachDef test/handler/CheckDefChanged | should identify unchanged definitions | /home/cbis-admin/set_version/multi-nic-cni/internal/plugin/net_attach_def_test.go |
+| NetAttachDef test/handler/CheckDefChanged/comparing network attachment definitions | different annotation count | /home/cbis-admin/set_version/multi-nic-cni/internal/plugin/net_attach_def_test.go |
+| NetAttachDef test/handler/CheckDefChanged/comparing network attachment definitions | different annotation values | /home/cbis-admin/set_version/multi-nic-cni/internal/plugin/net_attach_def_test.go |
+| NetAttachDef test/handler/CheckDefChanged/comparing network attachment definitions | different configurations | /home/cbis-admin/set_version/multi-nic-cni/internal/plugin/net_attach_def_test.go |
+| NetAttachDef test/handler/CheckDefChanged/comparing network attachment definitions | identical definitions | /home/cbis-admin/set_version/multi-nic-cni/internal/plugin/net_attach_def_test.go |
 | Test CIDR Handler\t/Handler functions/IPAM | Dynamically compute CIDR | /home/cbis-admin/set_version/multi-nic-cni/controllers/cidr_handler_test.go |
 | Test CIDR Handler\t/Handler functions/IPAM | Empty subnet | /home/cbis-admin/set_version/multi-nic-cni/controllers/cidr_handler_test.go |
-| Test CIDR Handler\t/Handler functions/IPAM | GenerateCIDRFromHostSubnet with no interfaces | /home/cbis-admin/set_version/multi-nic-cni/controllers/cidr_handler_test.go |
+| Test CIDR Handler\t/Handler functions/IPAM | Empty subnet and interfaces | /home/cbis-admin/set_version/multi-nic-cni/controllers/cidr_handler_test.go |
 | Test CIDR Handler\t/Handler functions/InitCustomCRCache | should initialize IPPool and HostInterface caches | /home/cbis-admin/set_version/multi-nic-cni/controllers/cidr_handler_test.go |
 | Test CIDR Handler\t/Handler functions/Sync/CIDR and IPPool | hasActivePod | /home/cbis-admin/set_version/multi-nic-cni/controllers/cidr_handler_test.go |
 | Test CIDR Handler\t/Handler functions/Sync/CIDR and IPPool | hasNewHost | /home/cbis-admin/set_version/multi-nic-cni/controllers/cidr_handler_test.go |
@@ -39,7 +39,10 @@ Test | Description | File
 | Test CIDR Handler\t/Util functions/GetHostInterfaceIndexMap | handles CIDREntries with empty Host lists | /home/cbis-admin/set_version/multi-nic-cni/controllers/cidr_handler_test.go |
 | Test CIDR Handler\t/Util functions/GetHostInterfaceIndexMap | returns a map from (host name, interface index) to HostInterfaceInfo of CIDR | /home/cbis-admin/set_version/multi-nic-cni/controllers/cidr_handler_test.go |
 | Test CIDR Handler\t/Util functions/GetHostInterfaceIndexMap | returns an empty map when there are no CIDR entries | /home/cbis-admin/set_version/multi-nic-cni/controllers/cidr_handler_test.go |
-| Test CIDR Handler\t/Util functions/Sync CIDR/IPPool | Sync CIDR/IPPool | /home/cbis-admin/set_version/multi-nic-cni/controllers/cidr_handler_test.go |
+| Test CIDR Handler\t/Util functions/Sync CIDR/IPPool/Getting index in range | index at bytes[1] | /home/cbis-admin/set_version/multi-nic-cni/controllers/cidr_handler_test.go |
+| Test CIDR Handler\t/Util functions/Sync CIDR/IPPool/Getting index in range | index at bytes[2] | /home/cbis-admin/set_version/multi-nic-cni/controllers/cidr_handler_test.go |
+| Test CIDR Handler\t/Util functions/Sync CIDR/IPPool/Getting index in range | index at bytes[3] | /home/cbis-admin/set_version/multi-nic-cni/controllers/cidr_handler_test.go |
+| Test CIDR Handler\t/Util functions/Sync CIDR/IPPool/Getting index in range | uncontained address | /home/cbis-admin/set_version/multi-nic-cni/controllers/cidr_handler_test.go |
 | Test CIDRCompute/CheckIfTabuIndex | cover tabu index | /home/cbis-admin/set_version/multi-nic-cni/internal/compute/compute_test.go |
 | Test CIDRCompute/CheckIfTabuIndex | no excludes | /home/cbis-admin/set_version/multi-nic-cni/internal/compute/compute_test.go |
 | Test CIDRCompute/CheckIfTabuIndex | not tabu index | /home/cbis-admin/set_version/multi-nic-cni/internal/compute/compute_test.go |

@@ -138,7 +138,7 @@ var _ = Describe("Test CIDR Handler	", func() {
 				Expect(len(hostIPs)).To(BeEquivalentTo(len(interfaceNames) * handler.HostInterfaceHandler.GetSize()))
 			})
 
-			It("GenerateCIDRFromHostSubnet with no interfaces", func() {
+			It("Empty subnet and interfaces", func() {
 				emptySubnetMultinicnetwork := GetMultiNicCNINetwork("empty-ipam", cniVersion, cniType, cniArgs)
 				emptySubnetMultinicnetwork.Spec.Subnet = ""
 				ipamConfig, err := MultiNicnetworkReconcilerInstance.GetIPAMConfig(emptySubnetMultinicnetwork)
@@ -146,13 +146,21 @@ var _ = Describe("Test CIDR Handler	", func() {
 				ipamConfig.HostBlock = 4
 				Expect(err).NotTo(HaveOccurred())
 
+				By("Testing with existing interfaces")
+				cidrSpec, err := handler.GenerateCIDRFromHostSubnet(*ipamConfig)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(len(cidrSpec.CIDRs)).To(Equal(len(interfaceNames)))
+				hostIPs := handler.GetHostAddressesToExclude()
+				Expect(len(hostIPs)).To(BeEquivalentTo(len(interfaceNames) * handler.HostInterfaceHandler.GetSize()))
+
+				By("Testing with no interfaces")
 				// Clear the HostInterface cache to simulate no interfaces
 				handler.HostInterfaceHandler.SafeCache.Clear()
 
-				cidrSpec, err := handler.GenerateCIDRFromHostSubnet(*ipamConfig)
+				cidrSpec, err = handler.GenerateCIDRFromHostSubnet(*ipamConfig)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(len(cidrSpec.CIDRs)).To(Equal(0))
-				hostIPs := handler.GetHostAddressesToExclude()
+				hostIPs = handler.GetHostAddressesToExclude()
 				Expect(len(hostIPs)).To(BeZero())
 			})
 		})
@@ -275,18 +283,86 @@ var _ = Describe("Test CIDR Handler	", func() {
 			It("should initialize IPPool and HostInterface caches", func() {
 				var handler *CIDRHandler
 				var quit chan struct{}
+				ctx := context.TODO()
+				dummyName := "test-dummy-network"
+
 				By("Create new CIDRHandler")
 				quit = make(chan struct{})
 				handler = newCIDRHandler(quit)
+				defer close(quit)
+
+				By("Creating dummy CIDR")
+				dummyCIDRSpec := multinicv1.CIDRSpec{
+					Config: multinicv1.PluginConfig{
+						Name:           dummyName,
+						Type:           "ipvlan",
+						Subnet:         "10.0.0.0/16",
+						MasterNetAddrs: []string{"eth1"},
+					},
+					CIDRs: []multinicv1.CIDREntry{
+						{
+							NetAddress: "10.0.0.0/16",
+							Hosts: []multinicv1.HostInterfaceInfo{
+								{
+									HostIndex:     0,
+									HostName:      "host1",
+									InterfaceName: "eth1",
+									HostIP:        "10.0.0.1",
+									PodCIDR:       "10.0.0.1/30",
+									IPPool:        "ippool1",
+								},
+							},
+						},
+					},
+				}
+				createNewCIDR(ctx, handler, dummyName, dummyCIDRSpec)
+				defer func() {
+					cidr, err := handler.GetCIDR(dummyName)
+					if err == nil {
+						if delErr := K8sClient.Delete(ctx, cidr); delErr != nil {
+							fmt.Printf("Warning: failed to delete CIDR: %v\n", delErr)
+						}
+					}
+					handler.UnsetCache(dummyName)
+				}()
+
+				By("Creating dummy IPPool")
+				dummyIPPool := &multinicv1.IPPool{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "ippool1",
+					},
+					Spec: multinicv1.IPPoolSpec{
+						PodCIDR:     "10.0.0.1/30",
+						Allocations: []multinicv1.Allocation{},
+						Excludes:    []string{},
+					},
+				}
+				err := K8sClient.Create(ctx, dummyIPPool)
+				Expect(err).NotTo(HaveOccurred())
+				defer func() {
+					if err := K8sClient.Delete(ctx, dummyIPPool); err != nil {
+						fmt.Printf("Warning: failed to delete IPPool: %v\n", err)
+					}
+					handler.IPPoolHandler.SafeCache.UnsetCache("ippool1")
+				}()
+
 				By("Initializing caches")
 				handler.InitCustomCRCache()
-				By("Check IPPool cache")
+
+				By("Verifying IPPool cache")
 				ippoolMap, err := handler.IPPoolHandler.ListIPPool()
 				Expect(err).NotTo(HaveOccurred())
-				Expect(len(ippoolMap)).To(Equal(0))
-				By("Check HostInterface cache")
+				Expect(ippoolMap).To(HaveKey("ippool1"))
+				Expect(len(ippoolMap)).To(Equal(1))
+
+				By("Verifying HostInterface cache")
 				his := handler.HostInterfaceHandler.ListCache()
 				Expect(len(his)).To(BeNumerically(">", 0))
+
+				By("Verifying CIDR is in cache")
+				cidr, err := handler.GetCIDR(dummyName)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(cidr.Spec).To(Equal(dummyCIDRSpec))
 			})
 		})
 
@@ -636,30 +712,19 @@ var _ = Describe("Test CIDR Handler	", func() {
 		})
 
 		Context("Sync CIDR/IPPool", func() {
-			It("Sync CIDR/IPPool", func() {
-				// get index at bytes[3]
-				podCIDR := "192.168.0.0/16"
-				unsyncedIp := "192.168.0.10"
-				contains, index := MultiNicnetworkReconcilerInstance.CIDRHandler.CIDRCompute.GetIndexInRange(podCIDR, unsyncedIp)
-				Expect(contains).To(Equal(true))
-				Expect(index).To(Equal(10))
-				// get index at bytes[2]
-				unsyncedIp = "192.168.1.1"
-				contains, index = MultiNicnetworkReconcilerInstance.CIDRHandler.CIDRCompute.GetIndexInRange(podCIDR, unsyncedIp)
-				Expect(contains).To(Equal(true))
-				Expect(index).To(Equal(257))
-				// get index at bytes[1]
-				podCIDR = "10.0.0.0/8"
-				unsyncedIp = "10.1.1.1"
-				contains, index = MultiNicnetworkReconcilerInstance.CIDRHandler.CIDRCompute.GetIndexInRange(podCIDR, unsyncedIp)
-				Expect(contains).To(Equal(true))
-				Expect(index).To(Equal(256*256 + 256 + 1))
-				// uncontain
-				podCIDR = "192.168.0.0/26"
-				unsyncedIp = "192.168.1.1"
-				contains, _ = MultiNicnetworkReconcilerInstance.CIDRHandler.CIDRCompute.GetIndexInRange(podCIDR, unsyncedIp)
-				Expect(contains).To(Equal(false))
-			})
+			DescribeTable("Getting index in range",
+				func(podCIDR, testIP string, expectedContains bool, expectedIndex int) {
+					contains, index := MultiNicnetworkReconcilerInstance.CIDRHandler.CIDRCompute.GetIndexInRange(podCIDR, testIP)
+					Expect(contains).To(Equal(expectedContains))
+					if expectedContains {
+						Expect(index).To(Equal(expectedIndex))
+					}
+				},
+				Entry("index at bytes[3]", "192.168.0.0/16", "192.168.0.10", true, 10),
+				Entry("index at bytes[2]", "192.168.0.0/16", "192.168.1.1", true, 257),
+				Entry("index at bytes[1]", "10.0.0.0/8", "10.1.1.1", true, 256*256+256+1),
+				Entry("uncontained address", "192.168.0.0/26", "192.168.1.1", false, 0),
+			)
 		})
 	})
 
