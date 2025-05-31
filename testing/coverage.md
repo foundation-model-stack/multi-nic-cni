@@ -110,7 +110,7 @@ File | Function | Coverage
 | github.com/foundation-model-stack/multi-nic-cni/controllers/ippool_handler.go:250: | AddLabel | 0.0% |
 | github.com/foundation-model-stack/multi-nic-cni/controllers/multinicnetwork_controller.go:39: | GetPluginMap | 90.5% |
 | github.com/foundation-model-stack/multi-nic-cni/controllers/multinicnetwork_controller.go:82: | IsMultiNICIPAM | 80.0% |
-| github.com/foundation-model-stack/multi-nic-cni/controllers/multinicnetwork_controller.go:91: | Reconcile | 55.7% |
+| github.com/foundation-model-stack/multi-nic-cni/controllers/multinicnetwork_controller.go:91: | Reconcile | 54.4% |
 | github.com/foundation-model-stack/multi-nic-cni/controllers/multinicnetwork_controller.go:213: | GenerateNetAttachDef | 100.0% |
 | github.com/foundation-model-stack/multi-nic-cni/controllers/multinicnetwork_controller.go:225: | GetMainPluginConf | 75.0% |
 | github.com/foundation-model-stack/multi-nic-cni/controllers/multinicnetwork_controller.go:234: | SetupWithManager | 100.0% |
@@ -216,4 +216,4 @@ File | Function | Coverage
 | github.com/foundation-model-stack/multi-nic-cni/internal/plugin/utils.go:26: | getBoolean | 100.0% |
 | github.com/foundation-model-stack/multi-nic-cni/internal/plugin/utils.go:33: | ValidateResourceName | 100.0% |
 | github.com/foundation-model-stack/multi-nic-cni/internal/plugin/utils.go:39: | GetHolderNetName | 100.0% |
-| total: | (statements) | 67.5% |
+| total: | (statements) | 67.4% |
