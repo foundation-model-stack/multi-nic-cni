@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"time"
+	"unsafe"
 
 	multinicv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
 	. "github.com/foundation-model-stack/multi-nic-cni/controllers"
@@ -15,6 +17,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	dynamicfake "k8s.io/client-go/dynamic/fake"
+	k8sfake "k8s.io/client-go/kubernetes/fake"
 )
 
 var (
@@ -22,6 +28,36 @@ var (
 	networkPrefixes  []string = []string{"10.242.0.", "10.242.1."}
 	networkAddresses []string = []string{"10.242.0.0/24", "10.242.1.0/24", "10.242.2.0/24", "10.242.3.0/24"}
 )
+
+func newTestNetAttachDefHandler(scheme *runtime.Scheme) *plugin.NetAttachDefHandler {
+	// Create a fake clientset
+	fakeClient := k8sfake.NewSimpleClientset()
+
+	// Since we can't directly convert types, we'll create a new NetAttachDefHandler
+	// that embeds the DynamicHandler and uses the fake client
+	handler := &plugin.NetAttachDefHandler{
+		DynamicHandler: &plugin.DynamicHandler{
+			DYN: dynamicfake.NewSimpleDynamicClient(scheme),
+			GVR: schema.GroupVersionResource{
+				Group:    "k8s.cni.cncf.io",
+				Version:  "v1",
+				Resource: "network-attachment-definitions",
+			},
+		},
+	}
+
+	// Use reflection to set the Clientset field
+	clientsetValue := reflect.ValueOf(handler).Elem()
+	clientsetField := clientsetValue.FieldByName("Clientset")
+	if clientsetField.IsValid() && clientsetField.CanSet() {
+		// Convert the fake client to an unsafe pointer and back to the expected type
+		ptr := unsafe.Pointer(fakeClient)
+		converted := reflect.NewAt(clientsetField.Type(), ptr).Elem()
+		clientsetField.Set(converted)
+	}
+
+	return handler
+}
 
 var _ = Describe("Test CIDR Handler	", func() {
 	cniVersion := "0.3.0"
@@ -100,6 +136,24 @@ var _ = Describe("Test CIDR Handler	", func() {
 				Expect(len(cidrSpec.CIDRs)).To(Equal(len(interfaceNames)))
 				hostIPs := handler.GetHostAddressesToExclude()
 				Expect(len(hostIPs)).To(BeEquivalentTo(len(interfaceNames) * handler.HostInterfaceHandler.GetSize()))
+			})
+
+			It("GenerateCIDRFromHostSubnet with no interfaces", func() {
+				emptySubnetMultinicnetwork := GetMultiNicCNINetwork("empty-ipam", cniVersion, cniType, cniArgs)
+				emptySubnetMultinicnetwork.Spec.Subnet = ""
+				ipamConfig, err := MultiNicnetworkReconcilerInstance.GetIPAMConfig(emptySubnetMultinicnetwork)
+				ipamConfig.InterfaceBlock = 0
+				ipamConfig.HostBlock = 4
+				Expect(err).NotTo(HaveOccurred())
+
+				// Clear the HostInterface cache to simulate no interfaces
+				handler.HostInterfaceHandler.SafeCache.Clear()
+
+				cidrSpec, err := handler.GenerateCIDRFromHostSubnet(*ipamConfig)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(len(cidrSpec.CIDRs)).To(Equal(0))
+				hostIPs := handler.GetHostAddressesToExclude()
+				Expect(len(hostIPs)).To(BeZero())
 			})
 		})
 
@@ -217,32 +271,395 @@ var _ = Describe("Test CIDR Handler	", func() {
 			// })
 		})
 
+		Context("InitCustomCRCache", func() {
+			It("should initialize IPPool and HostInterface caches", func() {
+				var handler *CIDRHandler
+				var quit chan struct{}
+				By("Create new CIDRHandler")
+				quit = make(chan struct{})
+				handler = newCIDRHandler(quit)
+				By("Initializing caches")
+				handler.InitCustomCRCache()
+				By("Check IPPool cache")
+				ippoolMap, err := handler.IPPoolHandler.ListIPPool()
+				Expect(err).NotTo(HaveOccurred())
+				Expect(len(ippoolMap)).To(Equal(0))
+				By("Check HostInterface cache")
+				his := handler.HostInterfaceHandler.ListCache()
+				Expect(len(his)).To(BeNumerically(">", 0))
+			})
+		})
+
+		Context("SyncAllPendingCustomCR/syncWithMultinicNetwork/deletePendingCIDR", func() {
+			var (
+				handler    *CIDRHandler
+				defHandler *plugin.NetAttachDefHandler
+				scheme     *runtime.Scheme
+			)
+
+			BeforeEach(func() {
+				// Setup common test resources
+				handler = newCIDRHandler(make(chan struct{}))
+				scheme = runtime.NewScheme()
+				Expect(multinicv1.AddToScheme(scheme)).To(Succeed())
+				defHandler = newTestNetAttachDefHandler(scheme)
+			})
+
+			It("should sync network attachments and update internal state", func() {
+				testCIDRName := "test-network"
+				testCIDRSpec := multinicv1.CIDRSpec{
+					Config: multinicv1.PluginConfig{
+						Name:           "test-network",
+						Type:           "ipvlan",
+						Subnet:         "10.0.0.0/16",
+						MasterNetAddrs: []string{"eth1", "eth2"},
+						HostBlock:      0,
+						InterfaceBlock: 0,
+						ExcludeCIDRs:   nil,
+						VlanMode:       "",
+					},
+					CIDRs: []multinicv1.CIDREntry{
+						{
+							NetAddress: "10.0.0.0/16",
+							Hosts: []multinicv1.HostInterfaceInfo{
+								{
+									HostIndex:     0,
+									HostName:      "host1",
+									InterfaceName: "eth1",
+									HostIP:        "10.0.0.1",
+									PodCIDR:       "10.0.0.1/30",
+									IPPool:        "ippool1",
+								},
+							},
+						},
+					},
+				}
+
+				// Set up the test state
+				By("Setting up test CIDR in cache")
+				handler.SetCache(testCIDRName, testCIDRSpec)
+
+				By("Creating CIDR resource in fake client")
+				cidrObj := &multinicv1.CIDR{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: testCIDRName,
+					},
+					Spec: testCIDRSpec,
+				}
+				err := K8sClient.Create(context.TODO(), cidrObj)
+				Expect(err).NotTo(HaveOccurred())
+
+				By("Setting up IPPool in cache")
+				mockIPPool := multinicv1.IPPool{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: testCIDRName,
+					},
+					Spec: multinicv1.IPPoolSpec{
+						PodCIDR: "10.0.0.1/30",
+					},
+				}
+				handler.IPPoolHandler.SafeCache.SetCache(testCIDRName, mockIPPool.Spec)
+
+				// Act
+				By("Calling SyncAllPendingCustomCR")
+				handler.SyncAllPendingCustomCR(defHandler)
+
+				// Assert
+				By("Verifying CIDR state")
+				cidr, err := handler.GetCIDR(testCIDRName)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(cidr).NotTo(BeNil())
+				Expect(cidr.Spec.Config.Name).To(Equal(testCIDRName))
+				Expect(cidr.Spec.Config.Subnet).To(Equal("10.0.0.0/16"))
+
+				By("Verifying IPPool state")
+				ippool := handler.IPPoolHandler.SafeCache.GetCache(testCIDRName)
+				Expect(ippool).NotTo(BeNil())
+			})
+
+			It("should delete CIDR when no corresponding MultiNicNetwork exists", func() {
+				// Create CIDR without MultiNicNetwork
+				cidrName := "test-no-network"
+				cidrSpec := multinicv1.CIDRSpec{
+					Config: multinicv1.PluginConfig{
+						Name:           cidrName,
+						Type:           "ipvlan",
+						Subnet:         "10.0.0.0/16",
+						MasterNetAddrs: []string{"eth1"},
+					},
+					CIDRs: []multinicv1.CIDREntry{
+						{
+							NetAddress:     "10.0.0.0/16",
+							InterfaceIndex: 0,
+							Hosts: []multinicv1.HostInterfaceInfo{
+								{
+									HostIndex:     0,
+									HostName:      "host1",
+									InterfaceName: "eth1",
+									HostIP:        "10.0.0.1",
+									PodCIDR:       "10.0.0.1/30",
+								},
+							},
+						},
+					},
+				}
+
+				cidr := &multinicv1.CIDR{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: cidrName,
+					},
+					Spec: cidrSpec,
+				}
+				err := K8sClient.Create(context.TODO(), cidr)
+				Expect(err).NotTo(HaveOccurred())
+
+				// Add
+				handler.SetCache(cidrName, cidrSpec)
+
+				// Act
+				handler.SyncAllPendingCustomCR(defHandler)
+
+				// Assert: CIDR should be deleted
+				Eventually(func() bool {
+					_, err := handler.GetCIDR(cidrName)
+					return errors.IsNotFound(err)
+				}, "5s", "100ms").Should(BeTrue(), "CIDR should be deleted")
+			})
+
+			It("should keep CIDR when corresponding MultiNicNetwork exists", func() {
+				// Create MultiNicNetwork first
+				netName := "test-with-network"
+				network := GetMultiNicCNINetwork(netName, "0.3.0", "ipvlan", nil)
+				err := K8sClient.Create(context.TODO(), network)
+				Expect(err).NotTo(HaveOccurred())
+
+				// Create CIDR
+				cidrSpec := multinicv1.CIDRSpec{
+					Config: multinicv1.PluginConfig{
+						Name:           netName,
+						Type:           "ipvlan",
+						Subnet:         "10.0.0.0/16",
+						MasterNetAddrs: []string{"eth1"},
+					},
+					CIDRs: []multinicv1.CIDREntry{
+						{
+							NetAddress:     "10.0.0.0/16",
+							InterfaceIndex: 0,
+							Hosts: []multinicv1.HostInterfaceInfo{
+								{
+									HostIndex:     0,
+									HostName:      "host1",
+									InterfaceName: "eth1",
+									HostIP:        "10.0.0.1",
+									PodCIDR:       "10.0.0.1/30",
+								},
+							},
+						},
+					},
+				}
+
+				cidr := &multinicv1.CIDR{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: netName,
+					},
+					Spec: cidrSpec,
+				}
+				err = K8sClient.Create(context.TODO(), cidr)
+				Expect(err).NotTo(HaveOccurred())
+
+				// Add
+				handler.SetCache(netName, cidrSpec)
+
+				// Act
+				handler.SyncAllPendingCustomCR(defHandler)
+
+				// Assert: CIDR should still exist
+				var foundCIDR *multinicv1.CIDR
+				Eventually(func() error {
+					foundCIDR, err = handler.GetCIDR(netName)
+					return err
+				}, "5s", "100ms").ShouldNot(HaveOccurred())
+
+				Expect(foundCIDR.Spec).To(Equal(cidrSpec))
+			})
+
+			AfterEach(func() {
+				// Cleanup resources
+				ctx := context.Background()
+				err := K8sClient.DeleteAllOf(ctx, &multinicv1.CIDR{})
+				Expect(err).NotTo(HaveOccurred())
+				err = K8sClient.DeleteAllOf(ctx, &multinicv1.MultiNicNetwork{})
+				Expect(err).NotTo(HaveOccurred())
+			})
+		})
 	})
 
-	Context("Util functions", Ordered, func() {
-		It("Sync CIDR/IPPool", func() {
-			// get index at bytes[3]
-			podCIDR := "192.168.0.0/16"
-			unsyncedIp := "192.168.0.10"
-			contains, index := MultiNicnetworkReconcilerInstance.CIDRHandler.CIDRCompute.GetIndexInRange(podCIDR, unsyncedIp)
-			Expect(contains).To(Equal(true))
-			Expect(index).To(Equal(10))
-			// get index at bytes[2]
-			unsyncedIp = "192.168.1.1"
-			contains, index = MultiNicnetworkReconcilerInstance.CIDRHandler.CIDRCompute.GetIndexInRange(podCIDR, unsyncedIp)
-			Expect(contains).To(Equal(true))
-			Expect(index).To(Equal(257))
-			// get index at bytes[1]
-			podCIDR = "10.0.0.0/8"
-			unsyncedIp = "10.1.1.1"
-			contains, index = MultiNicnetworkReconcilerInstance.CIDRHandler.CIDRCompute.GetIndexInRange(podCIDR, unsyncedIp)
-			Expect(contains).To(Equal(true))
-			Expect(index).To(Equal(256*256 + 256 + 1))
-			// uncontain
-			podCIDR = "192.168.0.0/26"
-			unsyncedIp = "192.168.1.1"
-			contains, _ = MultiNicnetworkReconcilerInstance.CIDRHandler.CIDRCompute.GetIndexInRange(podCIDR, unsyncedIp)
-			Expect(contains).To(Equal(false))
+	Context("Util functions", func() {
+		Context("GetAllNetAddrs", func() {
+			It("returns all unique network addresses from HostInterfaceHandler", func() {
+				// Prepare mock HostInterfaceHandler cache
+				handler := newCIDRHandler(make(chan struct{}))
+
+				// Clear the cache to remove the "initialHost" added by newCIDRHandler
+				handler.HostInterfaceHandler.SafeCache.Clear()
+
+				mockCache := map[string]multinicv1.HostInterface{
+					"host1": {
+						Spec: multinicv1.HostInterfaceSpec{
+							Interfaces: []multinicv1.InterfaceInfoType{
+								{NetAddress: "10.0.0.1"},
+								{NetAddress: "10.0.0.2"},
+							},
+						},
+					},
+					"host2": {
+						Spec: multinicv1.HostInterfaceSpec{
+							Interfaces: []multinicv1.InterfaceInfoType{
+								{NetAddress: "10.0.0.3"},
+								{NetAddress: "10.0.0.4"},
+							},
+						},
+					},
+				}
+
+				// Populate the SafeCache with the mock data
+				for hostName, hostInterface := range mockCache {
+					handler.HostInterfaceHandler.SafeCache.SetCache(hostName, hostInterface)
+				}
+
+				addrs := handler.GetAllNetAddrs()
+				Expect(addrs).To(ContainElements("10.0.0.1", "10.0.0.2", "10.0.0.3", "10.0.0.4"))
+				Expect(len(addrs)).To(Equal(4))
+
+				// Clean up the SafeCache after the test
+				handler.HostInterfaceHandler.SafeCache.Clear()
+			})
+		})
+
+		Context("GetHostInterfaceIndexMap", func() {
+			It("returns a map from (host name, interface index) to HostInterfaceInfo of CIDR", func() {
+				// Prepare mock CIDREntries
+				cidrEntries := []multinicv1.CIDREntry{
+					{
+						NetAddress:     "10.0.0.0/24",
+						InterfaceIndex: 0,
+						VlanCIDR:       "10.0.0.0/24",
+						Hosts: []multinicv1.HostInterfaceInfo{
+							{
+								HostIndex:     0,
+								HostName:      "host1",
+								InterfaceName: "eth0",
+								HostIP:        "10.0.0.1",
+								PodCIDR:       "10.0.0.1/30",
+								IPPool:        "ippool1",
+							},
+							{
+								HostIndex:     1,
+								HostName:      "host2",
+								InterfaceName: "eth0",
+								HostIP:        "10.0.0.2",
+								PodCIDR:       "10.0.0.2/30",
+								IPPool:        "ippool2",
+							},
+						},
+					},
+					{
+						NetAddress:     "10.0.1.0/24",
+						InterfaceIndex: 1,
+						VlanCIDR:       "10.0.1.0/24",
+						Hosts: []multinicv1.HostInterfaceInfo{
+							{
+								HostIndex:     0,
+								HostName:      "host1",
+								InterfaceName: "eth1",
+								HostIP:        "10.0.1.1",
+								PodCIDR:       "10.0.1.1/30",
+								IPPool:        "ippool3",
+							},
+						},
+					},
+				}
+
+				// Create a CIDRHandler
+				handler := newCIDRHandler(make(chan struct{}))
+
+				// Act
+				hostInterfaceIndexMap := handler.GetHostInterfaceIndexMap(cidrEntries)
+
+				// Assertions
+				Expect(hostInterfaceIndexMap).To(HaveLen(2)) // Expect 2 hosts
+
+				// Check host1
+				Expect(hostInterfaceIndexMap["host1"]).To(HaveLen(2)) // Expect 2 interfaces
+				Expect(hostInterfaceIndexMap["host1"][0].InterfaceName).To(Equal("eth0"))
+				Expect(hostInterfaceIndexMap["host1"][1].InterfaceName).To(Equal("eth1"))
+
+				// Check host2
+				Expect(hostInterfaceIndexMap["host2"]).To(HaveLen(1)) // Expect 1 interface
+				Expect(hostInterfaceIndexMap["host2"][0].InterfaceName).To(Equal("eth0"))
+			})
+
+			It("returns an empty map when there are no CIDR entries", func() {
+				// Prepare an empty slice of CIDREntries
+				cidrEntries := []multinicv1.CIDREntry{}
+
+				// Create a CIDRHandler
+				handler := newCIDRHandler(make(chan struct{}))
+
+				// Act
+				hostInterfaceIndexMap := handler.GetHostInterfaceIndexMap(cidrEntries)
+
+				// Assertions
+				Expect(hostInterfaceIndexMap).To(BeEmpty()) // Expect an empty map
+			})
+
+			It("handles CIDREntries with empty Host lists", func() {
+				// Prepare mock CIDREntries with empty Host lists
+				cidrEntries := []multinicv1.CIDREntry{
+					{
+						NetAddress:     "10.0.0.0/24",
+						InterfaceIndex: 0,
+						VlanCIDR:       "10.0.0.0/24",
+						Hosts:          []multinicv1.HostInterfaceInfo{}, // Empty Host list
+					},
+				}
+
+				// Create a CIDRHandler
+				handler := newCIDRHandler(make(chan struct{}))
+
+				// Act
+				hostInterfaceIndexMap := handler.GetHostInterfaceIndexMap(cidrEntries)
+
+				// Assertions
+				Expect(hostInterfaceIndexMap).To(BeEmpty()) // Expect an empty map
+			})
+		})
+
+		Context("Sync CIDR/IPPool", func() {
+			It("Sync CIDR/IPPool", func() {
+				// get index at bytes[3]
+				podCIDR := "192.168.0.0/16"
+				unsyncedIp := "192.168.0.10"
+				contains, index := MultiNicnetworkReconcilerInstance.CIDRHandler.CIDRCompute.GetIndexInRange(podCIDR, unsyncedIp)
+				Expect(contains).To(Equal(true))
+				Expect(index).To(Equal(10))
+				// get index at bytes[2]
+				unsyncedIp = "192.168.1.1"
+				contains, index = MultiNicnetworkReconcilerInstance.CIDRHandler.CIDRCompute.GetIndexInRange(podCIDR, unsyncedIp)
+				Expect(contains).To(Equal(true))
+				Expect(index).To(Equal(257))
+				// get index at bytes[1]
+				podCIDR = "10.0.0.0/8"
+				unsyncedIp = "10.1.1.1"
+				contains, index = MultiNicnetworkReconcilerInstance.CIDRHandler.CIDRCompute.GetIndexInRange(podCIDR, unsyncedIp)
+				Expect(contains).To(Equal(true))
+				Expect(index).To(Equal(256*256 + 256 + 1))
+				// uncontain
+				podCIDR = "192.168.0.0/26"
+				unsyncedIp = "192.168.1.1"
+				contains, _ = MultiNicnetworkReconcilerInstance.CIDRHandler.CIDRCompute.GetIndexInRange(podCIDR, unsyncedIp)
+				Expect(contains).To(Equal(false))
+			})
 		})
 	})
 

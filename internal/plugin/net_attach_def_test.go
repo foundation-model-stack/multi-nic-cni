@@ -15,6 +15,7 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -70,6 +71,109 @@ var _ = Describe("NetAttachDef test", func() {
 					g.Expect(errors.IsNotFound(err)).To(BeTrue())
 				}).WithTimeout(30 * time.Second).WithPolling(2 * time.Second).Should(Succeed())
 			}
+		})
+
+		Context("CheckDefChanged", func() {
+			It("should identify unchanged definitions", func() {
+				def1 := &NetworkAttachmentDefinition{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: multinicnetworkName,
+					},
+					Spec: NetworkAttachmentDefinitionSpec{
+						Config: `{"cniVersion":"0.3.0","type":"ipvlan","mode":"l2","mtu":"1500"}`,
+					},
+				}
+				def2 := &NetworkAttachmentDefinition{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: multinicnetworkName,
+					},
+					Spec: NetworkAttachmentDefinitionSpec{
+						Config: `{"cniVersion":"0.3.0","type":"ipvlan","mode":"l2","mtu":"1500"}`,
+					},
+				}
+
+				changed := CheckDefChanged(def1, def2)
+				Expect(changed).To(BeFalse())
+			})
+
+			It("should detect changed configurations", func() {
+				def1 := &NetworkAttachmentDefinition{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: multinicnetworkName,
+					},
+					Spec: NetworkAttachmentDefinitionSpec{
+						Config: `{"cniVersion":"0.3.0","type":"ipvlan","mode":"l2","mtu":"1500"}`,
+					},
+				}
+				def2 := &NetworkAttachmentDefinition{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: multinicnetworkName,
+					},
+					Spec: NetworkAttachmentDefinitionSpec{
+						Config: `{"cniVersion":"0.3.0","type":"ipvlan","mode":"l3","mtu":"1500"}`,
+					},
+				}
+
+				changed := CheckDefChanged(def1, def2)
+				Expect(changed).To(BeTrue())
+			})
+
+			It("should detect changes in annotations", func() {
+				def1 := &NetworkAttachmentDefinition{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: multinicnetworkName,
+						Annotations: map[string]string{
+							"key1": "value1",
+						},
+					},
+					Spec: NetworkAttachmentDefinitionSpec{
+						Config: `{"cniVersion":"0.3.0","type":"ipvlan","mode":"l2","mtu":"1500"}`,
+					},
+				}
+				def2 := &NetworkAttachmentDefinition{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: multinicnetworkName,
+						Annotations: map[string]string{
+							"key1": "value2",
+						},
+					},
+					Spec: NetworkAttachmentDefinitionSpec{
+						Config: `{"cniVersion":"0.3.0","type":"ipvlan","mode":"l2","mtu":"1500"}`,
+					},
+				}
+
+				changed := CheckDefChanged(def1, def2)
+				Expect(changed).To(BeTrue())
+			})
+
+			It("should detect changes in annotation count", func() {
+				def1 := &NetworkAttachmentDefinition{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: multinicnetworkName,
+						Annotations: map[string]string{
+							"key1": "value1",
+						},
+					},
+					Spec: NetworkAttachmentDefinitionSpec{
+						Config: `{"cniVersion":"0.3.0","type":"ipvlan","mode":"l2","mtu":"1500"}`,
+					},
+				}
+				def2 := &NetworkAttachmentDefinition{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: multinicnetworkName,
+						Annotations: map[string]string{
+							"key1": "value1",
+							"key2": "value2",
+						},
+					},
+					Spec: NetworkAttachmentDefinitionSpec{
+						Config: `{"cniVersion":"0.3.0","type":"ipvlan","mode":"l2","mtu":"1500"}`,
+					},
+				}
+
+				changed := CheckDefChanged(def1, def2)
+				Expect(changed).To(BeTrue())
+			})
 		})
 	})
 })
