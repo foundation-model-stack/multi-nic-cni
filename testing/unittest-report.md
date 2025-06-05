@@ -5,6 +5,9 @@ Test | Description | File
 | Config Test | Check update from ConfigSpec | /home/cbis-admin/set_version/multi-nic-cni/controllers/config_test.go |
 | Daemon Test | Test TryGetDaemonPod for tainted daemon | /home/cbis-admin/set_version/multi-nic-cni/controllers/daemon_test.go |
 | Daemon Test | Test TryGetDaemonPod for valid daemon | /home/cbis-admin/set_version/multi-nic-cni/controllers/daemon_test.go |
+| DynamicHandler/GetFirst | should handle unmarshalling errors | /home/cbis-admin/set_version/multi-nic-cni/internal/plugin/dynamic_test.go |
+| DynamicHandler/GetFirst | should return error when no items exist | /home/cbis-admin/set_version/multi-nic-cni/internal/plugin/dynamic_test.go |
+| DynamicHandler/GetFirst | should return the first item when items exist | /home/cbis-admin/set_version/multi-nic-cni/internal/plugin/dynamic_test.go |
 | Host Interface Test/UpdateNewInterfaces - original with a single device | can add new while leave old one | /home/cbis-admin/set_version/multi-nic-cni/controllers/hostinterface_test.go |
 | Host Interface Test/UpdateNewInterfaces - original with a single device | can check no change | /home/cbis-admin/set_version/multi-nic-cni/controllers/hostinterface_test.go |
 | Host Interface Test/UpdateNewInterfaces - original with a single device | can detect change | /home/cbis-admin/set_version/multi-nic-cni/controllers/hostinterface_test.go |
@@ -14,7 +17,13 @@ Test | Description | File
 | Host Interface Test/UpdateNewInterfaces - original with more than one devices | can leave old one | /home/cbis-admin/set_version/multi-nic-cni/controllers/hostinterface_test.go |
 | Host Interface Test/UpdateNewInterfaces - original with more than one devices | can leave old one when some is missing | /home/cbis-admin/set_version/multi-nic-cni/controllers/hostinterface_test.go |
 | Host Interface Test/UpdateNewInterfaces - original with more than one devices | can leave old one when some is missing and some with new info | /home/cbis-admin/set_version/multi-nic-cni/controllers/hostinterface_test.go |
+| Mellanox Plugin/Init | should initialize successfully with valid config | /home/cbis-admin/set_version/multi-nic-cni/internal/plugin/mellanox_test.go |
+| Mellanox Plugin/Init/when config is invalid | should return error | /home/cbis-admin/set_version/multi-nic-cni/internal/plugin/mellanox_test.go |
 | NetAttachDef test/handler | create and delete | /home/cbis-admin/set_version/multi-nic-cni/internal/plugin/net_attach_def_test.go |
+| NetAttachDef test/handler/CheckDefChanged | should detect changed configurations | /home/cbis-admin/set_version/multi-nic-cni/internal/plugin/net_attach_def_test.go |
+| NetAttachDef test/handler/CheckDefChanged | should detect changes in annotation count | /home/cbis-admin/set_version/multi-nic-cni/internal/plugin/net_attach_def_test.go |
+| NetAttachDef test/handler/CheckDefChanged | should detect changes in annotations | /home/cbis-admin/set_version/multi-nic-cni/internal/plugin/net_attach_def_test.go |
+| NetAttachDef test/handler/CheckDefChanged | should identify unchanged definitions | /home/cbis-admin/set_version/multi-nic-cni/internal/plugin/net_attach_def_test.go |
 | Test CIDR Handler\t/Handler functions/IPAM | Dynamically compute CIDR | /home/cbis-admin/set_version/multi-nic-cni/controllers/cidr_handler_test.go |
 | Test CIDR Handler\t/Handler functions/IPAM | Empty subnet | /home/cbis-admin/set_version/multi-nic-cni/controllers/cidr_handler_test.go |
 | Test CIDR Handler\t/Handler functions/IPAM | GenerateCIDRFromHostSubnet with no interfaces | /home/cbis-admin/set_version/multi-nic-cni/controllers/cidr_handler_test.go |

@@ -44,12 +44,12 @@ File | Function | Coverage
 | github.com/foundation-model-stack/multi-nic-cni/controllers/config_controller.go:44: | getOperatorNamespace | 80.0% |
 | github.com/foundation-model-stack/multi-nic-cni/controllers/config_controller.go:70: | getDefaultConfigSpec | 100.0% |
 | github.com/foundation-model-stack/multi-nic-cni/controllers/config_controller.go:131: | CreateDefaultDaemonConfig | 0.0% |
-| github.com/foundation-model-stack/multi-nic-cni/controllers/config_controller.go:144: | Reconcile | 76.2% |
+| github.com/foundation-model-stack/multi-nic-cni/controllers/config_controller.go:144: | Reconcile | 64.3% |
 | github.com/foundation-model-stack/multi-nic-cni/controllers/config_controller.go:219: | SetupWithManager | 100.0% |
 | github.com/foundation-model-stack/multi-nic-cni/controllers/config_controller.go:226: | UpdateConfigBySpec | 90.5% |
 | github.com/foundation-model-stack/multi-nic-cni/controllers/config_controller.go:258: | newCNIDaemonSet | 89.5% |
 | github.com/foundation-model-stack/multi-nic-cni/controllers/config_controller.go:344: | getCNIHostPath | 88.2% |
-| github.com/foundation-model-stack/multi-nic-cni/controllers/config_controller.go:376: | callFinalizer | 64.7% |
+| github.com/foundation-model-stack/multi-nic-cni/controllers/config_controller.go:376: | callFinalizer | 0.0% |
 | github.com/foundation-model-stack/multi-nic-cni/controllers/daemon_cache_handler.go:26: | SetCache | 100.0% |
 | github.com/foundation-model-stack/multi-nic-cni/controllers/daemon_cache_handler.go:30: | GetCache | 100.0% |
 | github.com/foundation-model-stack/multi-nic-cni/controllers/daemon_cache_handler.go:38: | ListCache | 100.0% |
@@ -110,7 +110,7 @@ File | Function | Coverage
 | github.com/foundation-model-stack/multi-nic-cni/controllers/ippool_handler.go:250: | AddLabel | 0.0% |
 | github.com/foundation-model-stack/multi-nic-cni/controllers/multinicnetwork_controller.go:39: | GetPluginMap | 90.5% |
 | github.com/foundation-model-stack/multi-nic-cni/controllers/multinicnetwork_controller.go:82: | IsMultiNICIPAM | 80.0% |
-| github.com/foundation-model-stack/multi-nic-cni/controllers/multinicnetwork_controller.go:91: | Reconcile | 54.4% |
+| github.com/foundation-model-stack/multi-nic-cni/controllers/multinicnetwork_controller.go:91: | Reconcile | 55.7% |
 | github.com/foundation-model-stack/multi-nic-cni/controllers/multinicnetwork_controller.go:213: | GenerateNetAttachDef | 100.0% |
 | github.com/foundation-model-stack/multi-nic-cni/controllers/multinicnetwork_controller.go:225: | GetMainPluginConf | 75.0% |
 | github.com/foundation-model-stack/multi-nic-cni/controllers/multinicnetwork_controller.go:234: | SetupWithManager | 100.0% |
@@ -163,7 +163,7 @@ File | Function | Coverage
 | github.com/foundation-model-stack/multi-nic-cni/internal/plugin/dynamic.go:48: | Update | 0.0% |
 | github.com/foundation-model-stack/multi-nic-cni/internal/plugin/dynamic.go:72: | Delete | 100.0% |
 | github.com/foundation-model-stack/multi-nic-cni/internal/plugin/dynamic.go:78: | Get | 90.0% |
-| github.com/foundation-model-stack/multi-nic-cni/internal/plugin/dynamic.go:93: | GetFirst | 0.0% |
+| github.com/foundation-model-stack/multi-nic-cni/internal/plugin/dynamic.go:93: | GetFirst | 91.7% |
 | github.com/foundation-model-stack/multi-nic-cni/internal/plugin/ipvlan.go:30: | Init | 0.0% |
 | github.com/foundation-model-stack/multi-nic-cni/internal/plugin/ipvlan.go:34: | GetConfig | 92.9% |
 | github.com/foundation-model-stack/multi-nic-cni/internal/plugin/ipvlan.go:53: | CleanUp | 100.0% |
@@ -175,7 +175,7 @@ File | Function | Coverage
 | github.com/foundation-model-stack/multi-nic-cni/internal/plugin/mellanox.go:53: | GetSrIoVResource | 60.0% |
 | github.com/foundation-model-stack/multi-nic-cni/internal/plugin/mellanox.go:70: | GetSrIoVResourcesFromSrIoVPlugin | 100.0% |
 | github.com/foundation-model-stack/multi-nic-cni/internal/plugin/mellanox.go:91: | GetCombinedResourceNames | 100.0% |
-| github.com/foundation-model-stack/multi-nic-cni/internal/plugin/mellanox.go:107: | Init | 0.0% |
+| github.com/foundation-model-stack/multi-nic-cni/internal/plugin/mellanox.go:107: | Init | 100.0% |
 | github.com/foundation-model-stack/multi-nic-cni/internal/plugin/mellanox.go:122: | GetConfig | 0.0% |
 | github.com/foundation-model-stack/multi-nic-cni/internal/plugin/mellanox.go:150: | GetSrIoVResources | 0.0% |
 | github.com/foundation-model-stack/multi-nic-cni/internal/plugin/mellanox.go:171: | getPolicy | 0.0% |
@@ -184,7 +184,7 @@ File | Function | Coverage
 | github.com/foundation-model-stack/multi-nic-cni/internal/plugin/net_attach_def.go:60: | GetName | 100.0% |
 | github.com/foundation-model-stack/multi-nic-cni/internal/plugin/net_attach_def.go:63: | GetNameSpace | 0.0% |
 | github.com/foundation-model-stack/multi-nic-cni/internal/plugin/net_attach_def.go:95: | GetNetAttachDefHandler | 85.7% |
-| github.com/foundation-model-stack/multi-nic-cni/internal/plugin/net_attach_def.go:112: | CheckDefChanged | 0.0% |
+| github.com/foundation-model-stack/multi-nic-cni/internal/plugin/net_attach_def.go:112: | CheckDefChanged | 100.0% |
 | github.com/foundation-model-stack/multi-nic-cni/internal/plugin/net_attach_def.go:124: | CreateOrUpdate | 77.8% |
 | github.com/foundation-model-stack/multi-nic-cni/internal/plugin/net_attach_def.go:139: | CreateOrUpdateOnNamespace | 0.0% |
 | github.com/foundation-model-stack/multi-nic-cni/internal/plugin/net_attach_def.go:153: | createOrUpdate | 43.8% |
@@ -216,4 +216,4 @@ File | Function | Coverage
 | github.com/foundation-model-stack/multi-nic-cni/internal/plugin/utils.go:26: | getBoolean | 100.0% |
 | github.com/foundation-model-stack/multi-nic-cni/internal/plugin/utils.go:33: | ValidateResourceName | 100.0% |
 | github.com/foundation-model-stack/multi-nic-cni/internal/plugin/utils.go:39: | GetHolderNetName | 100.0% |
-| total: | (statements) | 67.1% |
+| total: | (statements) | 67.5% |
