@@ -20,7 +20,7 @@ File | Function | Coverage
 | github.com/foundation-model-stack/multi-nic-cni/controllers/cidr_handler.go:277: | NewCIDR | 75.0% |
 | github.com/foundation-model-stack/multi-nic-cni/controllers/cidr_handler.go:327: | Run | 100.0% |
 | github.com/foundation-model-stack/multi-nic-cni/controllers/cidr_handler.go:336: | UpdateCIDRs | 100.0% |
-| github.com/foundation-model-stack/multi-nic-cni/controllers/cidr_handler.go:344: | ProcessUpdateRequest | 60.0% |
+| github.com/foundation-model-stack/multi-nic-cni/controllers/cidr_handler.go:344: | ProcessUpdateRequest | 70.0% |
 | github.com/foundation-model-stack/multi-nic-cni/controllers/cidr_handler.go:361: | NewCIDRWithNewConfig | 80.0% |
 | github.com/foundation-model-stack/multi-nic-cni/controllers/cidr_handler.go:371: | UpdateEntries | 80.9% |
 | github.com/foundation-model-stack/multi-nic-cni/controllers/cidr_handler.go:529: | updateCIDR | 52.0% |

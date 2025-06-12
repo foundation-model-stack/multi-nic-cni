@@ -4,9 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"reflect"
 	"time"
-	"unsafe"
 
 	multinicv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
 	. "github.com/foundation-model-stack/multi-nic-cni/controllers"
@@ -18,9 +16,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	dynamicfake "k8s.io/client-go/dynamic/fake"
-	k8sfake "k8s.io/client-go/kubernetes/fake"
 )
 
 var (
@@ -28,36 +23,6 @@ var (
 	networkPrefixes  []string = []string{"10.242.0.", "10.242.1."}
 	networkAddresses []string = []string{"10.242.0.0/24", "10.242.1.0/24", "10.242.2.0/24", "10.242.3.0/24"}
 )
-
-func newTestNetAttachDefHandler(scheme *runtime.Scheme) *plugin.NetAttachDefHandler {
-	// Create a fake clientset
-	fakeClient := k8sfake.NewSimpleClientset()
-
-	// Since we can't directly convert types, we'll create a new NetAttachDefHandler
-	// that embeds the DynamicHandler and uses the fake client
-	handler := &plugin.NetAttachDefHandler{
-		DynamicHandler: &plugin.DynamicHandler{
-			DYN: dynamicfake.NewSimpleDynamicClient(scheme),
-			GVR: schema.GroupVersionResource{
-				Group:    "k8s.cni.cncf.io",
-				Version:  "v1",
-				Resource: "network-attachment-definitions",
-			},
-		},
-	}
-
-	// Use reflection to set the Clientset field
-	clientsetValue := reflect.ValueOf(handler).Elem()
-	clientsetField := clientsetValue.FieldByName("Clientset")
-	if clientsetField.IsValid() && clientsetField.CanSet() {
-		// Convert the fake client to an unsafe pointer and back to the expected type
-		ptr := unsafe.Pointer(fakeClient)
-		converted := reflect.NewAt(clientsetField.Type(), ptr).Elem()
-		clientsetField.Set(converted)
-	}
-
-	return handler
-}
 
 var _ = Describe("Test CIDR Handler	", func() {
 	cniVersion := "0.3.0"
@@ -378,11 +343,15 @@ var _ = Describe("Test CIDR Handler	", func() {
 				handler = newCIDRHandler(make(chan struct{}))
 				scheme = runtime.NewScheme()
 				Expect(multinicv1.AddToScheme(scheme)).To(Succeed())
-				defHandler = newTestNetAttachDefHandler(scheme)
+				var err error
+				defHandler, err = plugin.GetNetAttachDefHandler(Cfg)
+				Expect(err).To(BeNil())
 			})
 
 			It("should sync network attachments and update internal state", func() {
 				testCIDRName := "test-network"
+				testPodCIDR := "10.0.0.1/30"
+				testIPPoolName := handler.GetIPPoolName(testCIDRName, testPodCIDR)
 				testCIDRSpec := multinicv1.CIDRSpec{
 					Config: multinicv1.PluginConfig{
 						Name:           "test-network",
@@ -403,7 +372,7 @@ var _ = Describe("Test CIDR Handler	", func() {
 									HostName:      "host1",
 									InterfaceName: "eth1",
 									HostIP:        "10.0.0.1",
-									PodCIDR:       "10.0.0.1/30",
+									PodCIDR:       testPodCIDR,
 									IPPool:        "ippool1",
 								},
 							},
@@ -412,6 +381,11 @@ var _ = Describe("Test CIDR Handler	", func() {
 				}
 
 				// Set up the test state
+				By("Creating MultiNicNetwork")
+				multinicnetwork := GetMultiNicCNINetwork(testCIDRName, cniVersion, cniType, cniArgs)
+				err := handler.Client.Create(context.TODO(), multinicnetwork)
+				Expect(err).NotTo(HaveOccurred())
+
 				By("Setting up test CIDR in cache")
 				handler.SetCache(testCIDRName, testCIDRSpec)
 
@@ -422,19 +396,19 @@ var _ = Describe("Test CIDR Handler	", func() {
 					},
 					Spec: testCIDRSpec,
 				}
-				err := K8sClient.Create(context.TODO(), cidrObj)
+				err = K8sClient.Create(context.TODO(), cidrObj)
 				Expect(err).NotTo(HaveOccurred())
 
 				By("Setting up IPPool in cache")
 				mockIPPool := multinicv1.IPPool{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: testCIDRName,
+						Name: testIPPoolName,
 					},
 					Spec: multinicv1.IPPoolSpec{
-						PodCIDR: "10.0.0.1/30",
+						PodCIDR: testPodCIDR,
 					},
 				}
-				handler.IPPoolHandler.SafeCache.SetCache(testCIDRName, mockIPPool.Spec)
+				handler.IPPoolHandler.SafeCache.SetCache(testIPPoolName, mockIPPool.Spec)
 
 				// Act
 				By("Calling SyncAllPendingCustomCR")
@@ -442,15 +416,19 @@ var _ = Describe("Test CIDR Handler	", func() {
 
 				// Assert
 				By("Verifying CIDR state")
-				cidr, err := handler.GetCIDR(testCIDRName)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(cidr).NotTo(BeNil())
-				Expect(cidr.Spec.Config.Name).To(Equal(testCIDRName))
-				Expect(cidr.Spec.Config.Subnet).To(Equal("10.0.0.0/16"))
+				Eventually(func(g Gomega) {
+					cidr, err := handler.GetCIDR(testCIDRName)
+					g.Expect(err).NotTo(HaveOccurred())
+					Expect(cidr).NotTo(BeNil())
+					Expect(cidr.Spec.Config.Name).To(Equal(testCIDRName))
+					Expect(cidr.Spec.Config.Subnet).To(Equal("10.0.0.0/16"))
+				}).WithTimeout(30 * time.Second).WithPolling(2 * time.Second).Should(Succeed())
 
 				By("Verifying IPPool state")
-				ippool := handler.IPPoolHandler.SafeCache.GetCache(testCIDRName)
-				Expect(ippool).NotTo(BeNil())
+				Eventually(func(g Gomega) {
+					_, err := handler.IPPoolHandler.GetIPPool(testIPPoolName)
+					g.Expect(err).NotTo(HaveOccurred())
+				}).WithTimeout(30 * time.Second).WithPolling(2 * time.Second).Should(Succeed())
 			})
 
 			It("should delete CIDR when no corresponding MultiNicNetwork exists", func() {
