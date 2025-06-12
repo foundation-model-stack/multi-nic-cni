@@ -130,15 +130,23 @@ func (p *MellanoxPlugin) GetConfig(net multinicv1.MultiNicNetwork, hifList map[s
 		vars.NetworkLog.V(2).Info(msg)
 		return "", annotation, errors.New(msg)
 	}
-	conf := HostDeviceTypeNetConf{}
-	conf.CNIVersion = net.Spec.MainPlugin.CNIVersion
-	conf.Type = HOST_DEVICE_TYPE
-	conf.Name = net.Name
-	err = json.Unmarshal([]byte(net.Spec.IPAM), &conf.IPAM)
+
+	// Create a map to store the full configuration
+	confMap := map[string]interface{}{
+		"cniVersion": net.Spec.MainPlugin.CNIVersion,
+		"type":       HOST_DEVICE_TYPE,
+		"name":       net.ObjectMeta.Name,
+	}
+	var ipamConfig map[string]interface{}
+	err = json.Unmarshal([]byte(net.Spec.IPAM), &ipamConfig)
 	if err != nil {
 		return "", annotation, err
 	}
-	confBytes, err := json.Marshal(conf)
+	confMap["ipam"] = ipamConfig
+	confMap["dns"] = map[string]interface{}{}
+
+	// Marshal the complete configuration with proper formatting
+	confBytes, err := json.MarshalIndent(confMap, "", "  ")
 	if err != nil {
 		return "", annotation, err
 	}
@@ -158,7 +166,7 @@ func (p *MellanoxPlugin) GetSrIoVResources() (rs []SrIoVResource) {
 	}
 	sriovPlugin := policy.Spec.SriovDevicePlugin
 	if sriovPlugin == nil || sriovPlugin.Config == nil {
-		vars.NetworkLog.V(2).Info(fmt.Sprintf("no sriov device plugin config set in %s", policy.Name))
+		vars.NetworkLog.V(2).Info(fmt.Sprintf("no sriov device plugin config set in %s", policy.ObjectMeta.Name))
 		return rs
 	}
 	rs, err = GetSrIoVResourcesFromSrIoVPlugin(sriovPlugin)
