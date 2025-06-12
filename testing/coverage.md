@@ -20,7 +20,7 @@ File | Function | Coverage
 | github.com/foundation-model-stack/multi-nic-cni/controllers/cidr_handler.go:277: | NewCIDR | 75.0% |
 | github.com/foundation-model-stack/multi-nic-cni/controllers/cidr_handler.go:327: | Run | 100.0% |
 | github.com/foundation-model-stack/multi-nic-cni/controllers/cidr_handler.go:336: | UpdateCIDRs | 100.0% |
-| github.com/foundation-model-stack/multi-nic-cni/controllers/cidr_handler.go:344: | ProcessUpdateRequest | 70.0% |
+| github.com/foundation-model-stack/multi-nic-cni/controllers/cidr_handler.go:344: | ProcessUpdateRequest | 60.0% |
 | github.com/foundation-model-stack/multi-nic-cni/controllers/cidr_handler.go:361: | NewCIDRWithNewConfig | 80.0% |
 | github.com/foundation-model-stack/multi-nic-cni/controllers/cidr_handler.go:371: | UpdateEntries | 80.9% |
 | github.com/foundation-model-stack/multi-nic-cni/controllers/cidr_handler.go:529: | updateCIDR | 52.0% |
@@ -175,11 +175,11 @@ File | Function | Coverage
 | github.com/foundation-model-stack/multi-nic-cni/internal/plugin/mellanox.go:53: | GetSrIoVResource | 60.0% |
 | github.com/foundation-model-stack/multi-nic-cni/internal/plugin/mellanox.go:70: | GetSrIoVResourcesFromSrIoVPlugin | 100.0% |
 | github.com/foundation-model-stack/multi-nic-cni/internal/plugin/mellanox.go:91: | GetCombinedResourceNames | 100.0% |
-| github.com/foundation-model-stack/multi-nic-cni/internal/plugin/mellanox.go:107: | Init | 100.0% |
-| github.com/foundation-model-stack/multi-nic-cni/internal/plugin/mellanox.go:122: | GetConfig | 0.0% |
-| github.com/foundation-model-stack/multi-nic-cni/internal/plugin/mellanox.go:150: | GetSrIoVResources | 0.0% |
-| github.com/foundation-model-stack/multi-nic-cni/internal/plugin/mellanox.go:171: | getPolicy | 0.0% |
-| github.com/foundation-model-stack/multi-nic-cni/internal/plugin/mellanox.go:180: | CleanUp | 0.0% |
+| github.com/foundation-model-stack/multi-nic-cni/internal/plugin/mellanox.go:109: | Init | 100.0% |
+| github.com/foundation-model-stack/multi-nic-cni/internal/plugin/mellanox.go:124: | GetConfig | 0.0% |
+| github.com/foundation-model-stack/multi-nic-cni/internal/plugin/mellanox.go:155: | GetSrIoVResources | 0.0% |
+| github.com/foundation-model-stack/multi-nic-cni/internal/plugin/mellanox.go:176: | getPolicy | 0.0% |
+| github.com/foundation-model-stack/multi-nic-cni/internal/plugin/mellanox.go:185: | CleanUp | 0.0% |
 | github.com/foundation-model-stack/multi-nic-cni/internal/plugin/net_attach_def.go:38: | NewNetworkAttachmentDefinition | 100.0% |
 | github.com/foundation-model-stack/multi-nic-cni/internal/plugin/net_attach_def.go:60: | GetName | 100.0% |
 | github.com/foundation-model-stack/multi-nic-cni/internal/plugin/net_attach_def.go:63: | GetNameSpace | 0.0% |
@@ -216,4 +216,4 @@ File | Function | Coverage
 | github.com/foundation-model-stack/multi-nic-cni/internal/plugin/utils.go:26: | getBoolean | 100.0% |
 | github.com/foundation-model-stack/multi-nic-cni/internal/plugin/utils.go:33: | ValidateResourceName | 100.0% |
 | github.com/foundation-model-stack/multi-nic-cni/internal/plugin/utils.go:39: | GetHolderNetName | 100.0% |
-| total: | (statements) | 68.7% |
+| total: | (statements) | 68.8% |
