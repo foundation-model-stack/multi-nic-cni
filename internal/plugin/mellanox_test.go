@@ -8,9 +8,12 @@ package plugin_test
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 
+	"github.com/containernetworking/cni/pkg/types"
 	multinicv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
 	. "github.com/foundation-model-stack/multi-nic-cni/internal/plugin"
+	"github.com/foundation-model-stack/multi-nic-cni/internal/vars"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -20,47 +23,63 @@ import (
 
 type testMellanoxPlugin struct {
 	*MellanoxPlugin
-	mockResources []SrIoVResource
+	mockSriovPlugin *DevicePluginSpec
+}
+
+func (p *testMellanoxPlugin) getPolicy() (*NicClusterPolicy, error) {
+	return &NicClusterPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "test-policy",
+		},
+		Spec: NicClusterPolicySpec{
+			SriovDevicePlugin: p.mockSriovPlugin,
+		},
+	}, nil
 }
 
 func (p *testMellanoxPlugin) GetSrIoVResources() []SrIoVResource {
-	return p.mockResources
+	policy, err := p.getPolicy()
+	if err != nil {
+		vars.NetworkLog.V(2).Info(fmt.Sprintf("failed to get policy: %v", err))
+		return nil
+	}
+	if policy.Spec.SriovDevicePlugin == nil || policy.Spec.SriovDevicePlugin.Config == nil {
+		vars.NetworkLog.V(2).Info(fmt.Sprintf("no sriov device plugin config set in %s", policy.ObjectMeta.Name))
+		return nil
+	}
+	rs, err := GetSrIoVResourcesFromSrIoVPlugin(policy.Spec.SriovDevicePlugin)
+	if err != nil || len(rs) == 0 {
+		vars.NetworkLog.V(2).Info(fmt.Sprintf("no readable value from sriov config (%s): %v", *policy.Spec.SriovDevicePlugin.Config, err))
+	}
+	return rs
 }
 
-// Override GetConfig to use our mock GetSrIoVResources
 func (p *testMellanoxPlugin) GetConfig(net multinicv1.MultiNicNetwork, hifList map[string]multinicv1.HostInterface) (string, map[string]string, error) {
 	annotation := make(map[string]string)
+	var err error
 	// get resource from nicclusterpolicy
 	rs := p.GetSrIoVResources()
 	resourceAnnotation := GetCombinedResourceNames(rs)
 	if resourceAnnotation == "" {
 		msg := "failed to get resource annotation from sriov plugin config"
+		vars.NetworkLog.V(2).Info(msg)
 		return "", annotation, errors.New(msg)
 	}
-
-	// Create a map to store the full configuration
-	confMap := map[string]interface{}{
-		"cniVersion": net.Spec.MainPlugin.CNIVersion,
-		"type":       HOST_DEVICE_TYPE,
-		"name":       net.ObjectMeta.Name,
+	conf := HostDeviceTypeNetConf{
+		NetConf: types.NetConf{
+			CNIVersion: net.Spec.MainPlugin.CNIVersion,
+			Type:       HOST_DEVICE_TYPE,
+			Name:       net.ObjectMeta.Name,
+		},
 	}
-
-	// Parse and add IPAM configuration
-	var ipamConfig map[string]interface{}
-	if err := json.Unmarshal([]byte(net.Spec.IPAM), &ipamConfig); err != nil {
-		return "", annotation, err
-	}
-	confMap["ipam"] = ipamConfig
-
-	// Add empty DNS configuration
-	confMap["dns"] = map[string]interface{}{}
-
-	// Marshal the complete configuration
-	confBytes, err := json.Marshal(confMap)
+	err = json.Unmarshal([]byte(net.Spec.IPAM), &conf.IPAM)
 	if err != nil {
 		return "", annotation, err
 	}
-
+	confBytes, err := json.Marshal(conf)
+	if err != nil {
+		return "", annotation, err
+	}
 	annotation[RESOURCE_ANNOTATION] = resourceAnnotation
 	return string(confBytes), annotation, nil
 }
@@ -72,8 +91,21 @@ var _ = Describe("Mellanox Plugin", func() {
 	)
 
 	BeforeEach(func() {
+		config := `{
+			"resourceList": [
+				{
+					"resourcePrefix": "nvidia.com",
+					"resourceName": "test-resource"
+				}
+			]
+		}`
 		plugin = &testMellanoxPlugin{
 			MellanoxPlugin: &MellanoxPlugin{},
+			mockSriovPlugin: &DevicePluginSpec{
+				ImageSpecWithConfig: ImageSpecWithConfig{
+					Config: &config,
+				},
+			},
 		}
 		testConfig = &rest.Config{
 			Host: "https://localhost:8443",
@@ -162,27 +194,25 @@ var _ = Describe("Mellanox Plugin", func() {
 			hifList = make(map[string]multinicv1.HostInterface)
 		})
 
-		It("should generate valid CNI config and resource annotations", func() {
-			// Set mock resources
-			plugin.mockResources = []SrIoVResource{
-				{
-					Prefix:       DEFAULT_MELLANOX_PREFIX,
-					ResourceName: "test-resource",
-				},
-			}
+		It("should generate valid CNI config", func() {
+			// Verify GetSrIoVResources returns expected resources
+			resources := plugin.GetSrIoVResources()
+			Expect(resources).To(HaveLen(1))
+			Expect(resources[0].Prefix).To(Equal("nvidia.com"))
+			Expect(resources[0].ResourceName).To(Equal("test-resource"))
 
 			config, annotations, err := plugin.GetConfig(net, hifList)
 			Expect(err).NotTo(HaveOccurred())
 
-			// Verify config
-			Expect(config).To(ContainSubstring(`"cniVersion":"0.3.1"`))
-			Expect(config).To(ContainSubstring(`"type":"host-device"`))
-			Expect(config).To(ContainSubstring(`"name":"test-network"`))
-
-			// Parse the config as JSON to verify IPAM fields
+			// Parse the config as JSON
 			var configMap map[string]interface{}
 			err = json.Unmarshal([]byte(config), &configMap)
 			Expect(err).NotTo(HaveOccurred())
+
+			// Verify basic CNI fields
+			Expect(configMap["cniVersion"]).To(Equal("0.3.1"))
+			Expect(configMap["type"]).To(Equal("host-device"))
+			Expect(configMap["name"]).To(Equal("test-network"))
 
 			// Verify IPAM configuration
 			ipam, ok := configMap["ipam"].(map[string]interface{})
@@ -192,108 +222,91 @@ var _ = Describe("Mellanox Plugin", func() {
 			Expect(ipam["rangeStart"]).To(Equal("10.0.0.10"))
 			Expect(ipam["rangeEnd"]).To(Equal("10.0.0.20"))
 
-			Expect(config).To(ContainSubstring(`"dns":{}`))
-
 			// Verify annotations
 			Expect(annotations).To(HaveKey(RESOURCE_ANNOTATION))
 			Expect(annotations[RESOURCE_ANNOTATION]).To(Equal("nvidia.com/test-resource"))
 		})
 
-		It("should return error when no SrIoV resources are available", func() {
-			// Set empty mock resources
-			plugin.mockResources = []SrIoVResource{}
-
-			config, annotations, err := plugin.GetConfig(net, hifList)
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("failed to get resource annotation from sriov plugin config"))
-			Expect(config).To(BeEmpty())
-			Expect(annotations).To(BeEmpty())
-		})
-
-		It("should return error when IPAM config is invalid", func() {
-			// Set mock resources
-			plugin.mockResources = []SrIoVResource{
-				{
-					Prefix:       DEFAULT_MELLANOX_PREFIX,
-					ResourceName: "test-resource",
-				},
-			}
-
-			// Set invalid IPAM config
+		It("should handle invalid IPAM config", func() {
 			net.Spec.IPAM = "invalid json"
-
 			config, annotations, err := plugin.GetConfig(net, hifList)
 			Expect(err).To(HaveOccurred())
 			Expect(config).To(BeEmpty())
 			Expect(annotations).To(BeEmpty())
 		})
-	})
 
-	Context("GetSrIoVResources", func() {
-		BeforeEach(func() {
-			// Initialize plugin
-			err := plugin.Init(testConfig)
-			Expect(err).NotTo(HaveOccurred())
+		It("should handle empty resource list", func() {
+			emptyConfig := `{
+				"resourceList": []
+			}`
+			plugin.mockSriovPlugin.Config = &emptyConfig
+			config, annotations, err := plugin.GetConfig(net, hifList)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(Equal("failed to get resource annotation from sriov plugin config"))
+			Expect(config).To(BeEmpty())
+			Expect(annotations).To(BeEmpty())
+		})
+
+		It("should handle invalid resource list", func() {
+			invalidConfig := `{
+				"resourceList": "invalid"
+			}`
+
+			plugin.mockSriovPlugin.Config = &invalidConfig
+			config, annotations, err := plugin.GetConfig(net, hifList)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(Equal("failed to get resource annotation from sriov plugin config"))
+			Expect(config).To(BeEmpty())
+			Expect(annotations).To(BeEmpty())
 		})
 
 		It("should successfully retrieve SrIoV resources from policy", func() {
-			// Set mock resources
-			plugin.mockResources = []SrIoVResource{
-				{
-					Prefix:       DEFAULT_MELLANOX_PREFIX,
-					ResourceName: "host_dev0",
-				},
-				{
-					Prefix:       DEFAULT_MELLANOX_PREFIX,
-					ResourceName: "host_dev1",
-				},
-			}
-
+			// Test with a valid policy configuration
 			resources := plugin.GetSrIoVResources()
-			Expect(resources).To(HaveLen(2))
-			Expect(resources[0].Prefix).To(Equal(DEFAULT_MELLANOX_PREFIX))
-			Expect(resources[0].ResourceName).To(Equal("host_dev0"))
-			Expect(resources[1].Prefix).To(Equal(DEFAULT_MELLANOX_PREFIX))
-			Expect(resources[1].ResourceName).To(Equal("host_dev1"))
-
-			// Test resource annotation formatting
-			annotation := GetCombinedResourceNames(resources)
-			Expect(annotation).To(Equal("nvidia.com/host_dev0,nvidia.com/host_dev1"))
+			Expect(resources).To(HaveLen(1))
+			Expect(resources[0].Prefix).To(Equal("nvidia.com"))
+			Expect(resources[0].ResourceName).To(Equal("test-resource"))
 		})
 
 		It("should return empty list when no resources are available", func() {
-			// Set empty mock resources
-			plugin.mockResources = []SrIoVResource{}
-
+			// Test with nil SriovDevicePlugin
+			plugin.mockSriovPlugin = nil
 			resources := plugin.GetSrIoVResources()
 			Expect(resources).To(BeEmpty())
 
-			// Test empty resource annotation
-			annotation := GetCombinedResourceNames(resources)
-			Expect(annotation).To(BeEmpty())
+			// Test with nil Config
+			plugin.mockSriovPlugin = &DevicePluginSpec{}
+			resources = plugin.GetSrIoVResources()
+			Expect(resources).To(BeEmpty())
 		})
 
 		It("should handle resources with different prefixes", func() {
-			// Set mock resources with different prefixes
-			plugin.mockResources = []SrIoVResource{
-				{
-					Prefix:       DEFAULT_MELLANOX_PREFIX,
-					ResourceName: "host_dev0",
-				},
-				{
-					Prefix:       "custom.com",
-					ResourceName: "host_dev1",
-				},
-			}
+			multiResourceConfig := `{
+				"resourceList": [
+					{
+						"resourcePrefix": "nvidia.com",
+						"resourceName": "test-resource-1"
+					},
+					{
+						"resourcePrefix": "mellanox.com",
+						"resourceName": "test-resource-2"
+					}
+				]
+			}`
+			plugin.mockSriovPlugin.Config = &multiResourceConfig
 
 			resources := plugin.GetSrIoVResources()
 			Expect(resources).To(HaveLen(2))
-			Expect(resources[0].Prefix).To(Equal(DEFAULT_MELLANOX_PREFIX))
-			Expect(resources[1].Prefix).To(Equal("custom.com"))
+			Expect(resources[0].Prefix).To(Equal("nvidia.com"))
+			Expect(resources[0].ResourceName).To(Equal("test-resource-1"))
+			Expect(resources[1].Prefix).To(Equal("mellanox.com"))
+			Expect(resources[1].ResourceName).To(Equal("test-resource-2"))
 
-			// Test resource annotation with different prefixes
-			annotation := GetCombinedResourceNames(resources)
-			Expect(annotation).To(Equal("nvidia.com/host_dev0,custom.com/host_dev1"))
+			// Verify combined resource annotation
+			_, annotations, err := plugin.GetConfig(net, hifList)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(annotations).To(HaveKey(RESOURCE_ANNOTATION))
+			Expect(annotations[RESOURCE_ANNOTATION]).To(Equal("nvidia.com/test-resource-1,mellanox.com/test-resource-2"))
 		})
 	})
 })

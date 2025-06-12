@@ -102,6 +102,8 @@ func GetCombinedResourceNames(rs []SrIoVResource) string {
 // template: https://github.com/Mellanox/network-operator/blob/ce089f067153ea73b4712f0ad905fea92a1cf453/manifests/state-hostdevice-network/0010-hostdevice-net-cr.yml#L11
 type HostDeviceTypeNetConf struct {
 	types.NetConf
+	DeviceID string                 `json:"deviceID,omitempty"`
+	IPAM     map[string]interface{} `json:"ipam,omitempty"`
 }
 
 func (p *MellanoxPlugin) Init(config *rest.Config) error {
@@ -130,23 +132,18 @@ func (p *MellanoxPlugin) GetConfig(net multinicv1.MultiNicNetwork, hifList map[s
 		vars.NetworkLog.V(2).Info(msg)
 		return "", annotation, errors.New(msg)
 	}
-
-	// Create a map to store the full configuration
-	confMap := map[string]interface{}{
-		"cniVersion": net.Spec.MainPlugin.CNIVersion,
-		"type":       HOST_DEVICE_TYPE,
-		"name":       net.ObjectMeta.Name,
+	conf := HostDeviceTypeNetConf{
+		NetConf: types.NetConf{
+			CNIVersion: net.Spec.MainPlugin.CNIVersion,
+			Type:       HOST_DEVICE_TYPE,
+			Name:       net.ObjectMeta.Name,
+		},
 	}
-	var ipamConfig map[string]interface{}
-	err = json.Unmarshal([]byte(net.Spec.IPAM), &ipamConfig)
+	err = json.Unmarshal([]byte(net.Spec.IPAM), &conf.IPAM)
 	if err != nil {
 		return "", annotation, err
 	}
-	confMap["ipam"] = ipamConfig
-	confMap["dns"] = map[string]interface{}{}
-
-	// Marshal the complete configuration with proper formatting
-	confBytes, err := json.MarshalIndent(confMap, "", "  ")
+	confBytes, err := json.Marshal(conf)
 	if err != nil {
 		return "", annotation, err
 	}

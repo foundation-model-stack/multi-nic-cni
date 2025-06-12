@@ -17,6 +17,13 @@ Test | Description | File
 | Host Interface Test/UpdateNewInterfaces - original with more than one devices | can leave old one | ./controllers/hostinterface_test.go |
 | Host Interface Test/UpdateNewInterfaces - original with more than one devices | can leave old one when some is missing | ./controllers/hostinterface_test.go |
 | Host Interface Test/UpdateNewInterfaces - original with more than one devices | can leave old one when some is missing and some with new info | ./controllers/hostinterface_test.go |
+| Mellanox Plugin/GetConfig | should generate valid CNI config | ./internal/plugin/mellanox_test.go |
+| Mellanox Plugin/GetConfig | should handle empty resource list | ./internal/plugin/mellanox_test.go |
+| Mellanox Plugin/GetConfig | should handle invalid IPAM config | ./internal/plugin/mellanox_test.go |
+| Mellanox Plugin/GetConfig | should handle invalid resource list | ./internal/plugin/mellanox_test.go |
+| Mellanox Plugin/GetConfig | should handle resources with different prefixes | ./internal/plugin/mellanox_test.go |
+| Mellanox Plugin/GetConfig | should return empty list when no resources are available | ./internal/plugin/mellanox_test.go |
+| Mellanox Plugin/GetConfig | should successfully retrieve SrIoV resources from policy | ./internal/plugin/mellanox_test.go |
 | Mellanox Plugin/Init | should initialize successfully with valid config | ./internal/plugin/mellanox_test.go |
 | Mellanox Plugin/Init/when config is invalid | should return error | ./internal/plugin/mellanox_test.go |
 | NetAttachDef test/handler | create and delete | ./internal/plugin/net_attach_def_test.go |
