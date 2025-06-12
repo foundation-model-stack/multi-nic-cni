@@ -62,3 +62,9 @@ func (s *SafeCache) GetSize() int {
 	defer s.mu.RUnlock()
 	return len(s.cache)
 }
+
+func (s *SafeCache) Clear() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.cache = make(map[string]interface{})
+}
