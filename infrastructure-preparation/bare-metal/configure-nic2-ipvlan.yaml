@@ -1,0 +1,69 @@
+apiVersion: nmstate.io/v1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  name: <hostname>
+spec:
+  nodeSelector:
+    kubernetes.io/hostname: <hostname>
+  desiredState:
+    interfaces:
+      - name: <vlan name>
+        type: vlan
+        state: up
+        vlan:
+          base-iface: tenant-bond
+          id: <vlan id>
+        ipv4:
+          enabled: true
+          address:
+            - ip: <ip address>
+              prefix-length: <prefix length>
+          dhcp: false
+      - name: tenant-bond
+        link-aggregation:
+          mode: active-backup
+          options:
+            miimon: "100"
+          port:
+            - <interface name>
+            - <interface name>
+        ipv4:
+          dhcp: false
+          enabled: false
+        ipv6:
+          autoconf: false
+          dhcp: false
+          enabled: false
+        mac-address: <mac address>
+        mtu: 9000
+        state: up
+        type: bond
+      - name: <interface name>
+        ethernet:
+          auto-negotiation: true
+          duplex: full
+          speed: 25000
+        ipv4:
+          enabled: false
+        ipv6:
+          enabled: false
+        mac-address: <mac address>
+        mtu: 9000
+        permanent-mac-address: <mac address>
+        state: up
+        type: ethernet
+      - name: <interface name>
+        ethernet:
+          auto-negotiation: true
+          duplex: full
+          speed: 25000
+        ipv4:
+          enabled: false
+        ipv6:
+          enabled: false
+        mac-address: <mac address>
+        mtu: 9000
+        permanent-mac-address: <mac address>
+        state: up
+        type: ethernet
+
