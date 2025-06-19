@@ -176,7 +176,7 @@ https://github.com/user-attachments/assets/129239b9-37f0-4669-b2ec-d93c4ce16c84
 Discover more insights about Multi-NIC CNI through our blog posts, talks, and academic papers.
 
 - Medium Blog Post Series: https://medium.com/@sunyanan.choochotkaew1/list/multinic-cni-series-8570830e6f3f
-- KubeCon+CloudNativeCon NA 20222 CNCF-Hosted Co-located Event: https://sched.co/1AsSs
-- KubeCon+CloudNativeCon NA 20224 CNCF-Hosted Co-located Event: https://sched.co/1izs8
+- KubeCon+CloudNativeCon NA 2022 CNCF-Hosted Co-located Event: https://sched.co/1AsSs
+- KubeCon+CloudNativeCon NA 2024 CNCF-Hosted Co-located Event: https://sched.co/1izs8
 - Multi-NIC CNI in Vela IBM Research's AI supercomputer in the cloud: https://research.ibm.com/blog/openshift-foundation-model-stack
 - Paper - The infrastructure powering IBM's Gen AI model development: https://arxiv.org/abs/2407.05467
