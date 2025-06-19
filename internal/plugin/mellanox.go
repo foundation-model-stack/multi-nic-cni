@@ -102,6 +102,8 @@ func GetCombinedResourceNames(rs []SrIoVResource) string {
 // template: https://github.com/Mellanox/network-operator/blob/ce089f067153ea73b4712f0ad905fea92a1cf453/manifests/state-hostdevice-network/0010-hostdevice-net-cr.yml#L11
 type HostDeviceTypeNetConf struct {
 	types.NetConf
+	DeviceID string                 `json:"deviceID,omitempty"`
+	IPAM     map[string]interface{} `json:"ipam,omitempty"`
 }
 
 func (p *MellanoxPlugin) Init(config *rest.Config) error {
@@ -130,10 +132,13 @@ func (p *MellanoxPlugin) GetConfig(net multinicv1.MultiNicNetwork, hifList map[s
 		vars.NetworkLog.V(2).Info(msg)
 		return "", annotation, errors.New(msg)
 	}
-	conf := HostDeviceTypeNetConf{}
-	conf.CNIVersion = net.Spec.MainPlugin.CNIVersion
-	conf.Type = HOST_DEVICE_TYPE
-	conf.Name = net.Name
+	conf := HostDeviceTypeNetConf{
+		NetConf: types.NetConf{
+			CNIVersion: net.Spec.MainPlugin.CNIVersion,
+			Type:       HOST_DEVICE_TYPE,
+			Name:       net.ObjectMeta.Name,
+		},
+	}
 	err = json.Unmarshal([]byte(net.Spec.IPAM), &conf.IPAM)
 	if err != nil {
 		return "", annotation, err
@@ -158,7 +163,7 @@ func (p *MellanoxPlugin) GetSrIoVResources() (rs []SrIoVResource) {
 	}
 	sriovPlugin := policy.Spec.SriovDevicePlugin
 	if sriovPlugin == nil || sriovPlugin.Config == nil {
-		vars.NetworkLog.V(2).Info(fmt.Sprintf("no sriov device plugin config set in %s", policy.Name))
+		vars.NetworkLog.V(2).Info(fmt.Sprintf("no sriov device plugin config set in %s", policy.ObjectMeta.Name))
 		return rs
 	}
 	rs, err = GetSrIoVResourcesFromSrIoVPlugin(sriovPlugin)
