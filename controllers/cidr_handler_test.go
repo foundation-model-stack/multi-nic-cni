@@ -25,6 +25,7 @@ var (
 )
 
 var _ = Describe("Test CIDR Handler	", func() {
+	ConfigReady = true
 	cniVersion := "0.3.0"
 	cniType := "ipvlan"
 	mode := "l2"

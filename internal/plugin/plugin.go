@@ -34,6 +34,7 @@ func GetMetaObject(name string, namespace string, annotations map[string]string)
 	}
 }
 
+// RemoveEmpty constructs a new config string based on netConfKeys and valid argument list.
 func RemoveEmpty(args map[string]string, pluginStr string) string {
 	var pluginObj map[string]interface{}
 	cleanedObj := make(map[string]interface{})

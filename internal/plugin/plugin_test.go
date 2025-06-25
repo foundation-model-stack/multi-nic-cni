@@ -34,6 +34,21 @@ var (
 	networkPrefixes []string = []string{"10.242.0.", "10.242.1."}
 )
 
+var _ = Describe("Common Plugin Test", func() {
+	It("RemoveEmpty", func() {
+		pluginStr := `{"cniVersion":"0.3.0","type":"ipvlan","mode":"l2","mtu":""}`
+		cniArgs := map[string]string{"mode": "l2"}
+		output := RemoveEmpty(cniArgs, pluginStr)
+		Expect(output).To(ContainSubstring(`"cniVersion":"0.3.0"`))
+		Expect(output).To(ContainSubstring(`"type":"ipvlan"`))
+		Expect(output).To(ContainSubstring(`"mode":"l2"`))
+		Expect(output).NotTo(ContainSubstring(`"mtu"`))
+		invalidPluginStr := "invalid"
+		output = RemoveEmpty(cniArgs, invalidPluginStr)
+		Expect(output).To(Equal(invalidPluginStr))
+	})
+})
+
 var _ = Describe("Test GetConfig of main plugins", func() {
 	cniVersion := "0.3.0"
 

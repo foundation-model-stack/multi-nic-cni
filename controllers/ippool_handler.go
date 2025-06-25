@@ -144,6 +144,7 @@ func (h *IPPoolHandler) initIPPool(netAttachDef string, podCIDR string,
 	return ippoolName, spec, excludesInterface
 }
 
+// extractMatchExcludesFromPodCIDR returns a list of exclude CIDR within given pod CIDR.
 func (h *IPPoolHandler) extractMatchExcludesFromPodCIDR(excludes []compute.IPValue, podCIDR string) []string {
 	excludesInterface := []string{}
 	// find CIDR ranges that excluded in the PodCIDR range
