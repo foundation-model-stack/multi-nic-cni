@@ -16,6 +16,7 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	client "sigs.k8s.io/controller-runtime/pkg/client"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -37,10 +38,24 @@ var _ = Describe("Test deploying MultiNicNetwork", func() {
 	It("successfully create/delete network attachment definition", func() {
 		mainPlugin, annotations, err := MultiNicnetworkReconcilerInstance.GetMainPluginConf(multinicnetwork)
 		Expect(err).NotTo(HaveOccurred())
-		err = MultiNicnetworkReconcilerInstance.NetAttachDefHandler.CreateOrUpdate(multinicnetwork, mainPlugin, annotations)
+		// Create the MultiNicNetwork in the cluster
+		err = K8sClient.Create(context.TODO(), multinicnetwork)
 		Expect(err).NotTo(HaveOccurred())
-		err = MultiNicnetworkReconcilerInstance.NetAttachDefHandler.DeleteNets(multinicnetwork)
+		// Fetch the created MultiNicNetwork to get the UID
+		fetched := &multinicv1.MultiNicNetwork{}
+		err = K8sClient.Get(context.TODO(), client.ObjectKey{Name: multinicnetwork.Name, Namespace: multinicnetwork.Namespace}, fetched)
 		Expect(err).NotTo(HaveOccurred())
+		err = MultiNicnetworkReconcilerInstance.NetAttachDefHandler.CreateOrUpdate(fetched, mainPlugin, annotations)
+		Expect(err).NotTo(HaveOccurred())
+		err = MultiNicnetworkReconcilerInstance.NetAttachDefHandler.DeleteNets(fetched)
+		Expect(err).NotTo(HaveOccurred())
+		// Delete the MultiNicNetwork from the cluster
+		err = K8sClient.Delete(context.TODO(), fetched)
+		Expect(err).NotTo(HaveOccurred())
+		// Wait for the MultiNicNetwork to be fully deleted
+		Eventually(func() error {
+			return K8sClient.Get(context.TODO(), client.ObjectKey{Name: fetched.Name, Namespace: fetched.Namespace}, &multinicv1.MultiNicNetwork{})
+		}).ShouldNot(Succeed())
 	})
 	It("successfully create/delete network attachment definition on new namespace", func() {
 		newNamespace := corev1.Namespace{
@@ -51,9 +66,16 @@ var _ = Describe("Test deploying MultiNicNetwork", func() {
 		mainPlugin, annotations, err := MultiNicnetworkReconcilerInstance.GetMainPluginConf(multinicnetwork)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(K8sClient.Create(context.TODO(), &newNamespace)).Should(Succeed())
-		err = MultiNicnetworkReconcilerInstance.NetAttachDefHandler.CreateOrUpdateOnNamespace(newNamespaceName, multinicnetwork, mainPlugin, annotations)
+		// Use a fresh MultiNicNetwork object for this test
+		multinicnetwork2 := GetMultiNicCNINetwork("test-mn", cniVersion, cniType, cniArgs)
+		err = K8sClient.Create(context.TODO(), multinicnetwork2)
 		Expect(err).NotTo(HaveOccurred())
-		err = MultiNicnetworkReconcilerInstance.NetAttachDefHandler.Delete(multinicnetwork.Name, newNamespaceName)
+		fetched := &multinicv1.MultiNicNetwork{}
+		err = K8sClient.Get(context.TODO(), client.ObjectKey{Name: multinicnetwork2.Name, Namespace: multinicnetwork2.Namespace}, fetched)
+		Expect(err).NotTo(HaveOccurred())
+		err = MultiNicnetworkReconcilerInstance.NetAttachDefHandler.CreateOrUpdateOnNamespace(newNamespaceName, fetched, mainPlugin, annotations)
+		Expect(err).NotTo(HaveOccurred())
+		err = MultiNicnetworkReconcilerInstance.NetAttachDefHandler.Delete(fetched.Name, newNamespaceName)
 		Expect(err).NotTo(HaveOccurred())
 	})
 })
