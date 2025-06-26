@@ -10,6 +10,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	ctrl "sigs.k8s.io/controller-runtime"
 
 	multinicv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
 )
@@ -17,7 +18,7 @@ import (
 var _ = Describe("Test Config Controller", func() {
 	ConfigReady = true
 
-	It("default config", func() {
+	It("default config", Serial, func() {
 		dummyConfigName := "dummy-config"
 		spec := ConfigReconcilerInstance.GetDefaultConfigSpec()
 		objMeta := metav1.ObjectMeta{
@@ -42,9 +43,19 @@ var _ = Describe("Test Config Controller", func() {
 		By("new daemonset")
 		ds := ConfigReconcilerInstance.NewCNIDaemonSet(dummyConfigName, spec.Daemon)
 		Expect(ds).NotTo(BeNil())
+		_, err = ConfigReconcilerInstance.Reconcile(ctx, ctrl.Request{
+			NamespacedName: namespacedName,
+		})
+		Expect(err).To(BeNil())
 		By("deleting")
 		err = ConfigReconcilerInstance.Client.Delete(ctx, cfg)
 		Expect(err).To(BeNil())
+		_, err = ConfigReconcilerInstance.Reconcile(ctx, ctrl.Request{
+			NamespacedName: namespacedName,
+		})
+		Expect(err).To(BeNil())
+		// set config ready back to true for the rest test
+		ConfigReady = true
 	})
 
 	Context("Multus", Ordered, func() {

@@ -13,6 +13,8 @@ import (
 )
 
 var _ = Describe("Host Interface Test", func() {
+	controllers.ConfigReady = true
+
 	Context("UpdateNewInterfaces - original with a single device", func() {
 		origInfos := []multinicv1.InterfaceInfoType{
 			genInterfaceInfo("eth1", "10.0.0.0/24"),
