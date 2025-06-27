@@ -2,9 +2,9 @@
 
 File | Function | Coverage 
 ---|---|---
-| github.com/foundation-model-stack/multi-nic-cni/controllers/cidr_controller.go:39: | Reconcile | 83.3% |
-| github.com/foundation-model-stack/multi-nic-cni/controllers/cidr_controller.go:110: | SetupWithManager | 100.0% |
-| github.com/foundation-model-stack/multi-nic-cni/controllers/cidr_controller.go:117: | callFinalizer | 100.0% |
+| github.com/foundation-model-stack/multi-nic-cni/controllers/cidr_controller.go:40: | Reconcile | 79.2% |
+| github.com/foundation-model-stack/multi-nic-cni/controllers/cidr_controller.go:119: | SetupWithManager | 100.0% |
+| github.com/foundation-model-stack/multi-nic-cni/controllers/cidr_controller.go:126: | callFinalizer | 100.0% |
 | github.com/foundation-model-stack/multi-nic-cni/controllers/cidr_handler.go:55: | NewCIDRHandler | 100.0% |
 | github.com/foundation-model-stack/multi-nic-cni/controllers/cidr_handler.go:86: | InitCustomCRCache | 66.7% |
 | github.com/foundation-model-stack/multi-nic-cni/controllers/cidr_handler.go:104: | GetCIDR | 100.0% |
@@ -41,15 +41,15 @@ File | Function | Coverage
 | github.com/foundation-model-stack/multi-nic-cni/controllers/cidr_handler.go:1048: | SetCache | 100.0% |
 | github.com/foundation-model-stack/multi-nic-cni/controllers/cidr_handler.go:1052: | GetCache | 0.0% |
 | github.com/foundation-model-stack/multi-nic-cni/controllers/cidr_handler.go:1060: | ListCache | 83.3% |
-| github.com/foundation-model-stack/multi-nic-cni/controllers/config_controller.go:44: | getOperatorNamespace | 80.0% |
-| github.com/foundation-model-stack/multi-nic-cni/controllers/config_controller.go:70: | getDefaultConfigSpec | 100.0% |
-| github.com/foundation-model-stack/multi-nic-cni/controllers/config_controller.go:131: | CreateDefaultDaemonConfig | 0.0% |
-| github.com/foundation-model-stack/multi-nic-cni/controllers/config_controller.go:144: | Reconcile | 81.0% |
-| github.com/foundation-model-stack/multi-nic-cni/controllers/config_controller.go:219: | SetupWithManager | 100.0% |
-| github.com/foundation-model-stack/multi-nic-cni/controllers/config_controller.go:226: | UpdateConfigBySpec | 90.5% |
-| github.com/foundation-model-stack/multi-nic-cni/controllers/config_controller.go:258: | newCNIDaemonSet | 89.5% |
-| github.com/foundation-model-stack/multi-nic-cni/controllers/config_controller.go:344: | getCNIHostPath | 88.2% |
-| github.com/foundation-model-stack/multi-nic-cni/controllers/config_controller.go:376: | callFinalizer | 70.6% |
+| github.com/foundation-model-stack/multi-nic-cni/controllers/config_controller.go:45: | getOperatorNamespace | 80.0% |
+| github.com/foundation-model-stack/multi-nic-cni/controllers/config_controller.go:71: | getDefaultConfigSpec | 100.0% |
+| github.com/foundation-model-stack/multi-nic-cni/controllers/config_controller.go:132: | CreateDefaultDaemonConfig | 0.0% |
+| github.com/foundation-model-stack/multi-nic-cni/controllers/config_controller.go:145: | Reconcile | 79.2% |
+| github.com/foundation-model-stack/multi-nic-cni/controllers/config_controller.go:228: | SetupWithManager | 100.0% |
+| github.com/foundation-model-stack/multi-nic-cni/controllers/config_controller.go:235: | UpdateConfigBySpec | 90.5% |
+| github.com/foundation-model-stack/multi-nic-cni/controllers/config_controller.go:267: | newCNIDaemonSet | 89.5% |
+| github.com/foundation-model-stack/multi-nic-cni/controllers/config_controller.go:353: | getCNIHostPath | 88.2% |
+| github.com/foundation-model-stack/multi-nic-cni/controllers/config_controller.go:385: | callFinalizer | 70.6% |
 | github.com/foundation-model-stack/multi-nic-cni/controllers/daemon_cache_handler.go:26: | SetCache | 100.0% |
 | github.com/foundation-model-stack/multi-nic-cni/controllers/daemon_cache_handler.go:30: | GetCache | 100.0% |
 | github.com/foundation-model-stack/multi-nic-cni/controllers/daemon_cache_handler.go:38: | ListCache | 100.0% |
@@ -71,12 +71,12 @@ File | Function | Coverage
 | github.com/foundation-model-stack/multi-nic-cni/controllers/daemon_watcher.go:259: | isDaemonPod | 75.0% |
 | github.com/foundation-model-stack/multi-nic-cni/controllers/daemon_watcher.go:269: | createHostInterfaceInfo | 80.0% |
 | github.com/foundation-model-stack/multi-nic-cni/controllers/daemon_watcher.go:279: | IsDaemonSetReady | 75.0% |
-| github.com/foundation-model-stack/multi-nic-cni/controllers/hostinterface_controller.go:38: | InitHostInterfaceCache | 63.2% |
-| github.com/foundation-model-stack/multi-nic-cni/controllers/hostinterface_controller.go:79: | Reconcile | 76.5% |
-| github.com/foundation-model-stack/multi-nic-cni/controllers/hostinterface_controller.go:140: | SetupWithManager | 100.0% |
-| github.com/foundation-model-stack/multi-nic-cni/controllers/hostinterface_controller.go:146: | UpdateInterfaces | 23.1% |
-| github.com/foundation-model-stack/multi-nic-cni/controllers/hostinterface_controller.go:206: | UpdateNewInterfaces | 100.0% |
-| github.com/foundation-model-stack/multi-nic-cni/controllers/hostinterface_controller.go:239: | CallFinalizer | 100.0% |
+| github.com/foundation-model-stack/multi-nic-cni/controllers/hostinterface_controller.go:39: | InitHostInterfaceCache | 63.2% |
+| github.com/foundation-model-stack/multi-nic-cni/controllers/hostinterface_controller.go:80: | Reconcile | 72.5% |
+| github.com/foundation-model-stack/multi-nic-cni/controllers/hostinterface_controller.go:149: | SetupWithManager | 100.0% |
+| github.com/foundation-model-stack/multi-nic-cni/controllers/hostinterface_controller.go:155: | UpdateInterfaces | 23.1% |
+| github.com/foundation-model-stack/multi-nic-cni/controllers/hostinterface_controller.go:215: | UpdateNewInterfaces | 100.0% |
+| github.com/foundation-model-stack/multi-nic-cni/controllers/hostinterface_controller.go:248: | CallFinalizer | 100.0% |
 | github.com/foundation-model-stack/multi-nic-cni/controllers/hostinterface_handler.go:34: | NewHostInterfaceHandler | 100.0% |
 | github.com/foundation-model-stack/multi-nic-cni/controllers/hostinterface_handler.go:48: | initHostInterface | 100.0% |
 | github.com/foundation-model-stack/multi-nic-cni/controllers/hostinterface_handler.go:62: | CreateHostInterface | 100.0% |
@@ -90,10 +90,10 @@ File | Function | Coverage
 | github.com/foundation-model-stack/multi-nic-cni/controllers/hostinterface_handler.go:149: | IpamJoin | 13.0% |
 | github.com/foundation-model-stack/multi-nic-cni/controllers/hostinterface_handler.go:192: | addLabel | 0.0% |
 | github.com/foundation-model-stack/multi-nic-cni/controllers/hostinterface_handler.go:206: | GetInfoAvailableSize | 100.0% |
-| github.com/foundation-model-stack/multi-nic-cni/controllers/ippool_controller.go:37: | InitIppoolCache | 77.8% |
-| github.com/foundation-model-stack/multi-nic-cni/controllers/ippool_controller.go:53: | Reconcile | 77.8% |
-| github.com/foundation-model-stack/multi-nic-cni/controllers/ippool_controller.go:104: | SetupWithManager | 100.0% |
-| github.com/foundation-model-stack/multi-nic-cni/controllers/ippool_controller.go:111: | callFinalizer | 55.6% |
+| github.com/foundation-model-stack/multi-nic-cni/controllers/ippool_controller.go:38: | InitIppoolCache | 77.8% |
+| github.com/foundation-model-stack/multi-nic-cni/controllers/ippool_controller.go:54: | Reconcile | 72.7% |
+| github.com/foundation-model-stack/multi-nic-cni/controllers/ippool_controller.go:113: | SetupWithManager | 100.0% |
+| github.com/foundation-model-stack/multi-nic-cni/controllers/ippool_controller.go:120: | callFinalizer | 55.6% |
 | github.com/foundation-model-stack/multi-nic-cni/controllers/ippool_handler.go:39: | GetIPPool | 100.0% |
 | github.com/foundation-model-stack/multi-nic-cni/controllers/ippool_handler.go:52: | ListIPPool | 100.0% |
 | github.com/foundation-model-stack/multi-nic-cni/controllers/ippool_handler.go:68: | DeleteIPPool | 100.0% |
