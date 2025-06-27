@@ -2,6 +2,14 @@
 
 Test | Description | File 
 ---|---|---
+| Common IPPool Test/checkPoolValidity | contains excluded address | ./controllers/ippool_test.go |
+| Common IPPool Test/checkPoolValidity | empty address | ./controllers/ippool_test.go |
+| Common IPPool Test/checkPoolValidity | empty exclude | ./controllers/ippool_test.go |
+| Common IPPool Test/checkPoolValidity | nil | ./controllers/ippool_test.go |
+| Common IPPool Test/extractMatchExcludesFromPodCIDR | cover | ./controllers/ippool_test.go |
+| Common IPPool Test/extractMatchExcludesFromPodCIDR | subset | ./controllers/ippool_test.go |
+| Common IPPool Test/extractMatchExcludesFromPodCIDR | unrelated | ./controllers/ippool_test.go |
+| Common Plugin Test | RemoveEmpty | ./internal/plugin/plugin_test.go |
 | Config Test | Check update from ConfigSpec | ./controllers/config_test.go |
 | Daemon Test | Test TryGetDaemonPod for tainted daemon | ./controllers/daemon_test.go |
 | Daemon Test | Test TryGetDaemonPod for valid daemon | ./controllers/daemon_test.go |
@@ -27,6 +35,7 @@ Test | Description | File
 | Mellanox Plugin/Init | should initialize successfully with valid config | ./internal/plugin/mellanox_test.go |
 | Mellanox Plugin/Init/when config is invalid | should return error | ./internal/plugin/mellanox_test.go |
 | NetAttachDef test/handler | create and delete | ./internal/plugin/net_attach_def_test.go |
+| NetAttachDef test/handler | finalizer and owner reference work together for NAD cleanup | ./internal/plugin/net_attach_def_test.go |
 | NetAttachDef test/handler/CheckDefChanged/comparing network attachment definitions | different annotation count | ./internal/plugin/net_attach_def_test.go |
 | NetAttachDef test/handler/CheckDefChanged/comparing network attachment definitions | different annotation values | ./internal/plugin/net_attach_def_test.go |
 | NetAttachDef test/handler/CheckDefChanged/comparing network attachment definitions | different configurations | ./internal/plugin/net_attach_def_test.go |

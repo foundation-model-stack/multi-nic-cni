@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	multinicv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
+	"github.com/foundation-model-stack/multi-nic-cni/internal/compute"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	//+kubebuilder:scaffold:imports
@@ -190,3 +191,45 @@ var _ = Describe("Unsync IPPool Test", func() {
 		}
 	})
 })
+
+var _ = Describe("Common IPPool Test", func() {
+	ippoolHandler := IPPoolHandler{}
+	testExcludeCIDRs := []string{"10.0.1.0/24"}
+	address1 := "10.0.1.1"
+	address2 := "10.0.2.1"
+
+	DescribeTable("checkPoolValidity", func(excludeCIDRs []string, allocationAddresses []string, expectedInvalidAddresses []string) {
+		allocations := convertAddressesToAllocations(allocationAddresses)
+		invalidAllocations := ippoolHandler.CheckPoolValidity(excludeCIDRs, allocations)
+		expectedInvalidAllocations := convertAddressesToAllocations(expectedInvalidAddresses)
+		Expect(invalidAllocations).To(BeEquivalentTo(expectedInvalidAllocations))
+	},
+		Entry("nil", nil, nil, nil),
+		Entry("empty exclude", []string{}, []string{address1}, nil),
+		Entry("empty address", testExcludeCIDRs, []string{}, nil),
+		Entry("contains excluded address", testExcludeCIDRs, []string{address1, address2}, []string{address1}),
+	)
+
+	DescribeTable("extractMatchExcludesFromPodCIDR", func(excludeCIDRs []string, podCIDR string, expected []string) {
+		excludes := compute.SortAddress(excludeCIDRs)
+		output := ippoolHandler.ExtractMatchExcludesFromPodCIDR(excludes, podCIDR)
+		Expect(output).To(BeEquivalentTo(expected))
+	},
+		Entry("subset", []string{"10.0.1.0/24"}, "10.0.0.0/16", []string{"10.0.1.0/24"}),
+		Entry("unrelated", []string{"10.0.1.0/24"}, "10.0.2.0/24", []string{}),
+		Entry("cover", []string{"10.0.1.0/24"}, "10.0.1.128/25", []string{}), // should be handled by interface indexing step
+	)
+})
+
+func convertAddressesToAllocations(addresses []string) []multinicv1.Allocation {
+	if addresses == nil {
+		return nil
+	}
+	allocations := make([]multinicv1.Allocation, len(addresses))
+	for i, address := range addresses {
+		allocations[i] = multinicv1.Allocation{
+			Address: address,
+		}
+	}
+	return allocations
+}

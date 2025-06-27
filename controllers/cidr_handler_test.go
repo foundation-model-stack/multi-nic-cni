@@ -25,6 +25,7 @@ var (
 )
 
 var _ = Describe("Test CIDR Handler	", func() {
+	ConfigReady = true
 	cniVersion := "0.3.0"
 	cniType := "ipvlan"
 	mode := "l2"
@@ -344,7 +345,7 @@ var _ = Describe("Test CIDR Handler	", func() {
 				scheme = runtime.NewScheme()
 				Expect(multinicv1.AddToScheme(scheme)).To(Succeed())
 				var err error
-				defHandler, err = plugin.GetNetAttachDefHandler(Cfg)
+				defHandler, err = plugin.GetNetAttachDefHandler(Cfg, scheme)
 				Expect(err).To(BeNil())
 			})
 

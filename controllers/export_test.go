@@ -42,3 +42,11 @@ func (h *IPPoolHandler) UnsetIPPoolsCache(defName string, entries []multinicv1.C
 		}
 	}
 }
+
+func (h *IPPoolHandler) CheckPoolValidity(excludeCIDRs []string, allocations []multinicv1.Allocation) []multinicv1.Allocation {
+	return h.checkPoolValidity(excludeCIDRs, allocations)
+}
+
+func (h *IPPoolHandler) ExtractMatchExcludesFromPodCIDR(excludes []compute.IPValue, podCIDR string) []string {
+	return h.extractMatchExcludesFromPodCIDR(excludes, podCIDR)
+}

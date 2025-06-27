@@ -17,7 +17,7 @@ import (
 var _ = Describe("Test Config Controller", func() {
 	ConfigReady = true
 
-	It("default config", func() {
+	It("default config", Serial, func() {
 		dummyConfigName := "dummy-config"
 		spec := ConfigReconcilerInstance.GetDefaultConfigSpec()
 		objMeta := metav1.ObjectMeta{
@@ -42,9 +42,22 @@ var _ = Describe("Test Config Controller", func() {
 		By("new daemonset")
 		ds := ConfigReconcilerInstance.NewCNIDaemonSet(dummyConfigName, spec.Daemon)
 		Expect(ds).NotTo(BeNil())
+		// Wait for DaemonSet to be created by the controller
+		Eventually(func(g Gomega) {
+			daemonset, err := ConfigReconcilerInstance.Clientset.AppsV1().DaemonSets(OPERATOR_NAMESPACE).Get(ctx, dummyConfigName, metav1.GetOptions{})
+			g.Expect(err).To(BeNil())
+			g.Expect(daemonset).NotTo(BeNil())
+		}).WithTimeout(30 * time.Second).WithPolling(2 * time.Second).Should(Succeed())
 		By("deleting")
 		err = ConfigReconcilerInstance.Client.Delete(ctx, cfg)
 		Expect(err).To(BeNil())
+		// Wait for Config to be deleted by the controller
+		Eventually(func(g Gomega) {
+			err := ConfigReconcilerInstance.Client.Get(ctx, namespacedName, &config)
+			g.Expect(err).NotTo(BeNil())
+		}).WithTimeout(30 * time.Second).WithPolling(2 * time.Second).Should(Succeed())
+		// set config ready back to true for the rest test
+		ConfigReady = true
 	})
 
 	Context("Multus", Ordered, func() {

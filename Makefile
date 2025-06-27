@@ -118,7 +118,7 @@ GOLANGCI_LINT_INSTALL_SCRIPT ?= 'https://raw.githubusercontent.com/golangci/gola
 .PHONY: golangci-lint
 golangci-lint: $(GOLANGCI_LINT) ### Download golangci-lint locally if necessary.
 $(GOLANGCI_LINT):$(DEV_BIN_DIR)
-	test -s $(GOLANGCI_LINT) || { curl -sSfL $(GOLANGCI_LINT_INSTALL_SCRIPT) | sh -s -- -b $(DEV_BIN_DIR)  v1.54.2; }
+	test -s $(GOLANGCI_LINT) || { curl -sSfL $(GOLANGCI_LINT_INSTALL_SCRIPT) | sh -s -- -b $(DEV_BIN_DIR)  v1.64.8; }
 
 .PHONY: manifests
 manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
@@ -163,7 +163,7 @@ $(TEST_RESULT_DIR):
 .PHONY: ginkgo
 ginkgo: $(GINKGO) ## Download and install ginkgo locally if necessary.
 $(GINKGO): $(TEST_BIN_DIR)
-	$(call go-get-tool,$(TEST_BIN_DIR),$(GINKGO),github.com/onsi/ginkgo/v2/ginkgo@v2.20.1)
+	$(call go-get-tool,$(TEST_BIN_DIR),$(GINKGO),github.com/onsi/ginkgo/v2/ginkgo@v2.21.0)
 
 .PHONY: envtest
 envtest: $(ENVTEST) ## Download and install setup-envtest locally if necessary.
