@@ -14,6 +14,7 @@ import (
 	"go.uber.org/zap/zapcore"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -174,9 +175,17 @@ func (r *ConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 			if err = r.callFinalizer(vars.ConfigLog, req.NamespacedName.Name); err != nil {
 				return ctrl.Result{}, err
 			}
-
-			controllerutil.RemoveFinalizer(instance, configFinalizer)
-			err := r.Client.Update(ctx, instance)
+			err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+				err := r.Client.Get(ctx, req.NamespacedName, instance)
+				if err != nil {
+					if errors.IsNotFound(err) {
+						return nil
+					}
+					return err
+				}
+				controllerutil.RemoveFinalizer(instance, configFinalizer)
+				return r.Client.Update(ctx, instance)
+			})
 			if err != nil {
 				return ctrl.Result{}, err
 			}
