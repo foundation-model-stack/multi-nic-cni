@@ -44,12 +44,12 @@ File | Function | Coverage
 | github.com/foundation-model-stack/multi-nic-cni/controllers/config_controller.go:44: | getOperatorNamespace | 80.0% |
 | github.com/foundation-model-stack/multi-nic-cni/controllers/config_controller.go:70: | getDefaultConfigSpec | 100.0% |
 | github.com/foundation-model-stack/multi-nic-cni/controllers/config_controller.go:131: | CreateDefaultDaemonConfig | 0.0% |
-| github.com/foundation-model-stack/multi-nic-cni/controllers/config_controller.go:144: | Reconcile | 76.2% |
+| github.com/foundation-model-stack/multi-nic-cni/controllers/config_controller.go:144: | Reconcile | 81.0% |
 | github.com/foundation-model-stack/multi-nic-cni/controllers/config_controller.go:219: | SetupWithManager | 100.0% |
 | github.com/foundation-model-stack/multi-nic-cni/controllers/config_controller.go:226: | UpdateConfigBySpec | 90.5% |
 | github.com/foundation-model-stack/multi-nic-cni/controllers/config_controller.go:258: | newCNIDaemonSet | 89.5% |
 | github.com/foundation-model-stack/multi-nic-cni/controllers/config_controller.go:344: | getCNIHostPath | 88.2% |
-| github.com/foundation-model-stack/multi-nic-cni/controllers/config_controller.go:376: | callFinalizer | 64.7% |
+| github.com/foundation-model-stack/multi-nic-cni/controllers/config_controller.go:376: | callFinalizer | 70.6% |
 | github.com/foundation-model-stack/multi-nic-cni/controllers/daemon_cache_handler.go:26: | SetCache | 100.0% |
 | github.com/foundation-model-stack/multi-nic-cni/controllers/daemon_cache_handler.go:30: | GetCache | 100.0% |
 | github.com/foundation-model-stack/multi-nic-cni/controllers/daemon_cache_handler.go:38: | ListCache | 100.0% |
@@ -216,4 +216,4 @@ File | Function | Coverage
 | github.com/foundation-model-stack/multi-nic-cni/internal/plugin/utils.go:26: | getBoolean | 100.0% |
 | github.com/foundation-model-stack/multi-nic-cni/internal/plugin/utils.go:33: | ValidateResourceName | 100.0% |
 | github.com/foundation-model-stack/multi-nic-cni/internal/plugin/utils.go:39: | GetHolderNetName | 100.0% |
-| total: | (statements) | 70.4% |
+| total: | (statements) | 70.5% |
