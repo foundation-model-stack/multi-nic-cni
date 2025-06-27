@@ -123,7 +123,7 @@ var _ = BeforeSuite(func() {
 
 	hostInterfaceHandler := NewHostInterfaceHandler(cfg, mgr.GetClient())
 
-	defHandler, err := plugin.GetNetAttachDefHandler(cfg)
+	defHandler, err := plugin.GetNetAttachDefHandler(cfg, scheme.Scheme)
 	Expect(err).ToNot(HaveOccurred())
 
 	clientset, err := kubernetes.NewForConfig(cfg)
