@@ -18,10 +18,13 @@ import (
 	v1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 const (
@@ -90,9 +93,10 @@ type NetworkStatus struct {
 type NetAttachDefHandler struct {
 	*DynamicHandler
 	*kubernetes.Clientset
+	Scheme *runtime.Scheme
 }
 
-func GetNetAttachDefHandler(config *rest.Config) (*NetAttachDefHandler, error) {
+func GetNetAttachDefHandler(config *rest.Config, scheme *runtime.Scheme) (*NetAttachDefHandler, error) {
 	dyn, err := dynamic.NewForConfig(config)
 	if err != nil {
 		return nil, err
@@ -106,6 +110,7 @@ func GetNetAttachDefHandler(config *rest.Config) (*NetAttachDefHandler, error) {
 	return &NetAttachDefHandler{
 		DynamicHandler: handler,
 		Clientset:      clientset,
+		Scheme:         scheme,
 	}, nil
 }
 
@@ -128,7 +133,7 @@ func (h *NetAttachDefHandler) CreateOrUpdate(net *multinicv1.MultiNicNetwork, pl
 	}
 	errMsg := ""
 	for _, def := range defs {
-		errMsg = h.createOrUpdate(def, errMsg)
+		errMsg = h.createOrUpdate(net, def, errMsg)
 	}
 	if errMsg != "" {
 		vars.NetworkLog.V(2).Info(errMsg)
@@ -141,7 +146,7 @@ func (h *NetAttachDefHandler) CreateOrUpdateOnNamespace(ns string, net *multinic
 	if err != nil {
 		return err
 	}
-	errMsg := h.createOrUpdate(def, "")
+	errMsg := h.createOrUpdate(net, def, "")
 	if errMsg != "" {
 		vars.NetworkLog.V(2).Info(errMsg)
 		return errors.New(errMsg)
@@ -150,7 +155,19 @@ func (h *NetAttachDefHandler) CreateOrUpdateOnNamespace(ns string, net *multinic
 }
 
 // createOrUpdate creates new NetworkAttachmentDefinition resource if not exists, otherwise update
-func (h *NetAttachDefHandler) createOrUpdate(def *NetworkAttachmentDefinition, errMsg string) string {
+// Sets owner reference to the given MultiNicNetwork
+func (h *NetAttachDefHandler) createOrUpdate(multinicnetwork *multinicv1.MultiNicNetwork, def *NetworkAttachmentDefinition, errMsg string) string {
+	if err := controllerutil.SetControllerReference(multinicnetwork, def, h.Scheme); err != nil {
+		return fmt.Sprintf("failed to set controller reference: %v", err)
+	}
+	// Ensure Controller and BlockOwnerDeletion are set to true
+	for i := range def.OwnerReferences {
+		ref := &def.OwnerReferences[i]
+		if ref.UID == multinicnetwork.UID {
+			ref.Controller = ptr.To(true)
+			ref.BlockOwnerDeletion = ptr.To(true)
+		}
+	}
 	name := def.GetName()
 	namespace := def.GetNamespace()
 	result := &NetworkAttachmentDefinition{}

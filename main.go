@@ -136,7 +136,7 @@ func main() {
 
 	hostInterfaceHandler := controllers.NewHostInterfaceHandler(config, mgr.GetClient())
 
-	defHandler, err := plugin.GetNetAttachDefHandler(config)
+	defHandler, err := plugin.GetNetAttachDefHandler(config, scheme)
 	if err != nil {
 		vars.SetupLog.Error(err, "unable to create NetworkAttachmentdefinition handler")
 		os.Exit(1)

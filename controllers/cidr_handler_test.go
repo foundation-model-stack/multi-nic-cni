@@ -345,7 +345,7 @@ var _ = Describe("Test CIDR Handler	", func() {
 				scheme = runtime.NewScheme()
 				Expect(multinicv1.AddToScheme(scheme)).To(Succeed())
 				var err error
-				defHandler, err = plugin.GetNetAttachDefHandler(Cfg)
+				defHandler, err = plugin.GetNetAttachDefHandler(Cfg, scheme)
 				Expect(err).To(BeNil())
 			})
 
