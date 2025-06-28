@@ -45,6 +45,12 @@ spec:
       labels:
         multi-nic-cni-component: health-check-agent
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000780000
+        runAsGroup: 1000780000
+        seccompProfile:
+          type: RuntimeDefault
       containers:
       - env:
         - name: SIDECAR_PORT
@@ -71,12 +77,21 @@ spec:
             cpu: 100m
             memory: 50Mi
         securityContext:
-          privileged: true
+          runAsNonRoot: true
+          runAsUser: 1000780000
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+            add:
+            - NET_ADMIN
+            - NET_RAW
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         volumeMounts:
         - mountPath: /host/opt/cni/bin
           name: cnibin
+          readOnly: true
       dnsPolicy: ClusterFirst
       hostNetwork: true
       serviceAccount: multi-nic-cni-health-check-agent-sa
