@@ -17,10 +17,23 @@ spec:
     spec:
       serviceAccount: multi-nic-cni-health-checker-sa
       serviceAccountName: multi-nic-cni-health-checker-sa
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000800000
+        runAsGroup: 1000800000
+        seccompProfile:
+          type: RuntimeDefault
       containers:
       - name: checker
         image: ghcr.io/foundation-model-stack/multi-nic-cni-health-checker:v1.0.5
         imagePullPolicy: Always
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          runAsNonRoot: true
+          runAsUser: 1000800000
         ports:
           - containerPort: 8080
             name: http
