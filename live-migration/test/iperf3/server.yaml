@@ -5,6 +5,12 @@ metadata:
   annotations:
     k8s.v1.cni.cncf.io/networks: netname
 spec:
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000800000
+    runAsGroup: 1000800000
+    seccompProfile:
+      type: RuntimeDefault
   containers:
   - name: server
     image: networkstatic/iperf3
@@ -12,4 +18,11 @@ spec:
     args:
     - "iperf3 -s -p 30000"
     imagePullPolicy: IfNotPresent
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+        - ALL
+      runAsNonRoot: true
+      runAsUser: 1000800000
   nodeName: hostname
