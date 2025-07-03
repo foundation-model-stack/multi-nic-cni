@@ -2,10 +2,49 @@
 
 ![](../img/alpha-release.png)
 
-> **FIX-ME:** <br>
-> This channel does not include no bug fixes for incompability to newer version of network operator in https://github.com/foundation-model-stack/multi-nic-cni/pull/182.
+## v1.2.8
+
+**Feature**
+
+- Use owner reference to remove NAD upon removal
+- Use RetryOnConflict for finalizer removal
+
+**Maintenance**
+
+- code
+    * increase test coverage to 70.7%
+    * upgrade controller go version 1.24.1 with up-to-date dependency
+
+- documentation
+    * add bare metal infra configuration
+    * update infra preparation for aws and ibmcloud
+
+- operation
+    * kbuilder workflow
+    * hotfix issue template
+
+**Fix**
+
+- correct interface name on host-device ADD and prevent tabu prefix
+- fix PSP security settings for connection check
+
+## v1.2.7
+
+- support macvlan plugin
+
+- code enhancements:
+    * refactor code structure (add internal packages)
+    * upgrade test to ginkgo V2
+    * generate measurable test coverage results
+    * improve test coverage to 60%
+
+- fixes:
+    * correct sample multinicnetwork for macvlan+whereabouts IPAM
+    * handle error from ghw.PCI call
 
 ## v1.3.0 (based on v1.2.2)
+
+<span style="color: red;">This version does not include the bug fix for incompability to newer version of network operator in https://github.com/foundation-model-stack/multi-nic-cni/pull/182.</span>
 
 **Improvements:**
 
@@ -13,7 +52,9 @@
 * Add **namespace watcher** to add `NetworkAttachmentDefinition` when new namespace is created
 * Set `manager` container as default container in controller
 
-## v1.2.2
+## v1.2.2 (deprecated)
+
+<span style="color: red;">This version does not include the bug fix for incompability to newer version of network operator in https://github.com/foundation-model-stack/multi-nic-cni/pull/182.</span>
 
 **Improvements:**
 
@@ -45,7 +86,9 @@
                             "ips": [ "192.168.0.1/18", "192.168.64.1/18" ]
                     }]
 
-## v1.2.1
+## v1.2.1 (deprecated)
+
+<span style="color: red;">This version does not include the bug fix for incompability to newer version of network operator in https://github.com/foundation-model-stack/multi-nic-cni/pull/182.</span>
 
 **Improvements:**
 
