@@ -1,0 +1,25 @@
+changelog:
+  exclude:
+    labels:
+      - ignore-for-release
+    authors:
+      - github-actions
+      - app/dependabot
+  categories:
+    - title: Breaking Changes 🔔
+      labels:
+        - semver-major
+        - kind/feat
+    - title: Features 🎉
+      labels:
+        - semver-minor
+        - kind/feat
+    - title: Operations ♻️
+      labels:
+        - kind/chore
+    - title: Fixes 🛠
+      labels:
+        - kind/fix
+    - title: Other Changes
+      labels:
+        - "*"
