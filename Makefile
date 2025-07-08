@@ -15,8 +15,8 @@ export IMAGE_REGISTRY ?= ghcr.io/foundation-model-stack
 # - use environment variables to overwrite this value (e.g export VERSION=0.0.2)
 # VERSION ?= 0.0.1
 VERSION ?= 1.2.8
-export CHANNELS = "alpha-1.2"
-export DEFAULT_CHANNEL = "alpha-1.2"
+export CHANNELS = "alpha"
+export DEFAULT_CHANNEL = "alpha"
 
 # CHANNELS define the bundle channels used in the bundle.
 # Add a new line here if you would like to change its default config. (E.g CHANNELS = "preview,fast,stable")
