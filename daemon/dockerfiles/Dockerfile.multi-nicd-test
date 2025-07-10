@@ -1,4 +1,4 @@
-FROM ghcr.io/foundation-model-stack/multi-nic-cni-kbuilder:v1.2.8
+FROM ghcr.io/foundation-model-stack/multi-nic-cni-kbuilder:v1.2.9
 
 RUN mkdir -p /usr/local/app
 RUN mkdir -p /host/opt/cni/bin
