@@ -3,32 +3,43 @@
  * SPDX-License-Identifier: Apache2.0
  */
 
- package router
+package router
 
- import (
-	 "testing"
+import (
+	"testing"
 
-	 . "github.com/onsi/ginkgo"
-	 . "github.com/onsi/gomega"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 
-	 "github.com/vishvananda/netlink"
-	 "fmt"
-	 "os"
- )
+	"fmt"
+	"os"
 
- func TestRouter(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Router Test Suite")
-}
+	"github.com/vishvananda/netlink"
+)
 
 const (
-	LOCAL_TABLE_ID = 255
+	LOCAL_TABLE_ID   = 255
 	LOCAL_TABLE_NAME = "local"
 
 	NEW_TABLE_NAME = "newtable"
 
 	POD_RT_PATH = "/opt/rt_tables"
 )
+
+func TestRouter(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "Router Test Suite")
+}
+
+var _ = BeforeSuite(func() {
+	DeleteTable(NEW_TABLE_NAME, 100)
+	os.Unsetenv("RT_TABLE_PATH")
+})
+
+var _ = AfterSuite(func() {
+	DeleteTable(NEW_TABLE_NAME, 100)
+	os.Unsetenv("RT_TABLE_PATH")
+})
 
 var _ = Describe("Test Path", func() {
 	It("Set RT path", func() {
@@ -39,7 +50,7 @@ var _ = Describe("Test Path", func() {
 		Expect(RT_TABLE_PATH).To(Equal(POD_RT_PATH))
 		os.Unsetenv("RT_TABLE_PATH")
 		SetRTTablePath()
-		Expect(RT_TABLE_PATH).To(Equal(DEFAULT_RT_TABLE_PATH))	
+		Expect(RT_TABLE_PATH).To(Equal(DEFAULT_RT_TABLE_PATH))
 	})
 })
 
@@ -72,14 +83,4 @@ var _ = Describe("Test RT Table", func() {
 		fmt.Printf("Routes: %v\n", routes)
 		fmt.Printf("Rules: %v\n", rules)
 	})
-})
-
-var _ = BeforeSuite(func() {
-	DeleteTable(NEW_TABLE_NAME, 100)
-	os.Unsetenv("RT_TABLE_PATH")
-})
-
-var _ = AfterSuite(func() {
-	DeleteTable(NEW_TABLE_NAME, 100)
-	os.Unsetenv("RT_TABLE_PATH")
 })

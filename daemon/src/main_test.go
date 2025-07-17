@@ -8,48 +8,26 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
-	"testing"
 
 	da "github.com/foundation-model-stack/multi-nic-cni/daemon/allocator"
-	backend "github.com/foundation-model-stack/multi-nic-cni/daemon/backend"
 	di "github.com/foundation-model-stack/multi-nic-cni/daemon/iface"
 	dr "github.com/foundation-model-stack/multi-nic-cni/daemon/router"
 	ds "github.com/foundation-model-stack/multi-nic-cni/daemon/selector"
-	"k8s.io/client-go/kubernetes"
 
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/install"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/runtime/serializer/yaml"
 	"k8s.io/client-go/discovery"
-	"k8s.io/client-go/discovery/cached/memory"
 	"k8s.io/client-go/dynamic"
-	"k8s.io/client-go/restmapper"
 
-	"context"
-	"path/filepath"
-
-	"github.com/vishvananda/netlink"
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"log"
-	"strings"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/apimachinery/pkg/api/meta"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-
-	"os"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -114,99 +92,6 @@ var MASTER_PRODUCTS = []string{"efa1", ""}
 var GPU_BUS_MAP map[string]string = map[string]string{
 	"GPU-581b17ed-1c48-9b8c-6a9b-e2e6f99500dc": "0000:0c:05.0",
 }
-
-func TestAPIs(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "MultiNic CNI Suite")
-}
-
-func setTestLatestInterfaces() {
-	for index, master := range MASTER_INTERFACES {
-		netAddress := MASTER_NETADDRESSES[index]
-		vendor := MASTER_VENDORS[index]
-		product := MASTER_PRODUCTS[index]
-		pciAddress := MASTER_PCIADDRESS[index]
-		iface := di.InterfaceInfoType{
-			InterfaceName: master,
-			NetAddress:    netAddress,
-			Vendor:        vendor,
-			Product:       product,
-			PciAddress:    pciAddress,
-		}
-		di.SetInterfaceInfoCache(master, iface)
-	}
-	interfaceMap := di.GetInterfaceInfoCache()
-	Expect(len(interfaceMap)).To(Equal(2))
-}
-
-func replacePodUID(clientset *kubernetes.Clientset) {
-	var err error
-	// Get PodUID
-	targetPod, err = clientset.CoreV1().Pods(POD_NAMESPACE).Get(context.TODO(), POD_NAME, metav1.GetOptions{})
-	Expect(err).NotTo(HaveOccurred())
-	// Replace checkpoint file
-
-	// Read the file content
-	content, err := ioutil.ReadFile(EXAMPLE_CHECKPOINT)
-	Expect(err).NotTo(HaveOccurred())
-
-	// Perform text replacements
-	modifiedContent := strings.ReplaceAll(string(content), TO_REPLACE_POD_UID, string(targetPod.UID))
-
-	// Write the modified content back to the file
-	err = ioutil.WriteFile(EXAMPLE_CHECKPOINT, []byte(modifiedContent), 0644)
-	Expect(err).NotTo(HaveOccurred())
-}
-
-var _ = BeforeSuite(func() {
-	os.Setenv("TEST_MODE", "true")
-
-	// this env should be set by config.multinic when creating the daemonset
-	os.Setenv(NODENAME_ENV, FULL_HOST_NAME)
-	initHostName()
-	Expect(hostName).To(Equal(FULL_HOST_NAME))
-	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
-	install.Install(scheme)
-
-	By("bootstrapping test environment")
-	testEnv = &envtest.Environment{
-		CRDDirectoryPaths:     []string{filepath.Join("..", "example", "crd")},
-		ErrorIfCRDPathMissing: true,
-		Scheme:                scheme,
-	}
-
-	err := apiextensionsv1.AddToScheme(scheme)
-	Expect(err).NotTo(HaveOccurred())
-	//+kubebuilder:scaffold:scheme
-
-	cfg, err := testEnv.Start()
-	Expect(err).NotTo(HaveOccurred())
-	Expect(cfg).NotTo(BeNil())
-
-	dyn, err = dynamic.NewForConfig(cfg)
-	Expect(err).NotTo(HaveOccurred())
-	dc, err = discovery.NewDiscoveryClientForConfig(cfg)
-	Expect(err).NotTo(HaveOccurred())
-
-	da.IppoolHandler = backend.NewIPPoolHandler(cfg)
-	ds.MultinicnetHandler = backend.NewMultiNicNetworkHandler(cfg)
-	ds.NetAttachDefHandler = backend.NewNetAttachDefHandler(cfg)
-	ds.DeviceClassHandler = backend.NewDeviceClassHandler(cfg)
-	da.K8sClientset, _ = kubernetes.NewForConfig(cfg)
-	ds.K8sClientset, _ = kubernetes.NewForConfig(cfg)
-
-	deployExamples(EXAMPLE_RESOURCE_FOLDER, false)
-	addMasterInterfaces()
-	replacePodUID(ds.K8sClientset)
-}, 60)
-
-var _ = AfterSuite(func() {
-	By("tearing down the test environment")
-	deleteExamples(EXAMPLE_RESOURCE_FOLDER, true)
-	err := testEnv.Stop()
-	Expect(err).NotTo(HaveOccurred())
-	deleteMasterInterfaces()
-})
 
 var _ = Describe("Test L3Config Add/Delete", func() {
 	It("apply/delete l3config", func() {
@@ -505,109 +390,23 @@ var _ = Describe("Test NIC Select", func() {
 	})
 })
 
-func deployExamples(folder string, ignoreErr bool) {
-	files, err := ioutil.ReadDir(folder)
-	Expect(err).NotTo(HaveOccurred())
-
-	for _, file := range files {
-		fileLocation := folder + "/" + file.Name()
-		obj, dr := getDR(fileLocation, ignoreErr)
-		if dr == nil {
-			fmt.Println("No DR, deploy")
-			continue
-		}
-		_, err = dr.Create(context.TODO(), obj, metav1.CreateOptions{})
-		fmt.Printf("Deploy %s (%v): %v\n", fileLocation, ignoreErr, err)
-		if !ignoreErr {
-			Expect(err).NotTo(HaveOccurred())
-		}
-	}
-
-}
-
-func getDR(fileName string, ignoreErr bool) (*unstructured.Unstructured, dynamic.ResourceInterface) {
-	bodyBytes, err := ioutil.ReadFile(fileName)
-	if ignoreErr && err != nil {
-		return nil, nil
-	}
-	Expect(err).NotTo(HaveOccurred())
-	obj := &unstructured.Unstructured{}
-	dec := yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
-	_, gvk, err := dec.Decode(bodyBytes, nil, obj)
-	if ignoreErr && err != nil {
-		return nil, nil
-	}
-	Expect(err).NotTo(HaveOccurred())
-	return obj, getResourceInterface(gvk, obj.GetNamespace(), ignoreErr)
-}
-
-func getResourceInterface(gvk *schema.GroupVersionKind, ns string, ignoreErr bool) dynamic.ResourceInterface {
-	mapper := restmapper.NewDeferredDiscoveryRESTMapper(memory.NewMemCacheClient(dc))
-	mapping, err := mapper.RESTMapping(gvk.GroupKind(), gvk.Version)
-	if !ignoreErr {
-		Expect(err).NotTo(HaveOccurred())
-	}
-	if err != nil {
-		return nil
-	}
-
-	var dr dynamic.ResourceInterface
-	if mapping.Scope.Name() == meta.RESTScopeNameNamespace {
-		dr = dyn.Resource(mapping.Resource).Namespace(ns)
-	} else {
-		dr = dyn.Resource(mapping.Resource)
-	}
-	return dr
-}
-
-func deleteExamples(folder string, ignoreErr bool) {
-	files, err := ioutil.ReadDir(folder)
-	Expect(err).NotTo(HaveOccurred())
-
-	for _, file := range files {
-		fileLocation := folder + "/" + file.Name()
-		fmt.Printf("Delete %s (%v)\n", fileLocation, ignoreErr)
-		obj, dr := getDR(fileLocation, ignoreErr)
-		if dr == nil {
-			fmt.Println("No DR, delete")
-			continue
-		}
-		err = dr.Delete(context.TODO(), obj.GetName(), metav1.DeleteOptions{})
-		if !ignoreErr {
-			Expect(err).NotTo(HaveOccurred())
-		}
-	}
-}
-
-func addMasterInterfaces() {
-	// Add master
+func setTestLatestInterfaces() {
 	for index, master := range MASTER_INTERFACES {
-		linkAttrs := netlink.LinkAttrs{
-			Name: master,
+		netAddress := MASTER_NETADDRESSES[index]
+		vendor := MASTER_VENDORS[index]
+		product := MASTER_PRODUCTS[index]
+		pciAddress := MASTER_PCIADDRESS[index]
+		iface := di.InterfaceInfoType{
+			InterfaceName: master,
+			NetAddress:    netAddress,
+			Vendor:        vendor,
+			Product:       product,
+			PciAddress:    pciAddress,
 		}
-		err := netlink.LinkAdd(&netlink.Dummy{
-			linkAttrs,
-		})
-		Expect(err).NotTo(HaveOccurred())
-		masterLink, err := netlink.LinkByName(master)
-		Expect(err).NotTo(HaveOccurred())
-
-		addr, _ := netlink.ParseAddr(MASTER_IPS[index])
-		netlink.AddrAdd(masterLink, addr)
-		Expect(err).NotTo(HaveOccurred())
-		err = netlink.LinkSetUp(masterLink)
-		Expect(err).NotTo(HaveOccurred())
+		di.SetInterfaceInfoCache(master, iface)
 	}
-}
-
-func deleteMasterInterfaces() {
-	// Add master
-	for _, master := range MASTER_INTERFACES {
-		masterLink, err := netlink.LinkByName(master)
-		Expect(err).NotTo(HaveOccurred())
-		netlink.LinkSetDown(masterLink)
-		netlink.LinkDel(masterLink)
-	}
+	interfaceMap := di.GetInterfaceInfoCache()
+	Expect(len(interfaceMap)).To(Equal(2))
 }
 
 func MakeIPRequest(ipJson []byte, path string, handler http.HandlerFunc, shouldResponse bool) []da.IPResponse {

@@ -1,0 +1,54 @@
+# Multi-NIC Daemon Unit Test Coverage
+
+File | Function | Coverage 
+---|---|---
+| github.com/foundation-model-stack/multi-nic-cni/daemon/allocator/allocator.go:49: | Expired | 100.0% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/allocator/allocator.go:56: | FindAvailableIndex | 86.7% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/allocator/allocator.go:82: | valueToAddr | 0.0% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/allocator/allocator.go:91: | valueToAddrStr | 0.0% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/allocator/allocator.go:96: | addrToValue | 0.0% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/allocator/allocator.go:107: | getIPValue | 0.0% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/allocator/allocator.go:112: | getAddressByIndex | 0.0% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/allocator/allocator.go:123: | Contains | 0.0% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/allocator/allocator.go:127: | getExcludeRanges | 0.0% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/allocator/allocator.go:155: | GenerateAllocateIndexes | 100.0% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/allocator/allocator.go:170: | AllocateIP | 0.0% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/allocator/allocator.go:292: | getPod | 0.0% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/allocator/allocator.go:296: | CleanHangingAllocation | 0.0% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/allocator/allocator.go:324: | DeallocateIP | 0.0% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/allocator/allocator.go:380: | FlushExpiredHistory | 0.0% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/main.go:59: | handleRequests | 0.0% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/main.go:74: | Join | 0.0% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/main.go:101: | Greet | 0.0% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/main.go:133: | GreetAck | 0.0% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/main.go:148: | GetInterface | 100.0% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/main.go:153: | AddRoute | 0.0% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/main.go:158: | ApplyL3Config | 100.0% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/main.go:163: | DeleteL3Config | 100.0% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/main.go:168: | DeleteRoute | 0.0% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/main.go:173: | SelectNic | 93.3% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/main.go:196: | Allocate | 93.3% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/main.go:219: | Deallocate | 100.0% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/main.go:235: | InitClient | 0.0% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/main.go:260: | initHostName | 62.5% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/main.go:273: | main | 0.0% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/router/router.go:37: | ApplyL3Config | 0.0% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/router/router.go:74: | DeleteL3Config | 0.0% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/router/router.go:81: | deleteL3Config | 0.0% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/router/router.go:99: | AddRoute | 0.0% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/router/router.go:133: | DeleteRoute | 0.0% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/router/router.go:157: | GetRoutes | 100.0% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/router/router.go:166: | isRouteExist | 0.0% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/router/router.go:181: | getRoutesFromRequest | 0.0% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/router/router.go:232: | getRouteFromRequest | 0.0% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/router/rt_table.go:30: | SetRTTablePath | 100.0% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/router/rt_table.go:39: | GetTableID | 66.7% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/router/rt_table.go:59: | DeleteTable | 64.3% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/router/rt_table.go:79: | addRule | 88.9% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/router/rt_table.go:92: | isRuleExist | 87.5% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/router/rt_table.go:106: | getTableIDAndReservedIDs | 82.6% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/router/rt_table.go:142: | addTable | 92.3% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/router/rt_table.go:165: | deleteRule | 85.7% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/router/rt_table.go:176: | deleteRoutes | 54.5% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/router/rt_table.go:194: | getTableLine | 100.0% |
+| total: | (statements) | 27.4% |

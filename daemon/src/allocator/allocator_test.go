@@ -6,11 +6,13 @@
 package allocator
 
 import (
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 	"testing"
 
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+
 	"time"
+
 	"github.com/foundation-model-stack/multi-nic-cni/daemon/backend"
 )
 
