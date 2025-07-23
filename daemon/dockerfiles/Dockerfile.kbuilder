@@ -1,7 +1,7 @@
 FROM ubuntu:20.04
 
 RUN  apt-get update \
-  && apt-get install -y wget tar build-essential net-tools iproute2 git curl \
+  && apt-get install -y wget tar build-essential net-tools iproute2 git curl jq \
   && rm -rf /var/lib/apt/lists/*
 
 # install go

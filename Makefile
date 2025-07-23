@@ -148,6 +148,7 @@ lint: tidy fmt vet golangci-lint ## Run the lint check
 pr: lint test yaml ## Run targets required for PR
 
 ##@ Test
+ARCH                = $(shell go env GOARCH)
 TEST_BIN_DIR		= $(BASE_DIR)/tools/testbin
 TEST_RESULT_DIR 	= $(BASE_DIR)/testing
 ENVTEST				?= $(TEST_BIN_DIR)/setup-envtest
@@ -307,9 +308,9 @@ catalog-push: ## Push a catalog image.
 	$(MAKE) docker-push IMG=$(CATALOG_IMG)
 
 test-daemon:
-	$(DOCKER) build -t daemon-test:latest -f ./daemon/dockerfiles/Dockerfile.multi-nicd-test .
-	$(DOCKER) run -i --privileged daemon-test /bin/bash -c "cd /usr/local/build/cni&&make test"
-	$(DOCKER) run -i --privileged daemon-test /bin/bash -c "cd /usr/local/build/daemon/src&&make test-verbose"
+	$(DOCKER) build --platform linux/$(ARCH) -t daemon-test:latest -f ./daemon/dockerfiles/Dockerfile.multi-nicd-test .
+	$(DOCKER) run --platform linux/$(ARCH) -i --rm --privileged daemon-test /bin/bash -c "cd /usr/local/build/cni&&make test"
+	$(DOCKER) run --platform linux/$(ARCH) -i --rm -v ./testing:/usr/local/build/daemon/src/testing --privileged daemon-test /bin/bash -c "cd /usr/local/build/daemon/src&&make test"
 
 build-push-kbuilder-base:
 	$(DOCKER) build -t $(IMAGE_TAG_BASE)-kbuilder:v$(VERSION) -f ./daemon/dockerfiles/Dockerfile.kbuilder .

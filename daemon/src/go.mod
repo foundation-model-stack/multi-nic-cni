@@ -5,8 +5,8 @@ go 1.23
 require (
 	github.com/gorilla/mux v1.8.0
 	github.com/jaypipes/ghw v0.14.0
-	github.com/onsi/ginkgo v1.16.5
-	github.com/onsi/gomega v1.18.1
+	github.com/onsi/ginkgo/v2 v2.21.0
+	github.com/onsi/gomega v1.36.1
 	github.com/vishvananda/netlink v1.1.1-0.20210330154013-f5de75959ad5
 	k8s.io/api v0.23.3
 	k8s.io/apiextensions-apiserver v0.23.0

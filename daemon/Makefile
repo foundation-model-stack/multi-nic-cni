@@ -12,8 +12,8 @@ DAEMON_IMG ?= $(IMAGE_TAG_BASE)-daemon:v1.2.9
 test-verbose:
 	$(MAKE) -C src test-verbose
 
-test-env:
-	$(MAKE) -C src test-env
+test:
+	$(MAKE) -C src test
 
 update-cni-local:
 ifeq ($(shell uname), Linux)
