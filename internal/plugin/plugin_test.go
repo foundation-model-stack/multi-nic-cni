@@ -151,7 +151,6 @@ var _ = Describe("Test GetConfig of main plugins", func() {
 		hifList := generateHostInterfaceList(nodes)
 
 		BeforeAll(func() {
-			SRIOV_MANIFEST_PATH = "./template/cni-config"
 			err := sriovPlugin.Init(Cfg)
 			Expect(err).ToNot(HaveOccurred())
 		})

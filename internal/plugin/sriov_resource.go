@@ -6,18 +6,7 @@
 package plugin
 
 import (
-	"bytes"
-	"io"
-	"os"
-	"path/filepath"
-	"strings"
-	"text/template"
-
-	"github.com/Masterminds/sprig"
-	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/util/yaml"
 )
 
 // ////////////////////////////////////////
@@ -168,217 +157,7 @@ type SriovNetworkNicSelector struct {
 	NetFilter string `json:"netFilter,omitempty"`
 }
 
-// RenderNetAttDef renders a net-att-def for sriov CNI
-func (cr *SriovNetwork) RenderNetAttDef() (*unstructured.Unstructured, error) {
-	// render RawCNIConfig manifests
-	data := MakeRenderData()
-	data.Data["MetaPluginsConfigured"] = false
-	data.Data["CniType"] = "sriov"
-	data.Data["SriovNetworkName"] = cr.Name
-	if cr.Spec.NetworkNamespace == "" {
-		data.Data["SriovNetworkNamespace"] = cr.Namespace
-	} else {
-		data.Data["SriovNetworkNamespace"] = cr.Spec.NetworkNamespace
-	}
-	data.Data["SriovCniResourceName"] = os.Getenv("RESOURCE_PREFIX") + "/" + cr.Spec.ResourceName
-	data.Data["SriovCniVlan"] = cr.Spec.Vlan
-
-	if cr.Spec.VlanQoS <= 7 && cr.Spec.VlanQoS >= 0 {
-		data.Data["VlanQoSConfigured"] = true
-		data.Data["SriovCniVlanQoS"] = cr.Spec.VlanQoS
-	} else {
-		data.Data["VlanQoSConfigured"] = false
-	}
-
-	if cr.Spec.Capabilities == "" {
-		data.Data["CapabilitiesConfigured"] = false
-	} else {
-		data.Data["CapabilitiesConfigured"] = true
-		data.Data["SriovCniCapabilities"] = cr.Spec.Capabilities
-	}
-
-	data.Data["SpoofChkConfigured"] = true
-	switch cr.Spec.SpoofChk {
-	case "off":
-		data.Data["SriovCniSpoofChk"] = "off"
-	case "on":
-		data.Data["SriovCniSpoofChk"] = "on"
-	default:
-		data.Data["SpoofChkConfigured"] = false
-	}
-
-	data.Data["TrustConfigured"] = true
-	switch cr.Spec.Trust {
-	case "on":
-		data.Data["SriovCniTrust"] = "on"
-	case "off":
-		data.Data["SriovCniTrust"] = "off"
-	default:
-		data.Data["TrustConfigured"] = false
-	}
-
-	data.Data["StateConfigured"] = true
-	switch cr.Spec.LinkState {
-	case "enable":
-		data.Data["SriovCniState"] = "enable"
-	case "disable":
-		data.Data["SriovCniState"] = "disable"
-	case "auto":
-		data.Data["SriovCniState"] = "auto"
-	default:
-		data.Data["StateConfigured"] = false
-	}
-
-	data.Data["MinTxRateConfigured"] = false
-	if cr.Spec.MinTxRate != nil {
-		if *cr.Spec.MinTxRate >= 0 {
-			data.Data["MinTxRateConfigured"] = true
-			data.Data["SriovCniMinTxRate"] = *cr.Spec.MinTxRate
-		}
-	}
-
-	data.Data["MaxTxRateConfigured"] = false
-	if cr.Spec.MaxTxRate != nil {
-		if *cr.Spec.MaxTxRate >= 0 {
-			data.Data["MaxTxRateConfigured"] = true
-			data.Data["SriovCniMaxTxRate"] = *cr.Spec.MaxTxRate
-		}
-	}
-
-	if cr.Spec.IPAM != "" {
-		data.Data["SriovCniIpam"] = "\"ipam\":" + strings.Join(strings.Fields(cr.Spec.IPAM), "")
-	} else {
-		data.Data["SriovCniIpam"] = "\"ipam\":{}"
-	}
-
-	objs, err := RenderDir(SRIOV_MANIFEST_PATH, &data)
-	if err != nil {
-		return nil, err
-	}
-	return objs[0], nil
-}
-
-type RenderData struct {
-	Funcs template.FuncMap
-	Data  map[string]interface{}
-}
-
-func MakeRenderData() RenderData {
-	return RenderData{
-		Funcs: template.FuncMap{},
-		Data:  map[string]interface{}{},
-	}
-}
-
-// Functions available for all templates
-
-// getOr returns the value of m[key] if it exists, fallback otherwise.
-// As a special case, it also returns fallback if the value of m[key] is
-// the empty string
-func getOr(m map[string]interface{}, key string, fallback interface{}) interface{} {
-	val, ok := m[key]
-	if !ok {
-		return fallback
-	}
-
-	s, ok := val.(string)
-	if ok && s == "" {
-		return fallback
-	}
-
-	return val
-}
-
-// isSet returns the value of m[key] if key exists, otherwise false
-// Different from getOr because it will return zero values.
-func isSet(m map[string]interface{}, key string) interface{} {
-	val, ok := m[key]
-	if !ok {
-		return false
-	}
-	return val
-}
-
-// RenderTemplate reads, renders, and attempts to parse a yaml or
-// json file representing one or more k8s api objects
-func RenderTemplate(path string, d *RenderData) ([]*unstructured.Unstructured, error) {
-	tmpl := template.New(path).Option("missingkey=error")
-	if d.Funcs != nil {
-		tmpl.Funcs(d.Funcs)
-	}
-
-	// Add universal functions
-	tmpl.Funcs(template.FuncMap{"getOr": getOr, "isSet": isSet})
-	tmpl.Funcs(sprig.TxtFuncMap())
-
-	source, err := os.ReadFile(path)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to read manifest %s", path)
-	}
-
-	if _, err := tmpl.Parse(string(source)); err != nil {
-		return nil, errors.Wrapf(err, "failed to parse manifest %s as template", path)
-	}
-
-	rendered := bytes.Buffer{}
-	if err := tmpl.Execute(&rendered, d.Data); err != nil {
-		return nil, errors.Wrapf(err, "failed to render manifest %s", path)
-	}
-
-	out := []*unstructured.Unstructured{}
-
-	// special case - if the entire file is whitespace, skip
-	if len(strings.TrimSpace(rendered.String())) == 0 {
-		return out, nil
-	}
-
-	decoder := yaml.NewYAMLOrJSONDecoder(&rendered, 4096)
-	for {
-		u := unstructured.Unstructured{}
-		if err := decoder.Decode(&u); err != nil {
-			if err == io.EOF {
-				break
-			}
-			return nil, errors.Wrapf(err, "failed to unmarshal manifest %s", path)
-		}
-		out = append(out, &u)
-	}
-
-	return out, nil
-}
-
-// RenderDir will render all manifests in a directory, descending in to subdirectories
-// It will perform template substitutions based on the data supplied by the RenderData
-func RenderDir(manifestDir string, d *RenderData) ([]*unstructured.Unstructured, error) {
-	out := []*unstructured.Unstructured{}
-
-	if err := filepath.Walk(manifestDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if info.IsDir() {
-			return nil
-		}
-
-		// Skip non-manifest files
-		if !(strings.HasSuffix(path, ".yml") || strings.HasSuffix(path, ".yaml") || strings.HasSuffix(path, ".json")) {
-			return nil
-		}
-
-		objs, err := RenderTemplate(path, d)
-		if err != nil {
-			return err
-		}
-		out = append(out, objs...)
-		return nil
-	}); err != nil {
-		return nil, errors.Wrap(err, "error rendering manifests")
-	}
-
-	return out, nil
-}
-
-// SriovNetworkNodeState is the Schema for the sriovnetworknodestates API
+// SriovNetworkNodeState represents the node state for SR-IOV networks
 type SriovNetworkNodeState struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -387,17 +166,24 @@ type SriovNetworkNodeState struct {
 	Status SriovNetworkNodeStateStatus `json:"status,omitempty"`
 }
 
-// SriovNetworkNodeStateStatus defines the observed state of SriovNetworkNodeState
-type SriovNetworkNodeStateStatus struct {
-	Interfaces    InterfaceExts `json:"interfaces,omitempty"`
-	SyncStatus    string        `json:"syncStatus,omitempty"`
-	LastSyncError string        `json:"lastSyncError,omitempty"`
-}
-
 // SriovNetworkNodeStateSpec defines the desired state of SriovNetworkNodeState
 type SriovNetworkNodeStateSpec struct {
-	DpConfigVersion string          `json:"dpConfigVersion,omitempty"`
-	Interfaces      SriovInterfaces `json:"interfaces,omitempty"`
+	// NodeSelector selects the nodes to be configured
+	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
+}
+
+// SriovNetworkNodeStateStatus defines the observed state of SriovNetworkNodeState
+type SriovNetworkNodeStateStatus struct {
+	// Interfaces represents the list of SR-IOV capable interfaces on the node
+	Interfaces []InterfaceExt `json:"interfaces,omitempty"`
+}
+
+// InterfaceExt represents an SR-IOV interface with extended information
+type InterfaceExt struct {
+	// Name is the name of the interface
+	Name string `json:"name,omitempty"`
+	// PciAddress is the PCI address of the interface
+	PciAddress string `json:"pciAddress,omitempty"`
 }
 
 type SriovInterface struct {
@@ -415,24 +201,6 @@ type VfGroup struct {
 	VfRange      string `json:"vfRange,omitempty"`
 	PolicyName   string `json:"policyName,omitempty"`
 }
-
-type SriovInterfaces []SriovInterface
-
-type InterfaceExt struct {
-	Name       string            `json:"name,omitempty"`
-	Mac        string            `json:"mac,omitempty"`
-	Driver     string            `json:"driver,omitempty"`
-	PciAddress string            `json:"pciAddress"`
-	Vendor     string            `json:"vendor,omitempty"`
-	DeviceID   string            `json:"deviceID,omitempty"`
-	Mtu        int               `json:"mtu,omitempty"`
-	NumVfs     int               `json:"numVfs,omitempty"`
-	LinkSpeed  string            `json:"linkSpeed,omitempty"`
-	LinkType   string            `json:"linkType,omitempty"`
-	TotalVfs   int               `json:"totalvfs,omitempty"`
-	VFs        []VirtualFunction `json:"Vfs,omitempty"`
-}
-type InterfaceExts []InterfaceExt
 
 type VirtualFunction struct {
 	Name       string `json:"name,omitempty"`
