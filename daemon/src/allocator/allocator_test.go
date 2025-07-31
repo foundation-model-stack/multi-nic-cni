@@ -32,69 +32,165 @@ func genAllocation(indexes []int) []backend.Allocation {
 }
 
 var _ = Describe("Test Allocator", func() {
-	initIndexes := []int{1, 2, 3, 8, 13, 18}
-	allocations := genAllocation(initIndexes)
 
-	It("find simple next available index", func() {
-		indexes := []int{1, 2, 3, 8, 13, 18}
-		nextIndex := FindAvailableIndex(indexes, 0)
-		Expect(nextIndex).To(Equal(4))
-	})
+	Context("Allocate", func() {
+		initIndexes := []int{1, 2, 3, 8, 13, 18}
+		allocations := genAllocation(initIndexes)
 
-	It("find next available index with exclude range over consecutive order", func() {
-		excludes := []ExcludeRange{
-			ExcludeRange{
-				MinIndex: 4,
-				MaxIndex: 6,
+		DescribeTable("FindAvailableIndex",
+			func(excludes []ExcludeRange, expectedIndex []int, expected int) {
+				indexes := GenerateAllocateIndexes(allocations, 20, excludes)
+				Expect(indexes).To(Equal(expectedIndex))
+				nextIndex := FindAvailableIndex(indexes, 0)
+				Expect(nextIndex).To(Equal(expected))
 			},
-		}
-		indexes := GenerateAllocateIndexes(allocations, 20, excludes)
-		Expect(indexes).To(Equal([]int{1, 2, 3, 4, 5, 6, 8, 13, 18}))
-		nextIndex := FindAvailableIndex(indexes, 0)
-		Expect(nextIndex).To(Equal(7))
-	})
-	It("find next available index with exclude range over non-consecutive order", func() {
-		excludes := []ExcludeRange{
-			ExcludeRange{
-				MinIndex: 4,
-				MaxIndex: 7,
+			Entry("no excludes", []ExcludeRange{}, []int{1, 2, 3, 8, 13, 18}, 4),
+			Entry("excludes consecutive order", []ExcludeRange{
+				ExcludeRange{
+					MinIndex: 4,
+					MaxIndex: 6,
+				},
 			},
-		}
-
-		indexes := GenerateAllocateIndexes(allocations, 20, excludes)
-		Expect(indexes).To(Equal([]int{1, 2, 3, 4, 5, 6, 7, 8, 13, 18}))
-		nextIndex := FindAvailableIndex(indexes, 0)
-		Expect(nextIndex).To(Equal(9))
-	})
-
-	It("find next available index with exclude range over non-consecutive and then consecutive order", func() {
-		excludes := []ExcludeRange{
-			ExcludeRange{
-				MinIndex: 4,
-				MaxIndex: 7,
+				[]int{1, 2, 3, 4, 5, 6, 8, 13, 18},
+				7,
+			),
+			Entry("excludes non-consecutive order", []ExcludeRange{
+				ExcludeRange{
+					MinIndex: 4,
+					MaxIndex: 7,
+				},
 			},
-			ExcludeRange{
-				MinIndex: 9,
-				MaxIndex: 12,
+				[]int{1, 2, 3, 4, 5, 6, 7, 8, 13, 18},
+				9,
+			),
+			Entry("excludes non-consecutive and then consecutive order", []ExcludeRange{
+				ExcludeRange{
+					MinIndex: 4,
+					MaxIndex: 7,
+				},
+				ExcludeRange{
+					MinIndex: 9,
+					MaxIndex: 12,
+				},
 			},
-		}
+				[]int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 18},
+				14,
+			),
+		)
 
-		indexes := GenerateAllocateIndexes(allocations, 20, excludes)
-		Expect(indexes).To(Equal([]int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 18}))
-		nextIndex := FindAvailableIndex(indexes, 0)
-		Expect(nextIndex).To(Equal(14))
+		DescribeTable("getAddressByIndex", func(cidr string, index int, expectedIP string) {
+			result := getAddressByIndex(cidr, index)
+			Expect(result).To(Equal(expectedIP))
+		},
+			Entry("zero index", "10.0.0.0/16", 0, "10.0.0.0"),
+			Entry("first index", "10.0.0.0/16", 1, "10.0.0.1"),
+			Entry("shifted index", "10.0.0.0/16", 256, "10.0.1.0"),
+		)
+
+		DescribeTable("getExcludeRanges", func(cidr string, excludes []string, expected []ExcludeRange) {
+			result := getExcludeRanges(cidr, excludes)
+			Expect(result).To(BeEquivalentTo(expected))
+		},
+			Entry("empty", "10.0.0.0/16", []string{}, []ExcludeRange{}),
+			Entry("inner exclude", "10.0.0.0/16", []string{"10.0.0.0/24"},
+				[]ExcludeRange{
+					ExcludeRange{
+						MinIndex: 0,
+						MaxIndex: 255,
+					},
+				},
+			),
+			Entry("multiple inner excludes", "10.0.0.0/16", []string{"10.0.0.0/24", "10.0.1.1/32"},
+				[]ExcludeRange{
+					ExcludeRange{
+						MinIndex: 0,
+						MaxIndex: 255,
+					},
+					ExcludeRange{
+						MinIndex: 257,
+						MaxIndex: 257,
+					},
+				},
+			),
+			Entry("outer exclude", "10.0.0.0/24", []string{"10.0.0.0/23"},
+				[]ExcludeRange{
+					ExcludeRange{
+						MinIndex: 0,
+						MaxIndex: 511,
+					},
+				},
+			),
+		)
+
+		DescribeTable("allocateIP", func(interfaceNames []string, ippoolSpecMap map[string]backend.IPPoolType, expectedAddress map[string]string) {
+			newAllocations := allocateIP("test-pod", "test-namespace", interfaceNames, 1, ippoolSpecMap)
+			Expect(newAllocations).To(HaveLen(len(expectedAddress)))
+			for ippoolName, allocation := range newAllocations {
+				address, found := expectedAddress[ippoolName]
+				Expect(found).To(BeTrue())
+				Expect(allocation.Address).To(BeEquivalentTo(address))
+			}
+		},
+			Entry("no interface name", []string{}, map[string]backend.IPPoolType{
+				"eth0": backend.IPPoolType{InterfaceName: "eth0", PodCIDR: "192.168.0.0/24"},
+			}, map[string]string{}),
+			Entry("no ippool", []string{"eth0"}, map[string]backend.IPPoolType{}, map[string]string{}),
+			Entry("first allocation", []string{"eth0"}, map[string]backend.IPPoolType{
+				"eth0": backend.IPPoolType{InterfaceName: "eth0", PodCIDR: "192.168.0.0/24"},
+			}, map[string]string{
+				"eth0": "192.168.0.1",
+			}),
+			Entry("second allocation", []string{"eth0"}, map[string]backend.IPPoolType{
+				"eth0": backend.IPPoolType{
+					InterfaceName: "eth0",
+					PodCIDR:       "192.168.0.0/24",
+					Allocations: []backend.Allocation{
+						{
+							Pod:       "dummy",
+							Namespace: "test-namespace",
+							Index:     1,
+							Address:   "192.168.0.1"},
+					},
+				},
+			}, map[string]string{
+				"eth0": "192.168.0.2",
+			}),
+			Entry("reuse allocation", []string{"eth0"}, map[string]backend.IPPoolType{
+				"eth0": backend.IPPoolType{
+					InterfaceName: "eth0",
+					PodCIDR:       "192.168.0.0/24",
+					Allocations: []backend.Allocation{
+						{
+							Pod:       "dummy",
+							Namespace: "test-namespace",
+							Index:     255,
+							Address:   "192.168.0.255"},
+					},
+				},
+			}, map[string]string{
+				"eth0": "192.168.0.1",
+			}),
+		)
 	})
 
-	It("force expired", func() {
-		podName := "A"
-		deallocateHistory[podName] = &allocateRecord{
-			Time:       time.Now(),
-			LastOffset: 1,
-		}
-		Expect(deallocateHistory[podName].Expired()).To(Equal(false))
-		deallocateHistory[podName].Time = deallocateHistory[podName].Time.Add(time.Duration(-HISTORY_TIMEOUT-1) * time.Second)
-		Expect(deallocateHistory[podName].Expired()).To(Equal(true))
+	Context("Deallocate", func() {
+
+		It("force expired", func() {
+			podName := "A"
+			deallocateHistory[podName] = &allocateRecord{
+				Time:       time.Now(),
+				LastOffset: 1,
+			}
+			Expect(deallocateHistory[podName].Expired()).To(Equal(false))
+			deallocateHistory[podName].Time = deallocateHistory[podName].Time.Add(time.Duration(-HISTORY_TIMEOUT-1) * time.Second)
+			Expect(deallocateHistory[podName].Expired()).To(Equal(true))
+			FlushExpiredHistory()
+			_, found := deallocateHistory[podName]
+			Expect(found).To(BeFalse())
+		})
+
 	})
+
 })
 
 var _ = Describe("Test VF/PF Interface Mapping", func() {
@@ -210,7 +306,6 @@ var _ = Describe("Test VF/PF Interface Mapping", func() {
 			Expect(result).To(Equal("ens9f0np0"))
 		})
 
-
 	})
 
 	Describe("Interface matching logic", func() {
@@ -226,7 +321,7 @@ var _ = Describe("Test VF/PF Interface Mapping", func() {
 			// Mock the VF detection functions
 			originalIsVF := isVF
 			originalGetPF := getPFInterfaceName
-			defer func() { 
+			defer func() {
 				isVF = originalIsVF
 				getPFInterfaceName = originalGetPF
 			}()
@@ -377,4 +472,3 @@ var _ = Describe("Test VF/PF Interface Mapping", func() {
 		})
 	})
 })
-
