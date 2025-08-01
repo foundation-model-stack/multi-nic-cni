@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -30,6 +31,39 @@ const (
 	HOSTNAME_LABEL_NAME = "hostname"
 	DEFNAME_LABEL_NAME  = "netname"
 )
+
+// isVFImpl is the actual implementation for VF detection
+func isVFImpl(interfaceName string) bool {
+	physfnPath := fmt.Sprintf("/sys/class/net/%s/device/physfn", interfaceName)
+	_, err := os.Stat(physfnPath)
+	return err == nil
+}
+
+// getPFInterfaceNameImpl is the actual implementation for getting PF name from VF
+func getPFInterfaceNameImpl(vfInterfaceName string) string {
+	physfnNetPath := fmt.Sprintf("/sys/class/net/%s/device/physfn/net", vfInterfaceName)
+
+	// Read the directory to find the PF interface name
+	entries, err := os.ReadDir(physfnNetPath)
+	if err != nil {
+		log.Printf("Failed to read PF net directory for VF %s: %v", vfInterfaceName, err)
+		return vfInterfaceName // Return original name if we can't determine PF
+	}
+
+	if len(entries) == 0 {
+		log.Printf("No PF interface found for VF %s", vfInterfaceName)
+		return vfInterfaceName // Return original name if no PF found
+	}
+
+	// In standard SR-IOV, each VF belongs to exactly one PF
+	pfInterfaceName := entries[0].Name()
+	log.Printf("VF %s maps to PF %s", vfInterfaceName, pfInterfaceName)
+	return pfInterfaceName
+}
+
+// Function variables that can be mocked in tests
+var isVF = isVFImpl
+var getPFInterfaceName = getPFInterfaceNameImpl
 
 var allocatorLock sync.Mutex
 
@@ -203,9 +237,25 @@ func AllocateIP(req IPRequest) []IPResponse {
 		}
 		spec := ippoolSpecMap[ippoolName]
 		deleteIndex := -1
+		var originalInterfaceName string
 		for deleteIndex = 0; deleteIndex < len(interfaceNames); deleteIndex++ {
 			interfaceName := interfaceNames[deleteIndex]
+			matchFound := false
+
+			// Direct interface name match
 			if spec.InterfaceName == interfaceName {
+				matchFound = true
+				originalInterfaceName = interfaceName
+			} else if isVF(interfaceName) {
+				// Check if the interface is a VF and map it to its PF for comparison
+				pfInterfaceName := getPFInterfaceName(interfaceName)
+				if spec.InterfaceName == pfInterfaceName {
+					matchFound = true
+					originalInterfaceName = interfaceName // Use the original VF name
+				}
+			}
+
+			if matchFound {
 				break
 			}
 		}
@@ -269,7 +319,7 @@ func AllocateIP(req IPRequest) []IPResponse {
 			_, err = IppoolHandler.PatchIPPool(ippoolName, allocations)
 			if err == nil {
 				response := IPResponse{
-					InterfaceName: spec.InterfaceName,
+					InterfaceName: originalInterfaceName, // Use original VF name instead of PF name
 					IPAddress:     nextAddress,
 					VLANBlockSize: strings.Split(spec.VlanCIDR, "/")[1],
 				}
@@ -326,6 +376,7 @@ func DeallocateIP(req IPRequest) []IPResponse {
 	podNamespace := req.PodNamespace
 	defName := req.NetAttachDefName
 	hostName := req.HostName
+	interfaceNames := req.InterfaceNames
 
 	// set first record
 	if _, ok := deallocateHistory[podName]; !ok {
@@ -359,8 +410,21 @@ func DeallocateIP(req IPRequest) []IPResponse {
 					if err != nil {
 						log.Println(fmt.Sprintf("Cannot patch IPPool: %v", err))
 					}
+					// Map PF interface name back to VF if needed
+					responseInterfaceName := spec.InterfaceName // Default to PF name
+					for _, vfInterfaceName := range interfaceNames {
+						if isVF(vfInterfaceName) {
+							pfInterfaceName := getPFInterfaceName(vfInterfaceName)
+							if pfInterfaceName == spec.InterfaceName {
+								responseInterfaceName = vfInterfaceName // Use VF name in response
+								log.Printf("Deallocate: mapping PF %s back to VF %s", spec.InterfaceName, vfInterfaceName)
+								break
+							}
+						}
+					}
+
 					response := IPResponse{
-						InterfaceName: spec.InterfaceName,
+						InterfaceName: responseInterfaceName, // Use VF name if available, otherwise PF name
 						IPAddress:     allocation.Address,
 						VLANBlockSize: strings.Split(spec.VlanCIDR, "/")[1],
 					}
@@ -385,3 +449,4 @@ func FlushExpiredHistory() {
 		}
 	}
 }
+
