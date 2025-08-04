@@ -123,7 +123,8 @@ func AddRoute(r *http.Request) RouteUpdateResponse {
 			success = false
 		}
 	} else {
-		res_msg += fmt.Sprintf("GetRouteError %v;", err)
+		res_msg = fmt.Sprintf("GetRouteError %v;", err)
+		log.Printf("failed to add route: %s", res_msg)
 		success = false
 	}
 	response := RouteUpdateResponse{Success: success, Message: res_msg}
@@ -147,7 +148,8 @@ func DeleteRoute(r *http.Request) RouteUpdateResponse {
 			success = true
 		}
 	} else {
-		res_msg += fmt.Sprintf("GetRouteError %v;", err)
+		res_msg = fmt.Sprintf("GetRouteError %v;", err)
+		log.Printf("failed to delete route: %s", res_msg)
 		success = false
 	}
 	response := RouteUpdateResponse{Success: success, Message: res_msg}
@@ -180,17 +182,20 @@ func isRouteExist(cmpRoute netlink.Route, dev netlink.Link) (bool, error) {
 
 func getRoutesFromRequest(r *http.Request, addIfNotExists bool) (string, int, map[netlink.Link][]netlink.Route, error) {
 	reqBody, err := io.ReadAll(r.Body)
-	devRoutesMap := make(map[netlink.Link][]netlink.Route)
 
 	if err != nil {
-		return "", -1, devRoutesMap, err
+		return "", -1, nil, err
 	}
 	var req L3ConfigRequest
 	err = json.Unmarshal(reqBody, &req)
 	if err != nil {
-		return "", -1, devRoutesMap, err
+		return "", -1, nil, err
 	}
+	return getRoutesFromL3Config(req, addIfNotExists)
+}
 
+func getRoutesFromL3Config(req L3ConfigRequest, addIfNotExists bool) (string, int, map[netlink.Link][]netlink.Route, error) {
+	devRoutesMap := make(map[netlink.Link][]netlink.Route)
 	if req.Force {
 		tableID, err := GetTableID(req.Name, req.Subnet, false)
 		if err == nil {
@@ -241,6 +246,7 @@ func getRouteFromRequest(r *http.Request) (netlink.Route, netlink.Link, error) {
 	if err != nil {
 		return route, dev, err
 	}
+	log.Printf("get route request: %v", req)
 	dev, err = netlink.LinkByName(req.InterfaceName)
 	if err != nil {
 		return route, dev, err

@@ -14,17 +14,17 @@ import (
 	"strings"
 	"testing"
 
-	da "github.com/foundation-model-stack/multi-nic-cni/daemon/allocator"
-	"github.com/foundation-model-stack/multi-nic-cni/daemon/backend"
 	ds "github.com/foundation-model-stack/multi-nic-cni/daemon/selector"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/vishvananda/netlink"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/install"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer/yaml"
 	"k8s.io/client-go/discovery"
@@ -38,6 +38,12 @@ import (
 	//+kubebuilder:scaffold:imports
 )
 
+var dyn dynamic.Interface
+var dc *discovery.DiscoveryClient
+var testEnv *envtest.Environment
+var scheme = runtime.NewScheme()
+var targetPod *v1.Pod
+
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Multi-NIC Daemon Suite")
@@ -47,8 +53,9 @@ var _ = BeforeSuite(func() {
 	os.Setenv("TEST_MODE", "true")
 
 	// this env should be set by config.multinic when creating the daemonset
+	initHostName() // before setting NODENAME_ENV
 	os.Setenv(NODENAME_ENV, FULL_HOST_NAME)
-	initHostName()
+	initHostName() // after setting
 	Expect(hostName).To(Equal(FULL_HOST_NAME))
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
 	install.Install(scheme)
@@ -73,12 +80,8 @@ var _ = BeforeSuite(func() {
 	dc, err = discovery.NewDiscoveryClientForConfig(cfg)
 	Expect(err).NotTo(HaveOccurred())
 
-	da.IppoolHandler = backend.NewIPPoolHandler(cfg)
-	ds.MultinicnetHandler = backend.NewMultiNicNetworkHandler(cfg)
-	ds.NetAttachDefHandler = backend.NewNetAttachDefHandler(cfg)
-	ds.DeviceClassHandler = backend.NewDeviceClassHandler(cfg)
-	da.K8sClientset, _ = kubernetes.NewForConfig(cfg)
-	ds.K8sClientset, _ = kubernetes.NewForConfig(cfg)
+	initHandlers(cfg)
+	Expect(hostName).NotTo(BeEmpty())
 
 	deployExamples(EXAMPLE_RESOURCE_FOLDER, false)
 	addMasterInterfaces()

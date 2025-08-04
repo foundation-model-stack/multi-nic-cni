@@ -80,6 +80,11 @@ type allocateRecord struct {
 	LastOffset int
 }
 
+type allocation struct {
+	backend.Allocation
+	interfaceName string
+}
+
 func (r *allocateRecord) Expired() bool {
 	curr := time.Now()
 	return curr.Sub(r.Time).Seconds() > HISTORY_TIMEOUT
@@ -143,6 +148,10 @@ func getIPValue(address string) IPValue {
 	return IPValue{Address: address, Value: addrToValue(ip)}
 }
 
+// getAddressByIndex returns IP addres in string according to CIDR and index.
+// 1. getIPValue from CIDR for IPValue (with int value)
+// 2. add index to value in int
+// 3. convert int back to string with valueToAddrStr
 func getAddressByIndex(cidr string, index int) string {
 	startIPInIpValue := getIPValue(cidr)
 	addressByIndex := startIPInIpValue.Value + int64(index)
@@ -154,10 +163,7 @@ type ExcludeRange struct {
 	MaxIndex int
 }
 
-func (r ExcludeRange) Contains(index int) bool {
-	return index >= r.MinIndex && index <= r.MaxIndex
-}
-
+// getExcludeRanges returns ExcludeRange with min/max indexes within given CIDR.
 func getExcludeRanges(cidr string, excludes []string) []ExcludeRange {
 	exludeRanges := []ExcludeRange{}
 	startIPInIpValue := getIPValue(cidr)
@@ -180,7 +186,6 @@ func getExcludeRanges(cidr string, excludes []string) []ExcludeRange {
 				MaxIndex: excludeStartIndex + maxIndex,
 			}
 			exludeRanges = append(exludeRanges, r)
-
 		}
 	}
 	return exludeRanges
@@ -226,9 +231,22 @@ func AllocateIP(req IPRequest) []IPResponse {
 	}
 	ippoolSpecMap, err := IppoolHandler.ListIPPool(listOptions)
 	if err != nil {
+		allocatorLock.Unlock()
 		return responses
 	}
+	newAllocations := allocateIP(podName, podNamespace, interfaceNames, offset, ippoolSpecMap)
+	responses = applyNewAllocations(ippoolSpecMap, newAllocations)
+	allocatorLock.Unlock()
 
+	elapsed := time.Since(startAllocate)
+	log.Println(fmt.Sprintf("Allocate elapsed: %d us", int64(elapsed/time.Microsecond)))
+	return responses
+}
+
+func allocateIP(podName, podNamespace string, interfaceNames []string, offset int,
+	ippoolSpecMap map[string]backend.IPPoolType) map[string]allocation {
+
+	newAllocations := make(map[string]allocation)
 	for ippoolName, _ := range ippoolSpecMap {
 		if len(interfaceNames) == 0 {
 			// no more interfaces to allocate
@@ -303,39 +321,49 @@ func AllocateIP(req IPRequest) []IPResponse {
 				Address:   nextAddress,
 			}
 			log.Println(newAllocation)
-			toInsertIndex := -1
-			for allocationIndex, allocation := range allocations {
-				if allocation.Index > newAllocation.Index {
-					toInsertIndex = allocationIndex
-				}
-			}
-			if toInsertIndex == -1 {
-				allocations = append(allocations, newAllocation)
-			} else {
-				appendedAllocation := append(allocations[0:toInsertIndex], newAllocation)
-				allocations = append(appendedAllocation, allocations[toInsertIndex:]...)
-			}
-
-			_, err = IppoolHandler.PatchIPPool(ippoolName, allocations)
-			if err == nil {
-				response := IPResponse{
-					InterfaceName: originalInterfaceName, // Use original VF name instead of PF name
-					IPAddress:     nextAddress,
-					VLANBlockSize: strings.Split(spec.VlanCIDR, "/")[1],
-				}
-				log.Println(fmt.Sprintf("Append response %v (ip=%s)", response, nextAddress))
-				responses = append(responses, response)
-			} else {
-				log.Println(fmt.Sprintf("Cannot patch IPPool: %v", err))
+			newAllocations[ippoolName] = allocation{
+				Allocation:    newAllocation,
+				interfaceName: originalInterfaceName,
 			}
 		} else {
 			log.Println(fmt.Sprintf("Cannot get NextAddress for %s", podCIDR))
 		}
 	}
-	allocatorLock.Unlock()
+	return newAllocations
+}
 
-	elapsed := time.Since(startAllocate)
-	log.Println(fmt.Sprintf("Allocate elapsed: %d us", int64(elapsed/time.Microsecond)))
+func applyNewAllocations(ippoolSpecMap map[string]backend.IPPoolType, newAllocations map[string]allocation) []IPResponse {
+	var responses []IPResponse
+	for ippoolName, newAllocation := range newAllocations {
+		spec := ippoolSpecMap[ippoolName]
+		allocations := spec.Allocations
+
+		toInsertIndex := -1
+		for allocationIndex, allocation := range allocations {
+			if allocation.Index > newAllocation.Index {
+				toInsertIndex = allocationIndex
+			}
+		}
+		if toInsertIndex == -1 {
+			allocations = append(allocations, newAllocation.Allocation)
+		} else {
+			appendedAllocation := append(allocations[0:toInsertIndex], newAllocation.Allocation)
+			allocations = append(appendedAllocation, allocations[toInsertIndex:]...)
+		}
+
+		_, err := IppoolHandler.PatchIPPool(ippoolName, allocations)
+		if err == nil {
+			response := IPResponse{
+				InterfaceName: newAllocation.interfaceName, // Use original VF name instead of PF name
+				IPAddress:     newAllocation.Address,
+				VLANBlockSize: strings.Split(spec.VlanCIDR, "/")[1],
+			}
+			log.Println(fmt.Sprintf("Append response %v (ip=%s)", response, newAllocation.Address))
+			responses = append(responses, response)
+		} else {
+			log.Println(fmt.Sprintf("Cannot patch IPPool: %v", err))
+		}
+	}
 	return responses
 }
 
@@ -449,4 +477,3 @@ func FlushExpiredHistory() {
 		}
 	}
 }
-

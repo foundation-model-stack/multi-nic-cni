@@ -9,7 +9,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -72,7 +72,7 @@ func handleRequests() *mux.Router {
 }
 
 func Join(w http.ResponseWriter, r *http.Request) {
-	reqBody, err := ioutil.ReadAll(r.Body)
+	reqBody, err := io.ReadAll(r.Body)
 	if err != nil {
 		log.Printf("Fail to read: %v", err)
 	}
@@ -123,7 +123,7 @@ func Greet(targetHost string, myIP string) {
 			log.Printf("Status: %v", res.StatusCode)
 			return
 		}
-		ioutil.ReadAll(res.Body)
+		io.ReadAll(res.Body)
 	}
 	if myIP != "" {
 		log.Printf("Greeting %s from %s", targetHost, myIP)
@@ -132,7 +132,7 @@ func Greet(targetHost string, myIP string) {
 
 func GreetAck(w http.ResponseWriter, r *http.Request) {
 	var host string
-	reqBody, err := ioutil.ReadAll(r.Body)
+	reqBody, err := io.ReadAll(r.Body)
 	if err != nil {
 		log.Printf("Fail to read: %v", err)
 	}
@@ -172,7 +172,7 @@ func DeleteRoute(w http.ResponseWriter, r *http.Request) {
 
 func SelectNic(w http.ResponseWriter, r *http.Request) {
 	startSelect := time.Now()
-	reqBody, _ := ioutil.ReadAll(r.Body)
+	reqBody, _ := io.ReadAll(r.Body)
 	var req ds.NICSelectRequest
 	err := json.Unmarshal(reqBody, &req)
 	if strings.Contains(hostName, req.HostName) {
@@ -195,7 +195,7 @@ func SelectNic(w http.ResponseWriter, r *http.Request) {
 
 func Allocate(w http.ResponseWriter, r *http.Request) {
 	startAllocate := time.Now()
-	reqBody, _ := ioutil.ReadAll(r.Body)
+	reqBody, _ := io.ReadAll(r.Body)
 	var req da.IPRequest
 	err := json.Unmarshal(reqBody, &req)
 	if strings.Contains(hostName, req.HostName) {
@@ -217,7 +217,7 @@ func Allocate(w http.ResponseWriter, r *http.Request) {
 }
 
 func Deallocate(w http.ResponseWriter, r *http.Request) {
-	reqBody, _ := ioutil.ReadAll(r.Body)
+	reqBody, _ := io.ReadAll(r.Body)
 	var req da.IPRequest
 	var ipResponses []da.IPResponse
 	err := json.Unmarshal(reqBody, &req)
@@ -246,15 +246,17 @@ func InitClient() *rest.Config {
 	if err != nil {
 		log.Printf("Config Error: %v", err)
 	}
+	initHandlers(config)
+	return config
+}
 
+func initHandlers(config *rest.Config) {
 	da.IppoolHandler = backend.NewIPPoolHandler(config)
 	ds.MultinicnetHandler = backend.NewMultiNicNetworkHandler(config)
 	ds.NetAttachDefHandler = backend.NewNetAttachDefHandler(config)
 	ds.DeviceClassHandler = backend.NewDeviceClassHandler(config)
 	da.K8sClientset, _ = kubernetes.NewForConfig(config)
 	ds.K8sClientset, _ = kubernetes.NewForConfig(config)
-	return config
-
 }
 
 func initHostName() {
