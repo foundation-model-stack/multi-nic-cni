@@ -40,6 +40,21 @@ Test | Description | File
 | NetAttachDef test/handler/CheckDefChanged/comparing network attachment definitions | different annotation values | ./internal/plugin/net_attach_def_test.go |
 | NetAttachDef test/handler/CheckDefChanged/comparing network attachment definitions | different configurations | ./internal/plugin/net_attach_def_test.go |
 | NetAttachDef test/handler/CheckDefChanged/comparing network attachment definitions | identical definitions | ./internal/plugin/net_attach_def_test.go |
+| SriovNetwork RenderNetAttDef/NetworkAttachmentDefinition metadata | should set correct metadata fields | ./internal/plugin/sriov_resource_test.go |
+| SriovNetwork RenderNetAttDef/when configuration is invalid | should handle empty resource name gracefully | ./internal/plugin/sriov_resource_test.go |
+| SriovNetwork RenderNetAttDef/when rendering a complete SR-IOV configuration | should successfully render the NetworkAttachmentDefinition | ./internal/plugin/sriov_resource_test.go |
+| SriovNetwork RenderNetAttDef/when rendering a complete SR-IOV configuration/when extracting the CNI configuration | should contain correct SR-IOV configuration | ./internal/plugin/sriov_resource_test.go |
+| SriovNetwork RenderNetAttDef/when rendering a complete SR-IOV configuration/when extracting the CNI configuration | should contain valid CNI metadata | ./internal/plugin/sriov_resource_test.go |
+| SriovNetwork RenderNetAttDef/when rendering a complete SR-IOV configuration/when extracting the CNI configuration | should contain valid IPAM configuration | ./internal/plugin/sriov_resource_test.go |
+| SriovNetwork RenderNetAttDef/when rendering a complete SR-IOV configuration/when extracting the CNI configuration | should contain valid capabilities configuration | ./internal/plugin/sriov_resource_test.go |
+| SriovNetwork RenderNetAttDef/when rendering a complete SR-IOV configuration/when extracting the CNI configuration | should generate standalone config format | ./internal/plugin/sriov_resource_test.go |
+| SriovNetwork RenderNetAttDef/when rendering with MetaPlugins configuration | should successfully render the NetworkAttachmentDefinition | ./internal/plugin/sriov_resource_test.go |
+| SriovNetwork RenderNetAttDef/when rendering with MetaPlugins configuration/when extracting the CNI configuration | should contain SR-IOV plugin as first plugin | ./internal/plugin/sriov_resource_test.go |
+| SriovNetwork RenderNetAttDef/when rendering with MetaPlugins configuration/when extracting the CNI configuration | should generate plugins array format | ./internal/plugin/sriov_resource_test.go |
+| SriovNetwork RenderNetAttDef/when rendering with minimal configuration | should successfully render the NetworkAttachmentDefinition | ./internal/plugin/sriov_resource_test.go |
+| SriovNetwork RenderNetAttDef/when rendering with minimal configuration/when extracting the CNI configuration | should contain basic SR-IOV configuration | ./internal/plugin/sriov_resource_test.go |
+| SriovNetwork RenderNetAttDef/when rendering with minimal configuration/when extracting the CNI configuration | should contain empty IPAM configuration | ./internal/plugin/sriov_resource_test.go |
+| SriovNetwork RenderNetAttDef/when rendering with minimal configuration/when extracting the CNI configuration | should use default CNI version | ./internal/plugin/sriov_resource_test.go |
 | Test CIDR Handler\t/Handler functions/IPAM | Dynamically compute CIDR | ./controllers/cidr_handler_test.go |
 | Test CIDR Handler\t/Handler functions/IPAM | Empty subnet | ./controllers/cidr_handler_test.go |
 | Test CIDR Handler\t/Handler functions/IPAM | Empty subnet and interfaces | ./controllers/cidr_handler_test.go |

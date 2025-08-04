@@ -259,7 +259,6 @@ var _ = BeforeSuite(func() {
 		},
 	}
 
-	plugin.SRIOV_MANIFEST_PATH = "../internal/plugin/template/cni-config"
 	Expect(K8sClient.Create(context.TODO(), &sriovNamespace)).Should(Succeed())
 	err = SriovPlugin.Init(cfg)
 	Expect(err).ToNot(HaveOccurred())

@@ -16,5 +16,7 @@ spec:
     cniVersion: "0.3.0"
     type: sriov
     args:
+      # Modify the fields below according to your SR-IOV environment
       numVfs: "2"
+      vlan: "999"
       isRdma: "true"

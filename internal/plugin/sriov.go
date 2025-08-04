@@ -6,12 +6,13 @@
 package plugin
 
 import (
+	"encoding/json"
 	"fmt"
 
+	"github.com/containernetworking/cni/pkg/types"
 	multinicv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
 	"github.com/foundation-model-stack/multi-nic-cni/internal/vars"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 
@@ -34,7 +35,16 @@ var SRIOV_NODE_SELECTOR map[string]string = map[string]string{
 	"feature.node.kubernetes.io/network-sriov.capable": "true",
 }
 
-var SRIOV_MANIFEST_PATH string = "/template/cni-config"
+// SriovNetConf represents SR-IOV CNI configuration for multi-nic wrapper mode
+type SriovNetConf struct {
+	types.NetConf
+	Vlan      int   `json:"vlan,omitempty"`
+	VlanQoS   int   `json:"vlanQoS,omitempty"`
+	SpoofChk  *bool `json:"spoofchk,omitempty"`
+	Trust     *bool `json:"trust,omitempty"`
+	MinTxRate *int  `json:"min_tx_rate,omitempty"`
+	MaxTxRate *int  `json:"max_tx_rate,omitempty"`
+}
 
 type SriovPlugin struct {
 	SriovNetworkHandler           *DynamicHandler
@@ -64,8 +74,8 @@ func (p *SriovPlugin) Init(config *rest.Config) error {
 
 func (p *SriovPlugin) GetConfig(net multinicv1.MultiNicNetwork, hifList map[string]multinicv1.HostInterface) (string, map[string]string, error) {
 	annotation := make(map[string]string)
-	name := net.GetName()
-	namespace := net.GetNamespace()
+	name := net.ObjectMeta.Name
+	namespace := net.ObjectMeta.Namespace
 	resourceName := ValidateResourceName(name) // default name
 	spec := net.Spec.MainPlugin
 	args := spec.CNIArgs
@@ -73,21 +83,56 @@ func (p *SriovPlugin) GetConfig(net multinicv1.MultiNicNetwork, hifList map[stri
 	// get resource, create new SriovNetworkNodePolicies if resource is not pre-defined
 	// TO-DO: check configmap to verify pre-defined resourceName is valid
 	resourceName = p.getResource(name, args, resourceName, rootDevices)
-	var raw *unstructured.Unstructured
-	var err error
-	// create sriov network
+
+	// Create sriov network resource for tests and resource management
 	// TO-DO: support SriovIBNetwork
-	sriovnet, err := p.createSriovNetwork(name, namespace, args, resourceName)
+	_, err := p.createSriovNetwork(name, namespace, args, resourceName, &spec)
 	if err != nil {
 		return "", annotation, err
 	}
-	raw, err = sriovnet.RenderNetAttDef()
+
+	// Create SR-IOV configuration directly instead of using template
+	conf := &SriovNetConf{}
+	conf.CNIVersion = spec.CNIVersion
+	conf.Type = SRIOV_TYPE
+
+	// Parse VLAN
+	val, err := getInt(args, "vlan")
+	if err == nil {
+		conf.Vlan = val
+	}
+
+	// Parse VlanQoS
+	val, err = getInt(args, "vlanQoS")
+	if err == nil {
+		conf.VlanQoS = val
+	}
+
+	// Parse optional boolean fields
+	if spoofchk, err := getBoolean(args, "spoofchk"); err == nil {
+		conf.SpoofChk = &spoofchk
+	}
+
+	if trust, err := getBoolean(args, "trust"); err == nil {
+		conf.Trust = &trust
+	}
+
+	// Parse optional rate limiting fields
+	if minTxRate, err := getInt(args, "minTxRate"); err == nil {
+		conf.MinTxRate = &minTxRate
+	}
+
+	if maxTxRate, err := getInt(args, "maxTxRate"); err == nil {
+		conf.MaxTxRate = &maxTxRate
+	}
+
+	confBytes, err := json.Marshal(conf)
 	if err != nil {
 		return "", annotation, err
 	}
-	config := raw.Object["spec"].(map[string]interface{})["config"].(string)
+
 	annotation[RESOURCE_ANNOTATION] = SRIOV_RESOURCE_PREFIX + "/" + resourceName
-	return config, annotation, nil
+	return string(confBytes), annotation, nil
 }
 
 func (p *SriovPlugin) getRootDevices(net multinicv1.MultiNicNetwork, hifList map[string]multinicv1.HostInterface) []string {
@@ -188,7 +233,7 @@ func (p *SriovPlugin) getResource(name string, args map[string]string, resourceN
 	return spec.ResourceName
 }
 
-func (p *SriovPlugin) createSriovNetwork(name string, namespace string, args map[string]string, resourceName string) (*SriovNetwork, error) {
+func (p *SriovPlugin) createSriovNetwork(name string, namespace string, args map[string]string, resourceName string, pluginSpec *multinicv1.PluginSpec) (*SriovNetwork, error) {
 	spec := &SriovNetworkSpec{}
 	spec.NetworkNamespace = namespace
 	spec.ResourceName = resourceName
@@ -208,6 +253,7 @@ func (p *SriovPlugin) createSriovNetwork(name string, namespace string, args map
 	if err == nil {
 		spec.MaxTxRate = &val
 	}
+
 	netName := p.SriovnetworkName(name)
 	metaObj := GetMetaObject(netName, SRIOV_NAMESPACE, make(map[string]string))
 	sriovnet := NewSrioNetwork(metaObj, *spec)
