@@ -114,7 +114,7 @@ subnet|cluster-wide subnet for all hosts and pods|CIDR range|currently support o
 hostBlock|number of address bits for host indexing| int (n) | the number of assignable host = 2^n
 ipam|ipam plugin config| string | ipam can be single-NIC IPAM (e.g., whereabouts, VPC-native IPAM) or multi-NIC IPAM (e.g., [Multi-NIC IPAM Plugin](../concept/multi-nic-ipam.md#ipam-configuration))
 multiNicIPAM| indicator of ipam type | bool | **true** if ipam returns multiple IPs from *masters* key of NetworkAttachmentDefinition config at once, **false** if ipam returns only single IP from static config in ipam block
-plugin|main plugin config|[NetConf](https://pkg.go.dev/github.com/containernetworking/cni/pkg/types#NetConf) + plugin-specific arguments | main plugin integration must implement [Plugin](https://github.com/foundation-model-stack/multi-nic-cni/blob/main/plugin/plugin.go) with GetConfig function
+plugin|main plugin config|[NetConf](https://pkg.go.dev/github.com/containernetworking/cni/pkg/types#NetConf) + plugin-specific arguments | see [supported CNI plugins](../concept/cni-plugins.md) for the list of supported CNI plugins and their arguments
 attachPolicy|attachment policy|policy|[strategy](../concept/policy.md) with corresponding arguments to select host NICs to be master of secondary interfaces on Pod
 namespaces|list of namespaces to apply the network definitions (i.e., to create NetworkAttachmentDefinition resource)|[]string|apply to all namespace if not specified. new item can be added to the list by `kubectl edit` to create new NetworkAttachmentDefinition. the created NetworkAttachmentDefinition must be deleted manually if needed.
 
