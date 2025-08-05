@@ -6,22 +6,20 @@
 package allocator
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
-	"testing"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/serializer/yaml"
 
 	"time"
 
 	"github.com/foundation-model-stack/multi-nic-cni/daemon/backend"
 )
-
-func TestAllocator(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Allocator Test Suite")
-}
 
 func genAllocation(indexes []int) []backend.Allocation {
 	var allocations []backend.Allocation
@@ -191,21 +189,106 @@ var _ = Describe("Test Allocator", func() {
 
 	})
 
+	Context("with IPPool", func() {
+		podCIDR := "192.168.0.0/26"
+		defName := "netname"
+		ippoolName := "netname-192.168.0.0-26"
+		hostName := "hostname"
+		interfaceName := "eth1"
+
+		BeforeEach(func() {
+			yamlStr := fmt.Sprintf(`
+apiVersion: multinic.fms.io/v1
+kind: IPPool
+metadata:
+  name: %s
+  labels:
+    hostname: %s
+    netname: %s
+spec:
+  allocations: []
+  excludes: []
+  hostName: %s
+  interfaceName: %s
+  netAttachDef: %s
+  podCIDR: %s
+  vlanCIDR: 192.168.0.0/18
+`, ippoolName, hostName, defName, hostName, interfaceName, defName, podCIDR)
+			// Create decoder
+			dec := yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
+
+			// Decode YAML string to unstructured.Unstructured
+			obj := &unstructured.Unstructured{}
+			_, _, err := dec.Decode([]byte(yamlStr), nil, obj)
+			Expect(err).NotTo(HaveOccurred())
+			mapObj := obj.Object
+			_, err = IppoolHandler.Create(mapObj, metav1.NamespaceAll, metav1.CreateOptions{})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		AfterEach(func() {
+			IppoolHandler.Delete(ippoolName, metav1.NamespaceAll, metav1.DeleteOptions{})
+		})
+
+		It("Allocate-DeallocateIP", func() {
+			req := IPRequest{
+				PodName:          "podA",
+				PodNamespace:     "default",
+				HostName:         hostName,
+				NetAttachDefName: defName,
+				InterfaceNames:   []string{interfaceName},
+			}
+			By("Allocating IP")
+			responses := AllocateIP(req)
+			Expect(responses).To(HaveLen(1))
+			By("Deallocating IP")
+			responses = DeallocateIP(req)
+			Expect(responses).To(HaveLen(1))
+		})
+
+		It("CleanHangingAllocation", func() {
+			By("Patching allocation", func() {
+				allocations := []backend.Allocation{
+					{
+						Pod:       "dummyPod",
+						Namespace: "default",
+						Index:     10,
+						Address:   "192.168.0.10",
+					},
+				}
+				_, err := IppoolHandler.PatchIPPool(ippoolName, allocations)
+				Expect(err).NotTo(HaveOccurred())
+				allocs := getAllocations(ippoolName)
+				Expect(allocs).To(HaveLen(1))
+			})
+			By("Cleaning hanging allocation")
+			err := CleanHangingAllocation(hostName)
+			Expect(err).NotTo(HaveOccurred())
+			allocs := getAllocations(ippoolName)
+			Expect(allocs).To(HaveLen(0))
+		})
+	})
+
 })
 
 var _ = Describe("Test VF/PF Interface Mapping", func() {
 	var tempDir string
 	var err error
+	var originalNetClassDir = NetClassDir
 
 	BeforeEach(func() {
 		// Create a temporary directory for testing file system operations
 		tempDir, err = os.MkdirTemp("", "vf-pf-test")
 		Expect(err).ToNot(HaveOccurred())
+		// Temporarily modify the path for testing
+		originalNetClassDir = NetClassDir
+		NetClassDir = filepath.Join(tempDir, "sys", "class", "net")
 	})
 
 	AfterEach(func() {
 		// Clean up temporary directory
 		os.RemoveAll(tempDir)
+		NetClassDir = originalNetClassDir
 	})
 
 	Describe("isVF function", func() {
@@ -227,20 +310,7 @@ var _ = Describe("Test VF/PF Interface Mapping", func() {
 
 		It("should return true for VF interface", func() {
 			// Create a fake sys structure for a VF interface
-			vfPath := filepath.Join(tempDir, "sys", "class", "net", "ens9f0v1", "device", "physfn")
-			err := os.MkdirAll(vfPath, 0755)
-			Expect(err).ToNot(HaveOccurred())
-
-			// Temporarily modify the path for testing
-			originalIsVF := isVF
-			defer func() { isVF = originalIsVF }()
-
-			// Mock isVF to use our temp directory
-			isVF = func(interfaceName string) bool {
-				physfnPath := filepath.Join(tempDir, "sys", "class", "net", interfaceName, "device", "physfn")
-				_, err := os.Stat(physfnPath)
-				return err == nil
-			}
+			mockVF(tempDir, "ens9f0v1", "ens9f0np0")
 
 			result := isVF("ens9f0v1")
 			Expect(result).To(BeTrue())
@@ -248,59 +318,15 @@ var _ = Describe("Test VF/PF Interface Mapping", func() {
 	})
 
 	Describe("getPFInterfaceName function", func() {
+
 		It("should return original name when physfn directory doesn't exist", func() {
-			// Temporarily modify the function for testing
-			originalGetPF := getPFInterfaceName
-			defer func() { getPFInterfaceName = originalGetPF }()
-
-			getPFInterfaceName = func(vfInterfaceName string) string {
-				physfnNetPath := filepath.Join(tempDir, "sys", "class", "net", vfInterfaceName, "device", "physfn", "net")
-
-				entries, err := os.ReadDir(physfnNetPath)
-				if err != nil {
-					return vfInterfaceName
-				}
-
-				if len(entries) == 0 {
-					return vfInterfaceName
-				}
-
-				return entries[0].Name()
-			}
-
 			result := getPFInterfaceName("ens9f0v1")
 			Expect(result).To(Equal("ens9f0v1"))
 		})
 
 		It("should return PF name when single PF found", func() {
-			// Create a fake sys structure for VF with single PF
-			vfNetPath := filepath.Join(tempDir, "sys", "class", "net", "ens9f0v1", "device", "physfn", "net")
-			err := os.MkdirAll(vfNetPath, 0755)
-			Expect(err).ToNot(HaveOccurred())
-
-			// Create PF interface directory
-			pfPath := filepath.Join(vfNetPath, "ens9f0np0")
-			err = os.MkdirAll(pfPath, 0755)
-			Expect(err).ToNot(HaveOccurred())
-
-			// Mock the function to use our temp directory
-			originalGetPF := getPFInterfaceName
-			defer func() { getPFInterfaceName = originalGetPF }()
-
-			getPFInterfaceName = func(vfInterfaceName string) string {
-				physfnNetPath := filepath.Join(tempDir, "sys", "class", "net", vfInterfaceName, "device", "physfn", "net")
-
-				entries, err := os.ReadDir(physfnNetPath)
-				if err != nil {
-					return vfInterfaceName
-				}
-
-				if len(entries) == 0 {
-					return vfInterfaceName
-				}
-
-				return entries[0].Name()
-			}
+			// Create a fake sys structure for a VF interface
+			mockVF(tempDir, "ens9f0v1", "ens9f0np0")
 
 			result := getPFInterfaceName("ens9f0v1")
 			Expect(result).To(Equal("ens9f0np0"))
@@ -317,25 +343,8 @@ var _ = Describe("Test VF/PF Interface Mapping", func() {
 					PodCIDR:       "192.168.1.0/24",
 				},
 			}
-
-			// Mock the VF detection functions
-			originalIsVF := isVF
-			originalGetPF := getPFInterfaceName
-			defer func() {
-				isVF = originalIsVF
-				getPFInterfaceName = originalGetPF
-			}()
-
-			isVF = func(interfaceName string) bool {
-				return interfaceName == "ens9f0v1"
-			}
-
-			getPFInterfaceName = func(vfInterfaceName string) string {
-				if vfInterfaceName == "ens9f0v1" {
-					return "ens9f0np0"
-				}
-				return vfInterfaceName
-			}
+			// Create a fake sys structure for a VF interface
+			mockVF(tempDir, "ens9f0v1", "ens9f0np0")
 
 			// Test the matching logic
 			interfaceNames := []string{"ens9f0v1"}
@@ -377,14 +386,6 @@ var _ = Describe("Test VF/PF Interface Mapping", func() {
 				},
 			}
 
-			// Mock the VF detection functions
-			originalIsVF := isVF
-			defer func() { isVF = originalIsVF }()
-
-			isVF = func(interfaceName string) bool {
-				return false // eth0 is not a VF
-			}
-
 			// Test the matching logic
 			interfaceNames := []string{"eth0"}
 			spec := ippoolSpecMap["test-pool"]
@@ -422,24 +423,8 @@ var _ = Describe("Test VF/PF Interface Mapping", func() {
 				},
 			}
 
-			// Mock the VF detection functions
-			originalIsVF := isVF
-			originalGetPF := getPFInterfaceName
-			defer func() {
-				isVF = originalIsVF
-				getPFInterfaceName = originalGetPF
-			}()
-
-			isVF = func(interfaceName string) bool {
-				return interfaceName == "ens9f0v1"
-			}
-
-			getPFInterfaceName = func(vfInterfaceName string) string {
-				if vfInterfaceName == "ens9f0v1" {
-					return "ens9f0np0" // Maps to different PF than in IPPool
-				}
-				return vfInterfaceName
-			}
+			// Create a fake sys structure for a VF interface
+			mockVF(tempDir, "ens9f0v1", "ens9f0np0")
 
 			// Test the matching logic
 			interfaceNames := []string{"ens9f0v1"}
@@ -472,3 +457,23 @@ var _ = Describe("Test VF/PF Interface Mapping", func() {
 		})
 	})
 })
+
+func mockVF(tempDir, vf, pf string) {
+	// Mock VF net directory
+	vfNetPath := filepath.Join(tempDir, "sys", "class", "net", vf, "device", "physfn", "net")
+	err := os.MkdirAll(vfNetPath, 0755)
+	Expect(err).ToNot(HaveOccurred())
+
+	// Create PF interface directory
+	pfPath := filepath.Join(vfNetPath, pf)
+	err = os.MkdirAll(pfPath, 0755)
+	Expect(err).ToNot(HaveOccurred())
+}
+
+func getAllocations(ippoolName string) []interface{} {
+	ippool, err := IppoolHandler.Get(ippoolName, metav1.NamespaceAll, metav1.GetOptions{})
+	Expect(err).NotTo(HaveOccurred())
+	spec := ippool.Object["spec"].(map[string]interface{})
+	allocations := spec["allocations"].([]interface{})
+	return allocations
+}
