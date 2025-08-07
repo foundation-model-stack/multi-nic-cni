@@ -11,6 +11,7 @@ import (
 	"log"
 	"math"
 	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -32,16 +33,20 @@ const (
 	DEFNAME_LABEL_NAME  = "netname"
 )
 
-// isVFImpl is the actual implementation for VF detection
-func isVFImpl(interfaceName string) bool {
-	physfnPath := fmt.Sprintf("/sys/class/net/%s/device/physfn", interfaceName)
+var (
+	NetClassDir = "/sys/class/net"
+)
+
+// isVF detects VF
+func isVF(interfaceName string) bool {
+	physfnPath := filepath.Join(NetClassDir, interfaceName, "device", "physfn")
 	_, err := os.Stat(physfnPath)
 	return err == nil
 }
 
-// getPFInterfaceNameImpl is the actual implementation for getting PF name from VF
-func getPFInterfaceNameImpl(vfInterfaceName string) string {
-	physfnNetPath := fmt.Sprintf("/sys/class/net/%s/device/physfn/net", vfInterfaceName)
+// getPFInterfaceName gets PF name from VF
+func getPFInterfaceName(vfInterfaceName string) string {
+	physfnNetPath := filepath.Join(NetClassDir, vfInterfaceName, "device", "physfn", "net")
 
 	// Read the directory to find the PF interface name
 	entries, err := os.ReadDir(physfnNetPath)
@@ -60,10 +65,6 @@ func getPFInterfaceNameImpl(vfInterfaceName string) string {
 	log.Printf("VF %s maps to PF %s", vfInterfaceName, pfInterfaceName)
 	return pfInterfaceName
 }
-
-// Function variables that can be mocked in tests
-var isVF = isVFImpl
-var getPFInterfaceName = getPFInterfaceNameImpl
 
 var allocatorLock sync.Mutex
 
@@ -230,7 +231,8 @@ func AllocateIP(req IPRequest) []IPResponse {
 		LabelSelector: labels.SelectorFromSet(labelMap).String(),
 	}
 	ippoolSpecMap, err := IppoolHandler.ListIPPool(listOptions)
-	if err != nil {
+	if err != nil || len(ippoolSpecMap) == 0 {
+		log.Printf("Unable to proceed allocation without ippool or with error, ippools: %v, err: %v", ippoolSpecMap, err)
 		allocatorLock.Unlock()
 		return responses
 	}
