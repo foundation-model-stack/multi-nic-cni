@@ -2,7 +2,6 @@ apiVersion: multinic.fms.io/v1
 kind: MultiNicNetwork
 metadata:
   name: multi-nic-topology
-  namespace: default
 spec:
   subnet: "192.168.0.0/16"
   ipam: |

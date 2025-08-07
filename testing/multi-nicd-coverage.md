@@ -2,24 +2,24 @@
 
 File | Function | Coverage 
 ---|---|---
-| github.com/foundation-model-stack/multi-nic-cni/daemon/allocator/allocator.go:36: | isVFImpl | 100.0% |
-| github.com/foundation-model-stack/multi-nic-cni/daemon/allocator/allocator.go:43: | getPFInterfaceNameImpl | 0.0% |
-| github.com/foundation-model-stack/multi-nic-cni/daemon/allocator/allocator.go:88: | Expired | 100.0% |
-| github.com/foundation-model-stack/multi-nic-cni/daemon/allocator/allocator.go:95: | FindAvailableIndex | 86.7% |
-| github.com/foundation-model-stack/multi-nic-cni/daemon/allocator/allocator.go:121: | valueToAddr | 100.0% |
-| github.com/foundation-model-stack/multi-nic-cni/daemon/allocator/allocator.go:130: | valueToAddrStr | 100.0% |
-| github.com/foundation-model-stack/multi-nic-cni/daemon/allocator/allocator.go:135: | addrToValue | 100.0% |
-| github.com/foundation-model-stack/multi-nic-cni/daemon/allocator/allocator.go:146: | getIPValue | 100.0% |
-| github.com/foundation-model-stack/multi-nic-cni/daemon/allocator/allocator.go:155: | getAddressByIndex | 100.0% |
-| github.com/foundation-model-stack/multi-nic-cni/daemon/allocator/allocator.go:167: | getExcludeRanges | 93.8% |
-| github.com/foundation-model-stack/multi-nic-cni/daemon/allocator/allocator.go:194: | GenerateAllocateIndexes | 100.0% |
-| github.com/foundation-model-stack/multi-nic-cni/daemon/allocator/allocator.go:209: | AllocateIP | 0.0% |
-| github.com/foundation-model-stack/multi-nic-cni/daemon/allocator/allocator.go:246: | allocateIP | 84.6% |
-| github.com/foundation-model-stack/multi-nic-cni/daemon/allocator/allocator.go:335: | applyNewAllocations | 0.0% |
-| github.com/foundation-model-stack/multi-nic-cni/daemon/allocator/allocator.go:370: | getPod | 0.0% |
-| github.com/foundation-model-stack/multi-nic-cni/daemon/allocator/allocator.go:374: | CleanHangingAllocation | 0.0% |
-| github.com/foundation-model-stack/multi-nic-cni/daemon/allocator/allocator.go:402: | DeallocateIP | 0.0% |
-| github.com/foundation-model-stack/multi-nic-cni/daemon/allocator/allocator.go:472: | FlushExpiredHistory | 100.0% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/allocator/allocator.go:41: | isVF | 100.0% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/allocator/allocator.go:48: | getPFInterfaceName | 81.8% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/allocator/allocator.go:89: | Expired | 100.0% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/allocator/allocator.go:96: | FindAvailableIndex | 86.7% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/allocator/allocator.go:122: | valueToAddr | 100.0% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/allocator/allocator.go:131: | valueToAddrStr | 100.0% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/allocator/allocator.go:136: | addrToValue | 100.0% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/allocator/allocator.go:147: | getIPValue | 100.0% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/allocator/allocator.go:156: | getAddressByIndex | 100.0% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/allocator/allocator.go:168: | getExcludeRanges | 93.8% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/allocator/allocator.go:195: | GenerateAllocateIndexes | 100.0% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/allocator/allocator.go:210: | AllocateIP | 77.8% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/allocator/allocator.go:248: | allocateIP | 84.6% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/allocator/allocator.go:337: | applyNewAllocations | 73.7% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/allocator/allocator.go:372: | getPod | 100.0% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/allocator/allocator.go:376: | CleanHangingAllocation | 82.4% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/allocator/allocator.go:404: | DeallocateIP | 82.9% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/allocator/allocator.go:474: | FlushExpiredHistory | 100.0% |
 | github.com/foundation-model-stack/multi-nic-cni/daemon/main.go:59: | handleRequests | 0.0% |
 | github.com/foundation-model-stack/multi-nic-cni/daemon/main.go:74: | Join | 68.8% |
 | github.com/foundation-model-stack/multi-nic-cni/daemon/main.go:101: | Greet | 0.0% |
@@ -56,4 +56,4 @@ File | Function | Coverage
 | github.com/foundation-model-stack/multi-nic-cni/daemon/router/rt_table.go:165: | deleteRule | 85.7% |
 | github.com/foundation-model-stack/multi-nic-cni/daemon/router/rt_table.go:176: | deleteRoutes | 90.9% |
 | github.com/foundation-model-stack/multi-nic-cni/daemon/router/rt_table.go:194: | getTableLine | 100.0% |
-| total: | (statements) | 59.8% |
+| total: | (statements) | 74.8% |

@@ -24,6 +24,8 @@ Test | Description | File
 | Test Allocator/Allocate/getExcludeRanges | multiple inner excludes | /usr/local/build/daemon/src/allocator/allocator_test.go |
 | Test Allocator/Allocate/getExcludeRanges | outer exclude | /usr/local/build/daemon/src/allocator/allocator_test.go |
 | Test Allocator/Deallocate | force expired | /usr/local/build/daemon/src/allocator/allocator_test.go |
+| Test Allocator/with IPPool | Allocate-DeallocateIP | /usr/local/build/daemon/src/allocator/allocator_test.go |
+| Test Allocator/with IPPool | CleanHangingAllocation | /usr/local/build/daemon/src/allocator/allocator_test.go |
 | Test Get Interfaces | get interfaces | /usr/local/build/daemon/src/main_test.go |
 | Test L3Config Add/Delete | apply/delete l3config | /usr/local/build/daemon/src/main_test.go |
 | Test NIC Select | Get resource map | /usr/local/build/daemon/src/main_test.go |

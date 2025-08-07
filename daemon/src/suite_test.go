@@ -99,6 +99,7 @@ var _ = AfterSuite(func() {
 func deployExamples(folder string, ignoreErr bool) {
 	files, err := os.ReadDir(folder)
 	Expect(err).NotTo(HaveOccurred())
+	ctx := context.Background()
 
 	for _, file := range files {
 		fileLocation := folder + "/" + file.Name()
@@ -107,7 +108,7 @@ func deployExamples(folder string, ignoreErr bool) {
 			fmt.Println("No DR, deploy")
 			continue
 		}
-		_, err = dr.Create(context.TODO(), obj, metav1.CreateOptions{})
+		_, err = dr.Create(ctx, obj, metav1.CreateOptions{})
 		fmt.Printf("Deploy %s (%v): %v\n", fileLocation, ignoreErr, err)
 		if !ignoreErr {
 			Expect(err).NotTo(HaveOccurred())

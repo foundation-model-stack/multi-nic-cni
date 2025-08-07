@@ -5,7 +5,7 @@ RUN  apt-get update \
   && rm -rf /var/lib/apt/lists/*
 
 # install go
-RUN wget https://golang.org/dl/go1.23.0.linux-amd64.tar.gz && rm -rf /usr/local/go && tar -C /usr/local -xzf go1.23.0.linux-amd64.tar.gz
+RUN wget https://golang.org/dl/go1.24.1.linux-amd64.tar.gz && rm -rf /usr/local/go && tar -C /usr/local -xzf go1.24.1.linux-amd64.tar.gz
 ENV PATH "/usr/local/go/bin:${PATH}"
 RUN mkdir -p /usr/local/app
 RUN mkdir -p /host/opt/cni/bin

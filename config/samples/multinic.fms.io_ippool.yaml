@@ -11,6 +11,6 @@ spec:
   excludes: []
   hostName: node-1
   interfaceName: eth1
-  netAttachDef: multi-nic-cni-operator-ipvlanl3
+  netAttachDef: ipvlanl3
   podCIDR: 192.168.0.0/26
   vlanCIDR: 192.168.0.0/18

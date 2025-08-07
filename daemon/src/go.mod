@@ -1,6 +1,6 @@
 module github.com/foundation-model-stack/multi-nic-cni/daemon
 
-go 1.23
+go 1.24.1
 
 require (
 	github.com/NVIDIA/gpu-monitoring-tools v0.0.0-20211102125545-5a2c58442e48

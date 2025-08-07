@@ -137,7 +137,7 @@ func Select(req NICSelectRequest) NICSelectResponse {
 	masterNameMap := iface.GetInterfaceNameMap()
 	log.Printf("master name map: %v\n", masterNameMap)
 	nameNetMap := iface.GetNameNetMap()
-	netSpec, err := MultinicnetHandler.Get(req.NetAttachDefName, req.PodNamespace)
+	netSpec, err := MultinicnetHandler.Get(req.NetAttachDefName)
 	if err != nil {
 		// FIXME: failed to get network spec (use default policy): the server could not find the requested resource
 		log.Printf("failed to get network spec (use default policy): %v\n", err)

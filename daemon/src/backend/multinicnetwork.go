@@ -49,8 +49,8 @@ func NewMultiNicNetworkHandler(config *rest.Config) *MultiNicNetworkHandler {
 	return handler
 }
 
-func (h *MultiNicNetworkHandler) Get(name string, namespace string) (MultiNicNetworkSpec, error) {
-	multinicnetwork, err := h.DynamicHandler.Get(name, namespace, metav1.GetOptions{})
+func (h *MultiNicNetworkHandler) Get(name string) (MultiNicNetworkSpec, error) {
+	multinicnetwork, err := h.DynamicHandler.Get(name, metav1.NamespaceAll, metav1.GetOptions{})
 	if err != nil {
 		return MultiNicNetworkSpec{Policy: AttachmentPolicy{Strategy: "none"}}, err
 	}
