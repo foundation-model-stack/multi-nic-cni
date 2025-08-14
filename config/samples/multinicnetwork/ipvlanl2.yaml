@@ -4,14 +4,12 @@ metadata:
   name: multinic-ipvlanl2
   namespace: default
 spec:
-  subnet: "172.31.49.0/24"
+  subnet: ""
   ipam: |
-    { "type": "whereabouts" }
+    { "type": "whereabouts", "range": "192.168.0.0/18" }
   multiNICIPAM: false
   plugin:
     cniVersion: "0.3.0"
     type: ipvlan
     args: 
       mode: l2
-  masterNets:
-    - "172.31.32.0/20"
