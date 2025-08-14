@@ -11,6 +11,7 @@ Test | Description | File
 | Common IPPool Test/extractMatchExcludesFromPodCIDR | unrelated | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/controllers/ippool_test.go |
 | Common Plugin Test | RemoveEmpty | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/internal/plugin/plugin_test.go |
 | Config Test | Check update from ConfigSpec | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/controllers/config_test.go |
+| Daemon Test | Test IsUnmanaged function | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/controllers/daemon_test.go |
 | Daemon Test | Test TryGetDaemonPod for tainted daemon | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/controllers/daemon_test.go |
 | Daemon Test | Test TryGetDaemonPod for valid daemon | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/controllers/daemon_test.go |
 | DynamicHandler/GetFirst | should handle unmarshalling errors | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/internal/plugin/dynamic_test.go |
@@ -25,6 +26,7 @@ Test | Description | File
 | Host Interface Test/UpdateNewInterfaces - original with more than one devices | can leave old one | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/controllers/hostinterface_test.go |
 | Host Interface Test/UpdateNewInterfaces - original with more than one devices | can leave old one when some is missing | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/controllers/hostinterface_test.go |
 | Host Interface Test/UpdateNewInterfaces - original with more than one devices | can leave old one when some is missing and some with new info | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/controllers/hostinterface_test.go |
+| Host Interface Test/unmanaged host | can create/delete unmanaged host | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/controllers/hostinterface_test.go |
 | Mellanox Plugin/GetConfig | should generate valid CNI config | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/internal/plugin/mellanox_test.go |
 | Mellanox Plugin/GetConfig | should handle empty resource list | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/internal/plugin/mellanox_test.go |
 | Mellanox Plugin/GetConfig | should handle invalid IPAM config | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/internal/plugin/mellanox_test.go |
@@ -43,6 +45,7 @@ Test | Description | File
 | Test CIDR Handler\t/Handler functions/IPAM | Dynamically compute CIDR | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/controllers/cidr_handler_test.go |
 | Test CIDR Handler\t/Handler functions/IPAM | Empty subnet | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/controllers/cidr_handler_test.go |
 | Test CIDR Handler\t/Handler functions/IPAM | Empty subnet and interfaces | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/controllers/cidr_handler_test.go |
+| Test CIDR Handler\t/Handler functions/IPAM | Empty subnet with unmanaged hostinterface | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/controllers/cidr_handler_test.go |
 | Test CIDR Handler\t/Handler functions/InitCustomCRCache | should initialize IPPool and HostInterface caches | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/controllers/cidr_handler_test.go |
 | Test CIDR Handler\t/Handler functions/Sync/CIDR and IPPool | hasActivePod | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/controllers/cidr_handler_test.go |
 | Test CIDR Handler\t/Handler functions/Sync/CIDR and IPPool | hasNewHost | /Users/aa404681/Documents/internal_ws/cni/multi-nic-cni-operator/controllers/cidr_handler_test.go |

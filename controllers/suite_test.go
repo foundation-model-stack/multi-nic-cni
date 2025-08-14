@@ -58,6 +58,7 @@ var mellanoxPlugin *plugin.MellanoxPlugin
 
 var MultiNicnetworkReconcilerInstance *MultiNicNetworkReconciler
 var ConfigReconcilerInstance *ConfigReconciler
+var HostInterfaceReconcilerInstance *HostInterfaceReconciler
 var daemonWatcher *DaemonWatcher
 
 // Multi-NIC IPAM
@@ -148,13 +149,14 @@ var _ = BeforeSuite(func() {
 	}).SetupWithManager(mgr)
 	Expect(err).ToNot(HaveOccurred())
 
-	err = (&HostInterfaceReconciler{
+	HostInterfaceReconcilerInstance = &HostInterfaceReconciler{
 		Client:               mgr.GetClient(),
 		Scheme:               mgr.GetScheme(),
 		HostInterfaceHandler: hostInterfaceHandler,
 		CIDRHandler:          cidrHandler,
 		DaemonWatcher:        daemonWatcher,
-	}).SetupWithManager(mgr)
+	}
+	err = HostInterfaceReconcilerInstance.SetupWithManager(mgr)
 	Expect(err).ToNot(HaveOccurred())
 
 	err = (&IPPoolReconciler{
@@ -349,6 +351,13 @@ func GenerateNewHostInterface(hostName string, interfaceNames []string, networkP
 			Interfaces: ifaces,
 		},
 	}
+	return hif
+}
+
+// GenerateNewUnmanagedHostInterface generates empty HostInterface with unmanaged label
+func GenerateNewUnmanagedHostInterface(hostName string) multinicv1.HostInterface {
+	hif := GenerateNewHostInterface(hostName, []string{}, []string{}, 0)
+	hif.Labels[vars.UnmanagedLabelName] = "true"
 	return hif
 }
 

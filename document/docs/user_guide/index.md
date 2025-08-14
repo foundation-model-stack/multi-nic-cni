@@ -173,6 +173,9 @@ L3 Route configuration|&check;|X|X|&check;
 
         kubectl apply -f config/samples/multinicnetwork/mellanox_hostdevice.yaml
 
+- [IPVLAN L2 with unmanaged HostInterface](https://github.com/foundation-model-stack/multi-nic-cni/tree/main/config/samples/multinicnetwork/ipvlanl2_unmanaged.yaml)
+
+        kubectl apply -f config/samples/multinicnetwork/ipvlanl2_unmanaged.yaml
 ### AWS
 - [IPVLAN L2 with AWS-VPC-connecting IPAM](https://github.com/foundation-model-stack/multi-nic-cni/tree/main/config/samples/multinicnetwork/awsipvlan.yaml)
 
