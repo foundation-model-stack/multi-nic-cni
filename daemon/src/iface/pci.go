@@ -1,6 +1,6 @@
 /*
  * Copyright 2022- IBM Inc. All rights reserved
- * SPDX-License-Identifier: Apache2.0
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 package iface
@@ -228,7 +228,7 @@ func GetTargetNetworks() []NetDeviceInfo {
 			continue
 		}
 
-		// Detect VLAN interfaces 
+		// Detect VLAN interfaces
 		if link.Type() == "vlan" { // Check if the interface is a VLAN
 			vlanLink, ok := link.(*netlink.Vlan)
 			if !ok {
@@ -254,7 +254,7 @@ func GetTargetNetworks() []NetDeviceInfo {
 			continue
 		}
 
-		 // Check if the interface has an IP address
+		// Check if the interface has an IP address
 		addrs, err := netlink.AddrList(link, netlink.FAMILY_V4) // Check for IPv4 addresses
 		if err != nil {
 			log.Printf("cannot list addresses for interface %s: %v", devName, err)
