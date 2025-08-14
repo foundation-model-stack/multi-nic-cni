@@ -48,12 +48,14 @@ func InitHostInterfaceCache(clientset *kubernetes.Clientset, hostInterfaceHandle
 			if _, foundErr := daemonCacheHandler.GetCache(name); foundErr != nil {
 				// not found, check whether node is still there.
 				if _, foundErr = clientset.CoreV1().Nodes().Get(context.TODO(), name, metav1.GetOptions{}); foundErr != nil {
-					// delete HostInterface and do not add
-					err = hostInterfaceHandler.DeleteHostInterface(name)
-					if err != nil {
-						vars.HifLog.V(4).Info(fmt.Sprintf("Failed to delete HostInterface %s: %v", name, err))
+					if !vars.IsUnmanaged(instance.ObjectMeta) {
+						// delete HostInterface and do not add
+						err = hostInterfaceHandler.DeleteHostInterface(name)
+						if err != nil {
+							vars.HifLog.V(4).Info(fmt.Sprintf("Failed to delete HostInterface %s: %v", name, err))
+						}
+						continue
 					}
-					continue
 				}
 			}
 			hostInterfaceHandler.SetCache(name, instance)
@@ -92,6 +94,14 @@ func (r *HostInterfaceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{RequeueAfter: vars.UrgentReconcileTime}, nil
 	}
 
+	hifName := instance.GetName()
+	if vars.IsUnmanaged(instance.ObjectMeta) {
+		// handle unmanaged hostinterface before adding finalizer
+		r.HostInterfaceHandler.SetCache(hifName, *instance.DeepCopy())
+		r.CIDRHandler.UpdateCIDRs()
+		return ctrl.Result{}, nil
+	}
+
 	// Add finalizer to instance
 	if !controllerutil.ContainsFinalizer(instance, hifFinalizer) {
 		controllerutil.AddFinalizer(instance, hifFinalizer)
@@ -125,7 +135,6 @@ func (r *HostInterfaceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, nil
 	}
 
-	hifName := instance.GetName()
 	if !r.HostInterfaceHandler.SafeCache.Contains(hifName) && len(instance.Spec.Interfaces) > 0 {
 		r.HostInterfaceHandler.SetCache(hifName, *instance.DeepCopy())
 	}
@@ -153,6 +162,10 @@ func (r *HostInterfaceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 func (r *HostInterfaceReconciler) UpdateInterfaces(instance multinicv1.HostInterface) error {
+	if vars.IsUnmanaged(instance.ObjectMeta) {
+		r.CIDRHandler.UpdateCIDRs()
+		return nil
+	}
 	nodeName := instance.Spec.HostName
 	hifName := instance.GetName()
 	pod, err := r.DaemonWatcher.TryGetDaemonPod(nodeName)

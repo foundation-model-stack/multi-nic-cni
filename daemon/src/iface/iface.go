@@ -13,34 +13,28 @@ import (
 	"strings"
 
 	"github.com/vishvananda/netlink"
-)
 
-type InterfaceInfoType struct {
-	InterfaceName string `json:"interfaceName"`
-	NetAddress    string `json:"netAddress"`
-	HostIP        string `json:"hostIP"`
-	Vendor        string `json:"vendor"`
-	Product       string `json:"product"`
-	PciAddress    string `json:"pciAddress"`
-}
+	"github.com/foundation-model-stack/multi-nic-cni/daemon/backend"
+)
 
 const (
 	zombiePrefix = "net1"
 )
 
+var HostInterfaceHandler *backend.HostInterfaceHandler
 var interfaceInfoCache = InitSafeCache()
 
-func GetInterfaceInfoCache() map[string]InterfaceInfoType {
-	snapshot := make(map[string]InterfaceInfoType)
+func GetInterfaceInfoCache() map[string]backend.InterfaceInfoType {
+	snapshot := make(map[string]backend.InterfaceInfoType)
 	interfaceInfoCache.Lock()
 	for key, value := range interfaceInfoCache.cache {
-		snapshot[key] = value.(InterfaceInfoType)
+		snapshot[key] = value.(backend.InterfaceInfoType)
 	}
 	interfaceInfoCache.Unlock()
 	return snapshot
 }
 
-func SetInterfaceInfoCache(name string, info InterfaceInfoType) {
+func SetInterfaceInfoCache(name string, info backend.InterfaceInfoType) {
 	interfaceInfoCache.SetCache(name, info)
 }
 
@@ -118,8 +112,8 @@ func GetDefaultInterfaceSubNet() (string, error) {
 	return "", fmt.Errorf("not found")
 }
 
-func GetInterfaces() []InterfaceInfoType {
-	interfaces := []InterfaceInfoType{}
+func GetInterfaces() []backend.InterfaceInfoType {
+	interfaces := []backend.InterfaceInfoType{}
 	netDevices := GetTargetNetworks()
 	defaultSubnet, err := GetDefaultInterfaceSubNet()
 	if err != nil {
@@ -159,7 +153,7 @@ func GetInterfaces() []InterfaceInfoType {
 		}
 
 		if addr.IP.To4() != nil {
-			iface := InterfaceInfoType{
+			iface := backend.InterfaceInfoType{
 				InterfaceName: devName,
 				NetAddress:    netAddress,
 				HostIP:        addr.IP.To4().String(),
@@ -169,6 +163,14 @@ func GetInterfaces() []InterfaceInfoType {
 			}
 			interfaces = append(interfaces, iface)
 			interfaceInfoCache.SetCache(devName, iface)
+		}
+	}
+	// add unmanaged info
+	hifIfaces, err := HostInterfaceHandler.GetUnmanagedHostInterfaces()
+	if err == nil {
+		interfaces = append(interfaces, hifIfaces...)
+		for _, iface := range hifIfaces {
+			interfaceInfoCache.SetCache(iface.InterfaceName, iface)
 		}
 	}
 	return interfaces

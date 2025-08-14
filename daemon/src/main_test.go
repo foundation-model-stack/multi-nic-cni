@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	da "github.com/foundation-model-stack/multi-nic-cni/daemon/allocator"
+	"github.com/foundation-model-stack/multi-nic-cni/daemon/backend"
 	di "github.com/foundation-model-stack/multi-nic-cni/daemon/iface"
 	dr "github.com/foundation-model-stack/multi-nic-cni/daemon/router"
 	ds "github.com/foundation-model-stack/multi-nic-cni/daemon/selector"
@@ -85,7 +86,7 @@ var GPU_BUS_MAP map[string]string = map[string]string{
 var _ = Describe("Join", func() {
 	It("empty join", func() {
 		requestIpamInfo := IPAMInfo{
-			HIFList: []di.InterfaceInfoType{},
+			HIFList: []backend.InterfaceInfoType{},
 		}
 		body := MakePutRequest(requestIpamInfo, JOIN_PATH, http.HandlerFunc(Join))
 		Expect(strings.TrimSpace(string(body))).To(BeEquivalentTo(`""`))
@@ -149,7 +150,7 @@ var _ = Describe("Test Get Interfaces", func() {
 		handler.ServeHTTP(res, req)
 		body, err := io.ReadAll(res.Body)
 		Expect(err).NotTo(HaveOccurred())
-		var response []di.InterfaceInfoType
+		var response []backend.InterfaceInfoType
 		json.Unmarshal(body, &response)
 		log.Printf("TestUpdateInterface: %v", response)
 	})
@@ -352,7 +353,7 @@ func setTestLatestInterfaces() {
 		vendor := MASTER_VENDORS[index]
 		product := MASTER_PRODUCTS[index]
 		pciAddress := MASTER_PCIADDRESS[index]
-		iface := di.InterfaceInfoType{
+		iface := backend.InterfaceInfoType{
 			InterfaceName: master,
 			NetAddress:    netAddress,
 			Vendor:        vendor,

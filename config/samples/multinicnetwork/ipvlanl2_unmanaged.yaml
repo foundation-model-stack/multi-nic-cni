@@ -1,0 +1,18 @@
+apiVersion: multinic.fms.io/v1
+kind: MultiNicNetwork
+metadata:
+  name: multinic-unmanaged
+spec:
+  ipam: |
+    {
+      "type": "multi-nic-ipam",
+      "hostBlock": 0, 
+      "interfaceBlock": 0,
+      "vlanMode": "l2"
+    }
+  multiNICIPAM: true
+  plugin:
+    cniVersion: "0.3.0"
+    type: ipvlan
+    args: 
+      mode: l2

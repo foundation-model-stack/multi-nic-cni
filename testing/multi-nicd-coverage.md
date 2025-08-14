@@ -34,8 +34,8 @@ File | Function | Coverage
 | github.com/foundation-model-stack/multi-nic-cni/daemon/main.go:219: | Deallocate | 100.0% |
 | github.com/foundation-model-stack/multi-nic-cni/daemon/main.go:235: | InitClient | 0.0% |
 | github.com/foundation-model-stack/multi-nic-cni/daemon/main.go:253: | initHandlers | 100.0% |
-| github.com/foundation-model-stack/multi-nic-cni/daemon/main.go:262: | initHostName | 87.5% |
-| github.com/foundation-model-stack/multi-nic-cni/daemon/main.go:275: | main | 0.0% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/main.go:263: | initHostName | 87.5% |
+| github.com/foundation-model-stack/multi-nic-cni/daemon/main.go:276: | main | 0.0% |
 | github.com/foundation-model-stack/multi-nic-cni/daemon/router/router.go:37: | ApplyL3Config | 70.8% |
 | github.com/foundation-model-stack/multi-nic-cni/daemon/router/router.go:74: | DeleteL3Config | 100.0% |
 | github.com/foundation-model-stack/multi-nic-cni/daemon/router/router.go:81: | deleteL3Config | 81.8% |
