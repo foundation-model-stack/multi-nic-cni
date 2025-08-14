@@ -10,6 +10,7 @@ zone         = "us-south-1"
 
 subnet_count = "2"
 
+# worker_names = [ <WORKER_NAME_LIST> ]
 
 # podnet = "192.168.0.0/16" 
 
