@@ -6,10 +6,15 @@
 package controllers_test
 
 import (
+	"context"
+
 	multinicv1 "github.com/foundation-model-stack/multi-nic-cni/api/v1"
 	"github.com/foundation-model-stack/multi-nic-cni/controllers"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 var _ = Describe("Host Interface Test", func() {
@@ -98,6 +103,32 @@ var _ = Describe("Host Interface Test", func() {
 				Expect(newInfo.InterfaceName).To(BeElementOf("eth1", "eth2"))
 				Expect(newInfo.NetAddress).To(BeElementOf("10.0.2.0/24", "10.0.1.0/24"))
 			}
+		})
+	})
+
+	Context("unmanaged host", func() {
+		It("can create/delete unmanaged host", func() {
+			ctx := context.Background()
+			hostName := "unmanagned"
+			By("creating")
+			unmanaged := controllers.GenerateNewUnmanagedHostInterface(hostName)
+			err := controllers.K8sClient.Create(ctx, &unmanaged)
+			Expect(err).To(BeNil())
+			By("reconciling")
+			namespacedName := types.NamespacedName{Name: hostName, Namespace: metav1.NamespaceAll}
+			req := ctrl.Request{
+				NamespacedName: namespacedName,
+			}
+			_, err = controllers.HostInterfaceReconcilerInstance.Reconcile(ctx, req)
+			Expect(err).To(BeNil())
+			// finalizer must not be added
+			hif := &multinicv1.HostInterface{}
+			err = controllers.K8sClient.Get(ctx, namespacedName, hif)
+			Expect(err).To(BeNil())
+			Expect(hif.GetFinalizers()).To(HaveLen(0))
+			By("deleting")
+			err = controllers.K8sClient.Delete(ctx, &unmanaged)
+			Expect(err).To(BeNil())
 		})
 	})
 
