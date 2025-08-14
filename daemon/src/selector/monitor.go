@@ -1,16 +1,16 @@
 /*
  * Copyright 2022- IBM Inc. All rights reserved
- * SPDX-License-Identifier: Apache2.0
+ * SPDX-License-Identifier: Apache-2.0
  */
- 
+
 package selector
 
 type Metric struct {
-	name    string
+	name   string
 	values []float64
 }
 
-func GetInterfaceStat(interfaceNameMap map[string]string) map[string]Metric{ 
+func GetInterfaceStat(interfaceNameMap map[string]string) map[string]Metric {
 	//TODO
 	metricMap := make(map[string]Metric)
 	for _, master := range interfaceNameMap {
