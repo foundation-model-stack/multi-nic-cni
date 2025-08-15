@@ -1,0 +1,82 @@
+# Controller related changes
+area/controller:
+  - changed-files:
+    - any-glob-to-any-file: 
+      - 'controllers/**/*'
+      - 'main.go'
+      - 'api/**/*'
+      - 'config/crd/**/*'
+      - 'internal/**/*'
+
+# Daemon related changes
+area/daemon:
+  - changed-files:
+    - any-glob-to-any-file: 'daemon/**/*'
+
+# CNI plugin related changes
+area/cni:
+  - changed-files:
+    - any-glob-to-any-file: 'cni/**/*'
+
+
+# Configuration changes
+area/config:
+  - changed-files:
+    - any-glob-to-any-file: 'config/**/*'
+
+# Documentation changes
+documentation:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'document/**/*'
+      - 'README.md'
+      - '**/*.md'
+      - 'CONTRIBUTING.md'
+      - 'MAINTAINERS.md'
+
+# Test related changes
+area/testing:
+  - changed-files:
+    - any-glob-to-any-file:
+      - '**/*_test.go'
+      - '**/test/**/*'
+      - 'testing/**/*'
+      - 'e2e-test/**/*'
+
+# CI/CD and workflow changes
+area/ci:
+  - changed-files:
+    - any-glob-to-any-file:
+      - '.github/**/*'
+      - 'Makefile'
+      - '**/Makefile'
+      - '**/*.yaml'
+      - '**/*.yml'
+      - 'Dockerfile*'
+      - '**/Dockerfile*'
+
+# Dependencies
+dependencies:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'go.mod'
+      - 'go.sum'
+      - '**/go.mod'
+      - '**/go.sum'
+
+# Commit type labels based on branch names (conventional commits style)
+kind/feat:
+  - head-branch: ['^feat/', '^feature/', 'feat-', 'feature-']
+
+kind/fix:
+  - head-branch: ['^fix/', '^bugfix/', 'fix-', 'bugfix-', 'hotfix/']
+
+kind/chore:
+  - head-branch: ['^chore/', 'chore-']
+
+enhancement:
+  - head-branch: ['^enhancement/', '^enhance/', 'enhancement-', 'enhance-']
+
+# Release labels based on branch names
+release:
+  - head-branch: ['^release/', '^rel/', 'release-', 'rel-', '^v[0-9]', '^[0-9]+\.[0-9]+']
