@@ -1,0 +1,114 @@
+# Controller related changes
+area/controller:
+  - changed-files:
+    - any-glob-to-any-file: 
+      - 'controllers/**/*'
+      - 'main.go'
+
+# Daemon related changes
+area/daemon:
+  - changed-files:
+    - any-glob-to-any-file: 'daemon/**/*'
+
+# CNI plugin related changes
+area/cni:
+  - changed-files:
+    - any-glob-to-any-file: 'cni/**/*'
+
+# Plugin related changes
+area/plugin:
+  - changed-files:
+    - any-glob-to-any-file: 'internal/**/*'
+
+# API/CRD changes
+area/api:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'api/**/*'
+      - 'config/crd/**/*'
+
+# Configuration changes
+area/config:
+  - changed-files:
+    - any-glob-to-any-file: 'config/**/*'
+
+# Documentation changes
+area/docs:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'document/**/*'
+      - 'README.md'
+      - '**/*.md'
+      - 'CONTRIBUTING.md'
+      - 'MAINTAINERS.md'
+
+# Test related changes
+area/testing:
+  - changed-files:
+    - any-glob-to-any-file:
+      - '**/*_test.go'
+      - '**/test/**/*'
+      - 'testing/**/*'
+      - 'e2e-test/**/*'
+
+# CI/CD and workflow changes
+area/ci:
+  - changed-files:
+    - any-glob-to-any-file:
+      - '.github/**/*'
+      - 'Makefile'
+      - '**/Makefile'
+      - '**/*.yaml'
+      - '**/*.yml'
+      - 'Dockerfile*'
+      - '**/Dockerfile*'
+
+# Dependencies
+area/dependencies:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'go.mod'
+      - 'go.sum'
+      - '**/go.mod'
+      - '**/go.sum'
+
+# Language specific labels
+language/go:
+  - changed-files:
+    - any-glob-to-any-file: '**/*.go'
+
+language/yaml:
+  - changed-files:
+    - any-glob-to-any-file: 
+      - '**/*.yaml'
+      - '**/*.yml'
+
+language/shell:
+  - changed-files:
+    - any-glob-to-any-file: '**/*.sh'
+
+# Commit type labels based on branch names (conventional commits style)
+kind/feat:
+  - head-branch: ['^feat/', '^feature/', 'feat-', 'feature-']
+
+kind/fix:
+  - head-branch: ['^fix/', '^bugfix/', 'fix-', 'bugfix-', 'hotfix/']
+
+kind/chore:
+  - head-branch: ['^chore/', 'chore-']
+
+kind/docs:
+  - head-branch: ['^docs/', '^doc/', 'docs-', 'doc-']
+
+kind/ci:
+  - head-branch: ['^ci/', 'ci-']
+
+kind/refactor:
+  - head-branch: ['^refactor/', 'refactor-']
+
+enhancement:
+  - head-branch: ['^enhancement/', '^enhance/', 'enhancement-', 'enhance-']
+
+# Release labels based on branch names
+release:
+  - head-branch: ['^release/', '^rel/', 'release-', 'rel-', '^v[0-9]', '^[0-9]+\.[0-9]+']
