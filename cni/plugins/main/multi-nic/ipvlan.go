@@ -11,6 +11,8 @@ import (
 
 	"github.com/containernetworking/cni/pkg/types"
 	current "github.com/containernetworking/cni/pkg/types/100"
+	"github.com/containernetworking/plugins/pkg/utils"
+	"github.com/vishvananda/netlink"
 )
 
 // IPVLANNetConfig defines ipvlan net config
@@ -30,12 +32,24 @@ type IPVLANTypeNetConf struct {
 }
 
 // loadIPVANConf unmarshal to IPVLANNetConfig and returns list of IPVLAN configs
-func loadIPVANConf(bytes []byte, ifName string, n *NetConf, ipConfigs []*current.IPConfig) ([][]byte, error) {
-	confBytesArray := [][]byte{}
+func loadIPVANConf(bytes []byte, ifName string, n *NetConf, ipConfigs []*current.IPConfig) (confBytesArray [][]byte, multiPathRoutes map[string][]*netlink.NexthopInfo, loadError error) {
+	confBytesArray = [][]byte{}
 
 	configInIPVLAN := &IPVLANNetConfig{}
 	if err := json.Unmarshal(bytes, configInIPVLAN); err != nil {
-		return confBytesArray, err
+		loadError = err
+		return
+	}
+
+	var ipamMap map[string][]byte
+
+	if n.IPAM.Type == MultiConfigIPAMType {
+		var err error
+		ipamMap, err = getMultiIPAMConfigBytes(bytes)
+		if err != nil {
+			ipamMap = nil
+			utils.Logger.Debug(fmt.Sprintf("getMultiIPAMConfigBytes failed: %v", err))
+		}
 	}
 
 	// interfaces are orderly assigned from interface set
@@ -46,7 +60,8 @@ func loadIPVANConf(bytes []byte, ifName string, n *NetConf, ipConfigs []*current
 		// add config
 		singleConfig, err := copyIPVLANConfig(configInIPVLAN.MainPlugin)
 		if err != nil {
-			return confBytesArray, err
+			loadError = err
+			return
 		}
 		if singleConfig.CNIVersion == "" {
 			singleConfig.CNIVersion = n.CNIVersion
@@ -55,18 +70,26 @@ func loadIPVANConf(bytes []byte, ifName string, n *NetConf, ipConfigs []*current
 		singleConfig.Master = masterName
 		confBytes, err := json.Marshal(singleConfig)
 		if err != nil {
-			return confBytesArray, err
+			loadError = err
+			return
 		}
 
-		if n.IsMultiNICIPAM {
-			// multi-NIC IPAM config
-			confBytes = injectMultiNicIPAM(confBytes, ipConfigs, index)
+		if len(ipConfigs) > 0 {
+			// no need to call ipam due to static ip
+			confBytes, multiPathRoutes = injectMultiNicIPAM(confBytes, bytes, ipConfigs, index)
+		} else if ipamMap != nil {
+			if ipamBytes, found := ipamMap[masterName]; found {
+				confBytes, multiPathRoutes = replaceSingleNicIPAMWithMultiConfig(confBytes, bytes, ipamBytes)
+			} else {
+				utils.Logger.Debug(fmt.Sprintf("Multi-config IPAM has no definition of %s", masterName))
+				continue
+			}
 		} else {
-			confBytes = injectSingleNicIPAM(confBytes, bytes)
+			confBytes, multiPathRoutes = injectSingleNicIPAM(confBytes, bytes)
 		}
 		confBytesArray = append(confBytesArray, confBytes)
 	}
-	return confBytesArray, nil
+	return
 }
 
 // copyIPVLANConfig makes a copy of base IPVLAN config
