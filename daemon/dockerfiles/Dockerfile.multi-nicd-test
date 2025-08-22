@@ -1,4 +1,4 @@
-FROM ghcr.io/foundation-model-stack/multi-nic-cni-kbuilder:v1.2.9
+FROM ghcr.io/foundation-model-stack/multi-nic-cni-kbuilder:v1.3.1
 
 RUN  apt-get update \
   && apt-get install -y jq \
