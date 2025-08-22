@@ -9,17 +9,15 @@ changelog:
     - title: Breaking Changes 🔔
       labels:
         - semver-major
-        - kind/feat
     - title: Features 🎉
       labels:
-        - semver-minor
         - kind/feat
-    - title: Operations ♻️
-      labels:
-        - kind/chore
     - title: Fixes 🛠
       labels:
         - kind/fix
+    - title: Operations ♻️
+      labels:
+        - kind/chore
     - title: Other Changes
       labels:
         - "*"
