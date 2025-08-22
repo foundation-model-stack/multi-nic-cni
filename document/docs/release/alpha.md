@@ -2,6 +2,23 @@
 
 ![](../img/alpha-release.png)
 
+## v1.2.9
+
+**Highlights**
+
+- Update SR-IOV CNI support
+    - Add VF to PF matching to support VF network devices
+- Upgrade multi nicd go version to 1.24.1
+
+**Maintenance**
+
+- Report multi-nicd test coverage (upgrade ginkgo)
+- Increase multi-nicd test coverage to 74.8%
+
+**Fix**
+
+- selection strategy is not applied and crd in multi-nicd is unsync [#320](https://github.com/foundation-model-stack/multi-nic-cni/issues/320)
+
 ## v1.2.8
 
 **Feature**
@@ -27,20 +44,6 @@
 
 - correct interface name on host-device ADD and prevent tabu prefix
 - fix PSP security settings for connection check
-
-## v1.2.7
-
-- support macvlan plugin
-
-- code enhancements:
-    * refactor code structure (add internal packages)
-    * upgrade test to ginkgo V2
-    * generate measurable test coverage results
-    * improve test coverage to 60%
-
-- fixes:
-    * correct sample multinicnetwork for macvlan+whereabouts IPAM
-    * handle error from ghw.PCI call
 
 ## v1.3.0 (based on v1.2.2)
 
