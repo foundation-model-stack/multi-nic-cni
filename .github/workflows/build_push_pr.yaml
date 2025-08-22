@@ -22,7 +22,7 @@ on:
       - cni/**
 
 env:
-  VERSION: 1.2.9-pr-${{ github.event.pull_request.number }}
+  VERSION: 1.3.1-pr-${{ github.event.pull_request.number }}
   IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
   DAEMON_REGISTRY: ghcr.io/${{ github.repository_owner }}
 
