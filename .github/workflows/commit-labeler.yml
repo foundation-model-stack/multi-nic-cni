@@ -1,0 +1,86 @@
+name: "Commit Message Labeler"
+
+on:
+  pull_request_target
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  commit-labeler:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Assign Labels from Conventional Commits
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { owner, repo, number } = context.issue;
+            
+            // Get all commits in the PR
+            const commits = await github.rest.pulls.listCommits({
+              owner,
+              repo,
+              pull_number: number
+            });
+            
+            const commitTypes = new Set();
+            
+            // Parse commit messages to extract types
+            commits.data.forEach(commit => {
+              const message = commit.commit.message;
+              const match = message.match(/^(feat|feature|fix|bugfix|hotfix|chore|docs?|refactor|revert|enhancement|enhance|release|rel)(?:\(.+\))?:/);
+              if (match) {
+                commitTypes.add(match[1]);
+              }
+            });
+            
+            // Map commit types to labels
+            const labelMap = {
+              'feat': 'kind/feat',
+              'feature': 'kind/feat',
+              'fix': 'kind/fix',
+              'bugfix': 'kind/fix', 
+              'hotfix': 'kind/fix',
+              'chore': 'kind/chore',
+              'docs': 'kind/docs',
+              'doc': 'kind/docs',
+              'refactor': 'kind/refactor',
+              'revert': 'kind/revert',
+              'enhancement': 'enhancement',
+              'enhance': 'enhancement',
+              'release': 'release',
+              'rel': 'release'
+            };
+            
+            // Apply labels based on commit types found
+            for (const commitType of commitTypes) {
+              const label = labelMap[commitType];
+              if (label) {
+                try {
+                  await github.rest.issues.addLabels({
+                    owner,
+                    repo,
+                    issue_number: number,
+                    labels: [label]
+                  });
+                  console.log(`Applied label: ${label} (from commit type: ${commitType})`);
+                } catch (error) {
+                  console.error(`Failed to apply label ${label}:`, error.message);
+                }
+              }
+            }
+            
+            console.log(`Processed ${commits.data.length} commits, found types: ${Array.from(commitTypes).join(', ')}`);
+            console.log(`Applied labels: ${Array.from(commitTypes).map(t => labelMap[t]).filter(Boolean).join(', ')}`);
+            
+            return {
+              commitTypes: Array.from(commitTypes),
+              labelsApplied: Array.from(commitTypes).map(t => labelMap[t]).filter(Boolean)
+            };
