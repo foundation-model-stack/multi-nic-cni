@@ -108,7 +108,6 @@ jobs:
             
             1. Review the changes in this PR
             2. Merge if everything looks correct
-            3. Create a new release tag: `v${{ env.NEW_VERSION }}`
             
             ---
             *This PR was created automatically by GitHub Actions*
