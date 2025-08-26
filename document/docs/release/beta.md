@@ -2,18 +2,24 @@
 
 ![](../img/beta-release.png)
 
-## v1.2.6
+## v1.2.7
 
-- upgrade go version
-  * controller: GO 1.22
-  * daemon, CNI: GO 1.23
-- remove kube-rbac-proxy
-- add make `set_version` target to simplify release steps
-- update concept image, user and contributing guide
-- rewrite the highlighted features and add demo and references
-- fix bugs: 
-    * [sample-concheck make error](https://github.com/foundation-model-stack/multi-nic-cni/pull/235)
-    * [failed to load netconf: post fail: Post "http://localhost:11000/select": EOF](https://github.com/foundation-model-stack/multi-nic-cni/issues/240)
+**Highlights**
+
+- support macvlan plugin
+- refactor code structure (add internal packages)
+
+**Maintenance**
+
+- upgrade controller test to ginkgo V2
+- generate measurable controller test coverage results
+- improve controller test coverage to 60%
+
+**Fix**
+
+- correct sample multinicnetwork for macvlan+whereabouts IPAM
+- handle error from ghw.PCI call
+
 
 ## v1.2.0 (deprecated)
 

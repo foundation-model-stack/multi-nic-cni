@@ -2,7 +2,26 @@
 
 ![](../img/stable-release.png)
 
+## v1.2.6
+
+**Highlights**
+
+- upgrade go version
+  * controller: GO 1.22
+  * daemon, CNI: GO 1.23
+- remove kube-rbac-proxy
+- add make `set_version` target to simplify release steps
+- update concept image, user and contributing guide
+- rewrite the highlighted features and add demo and references
+
+**Fix**
+
+- [sample-concheck make error](https://github.com/foundation-model-stack/multi-nic-cni/pull/235)
+- [failed to load netconf: post fail: Post "http://localhost:11000/select": EOF](https://github.com/foundation-model-stack/multi-nic-cni/issues/240)
+
 ## v1.2.5
+
+**Highlights**
 
 - support multiple resource names defined in NicClusterPolicy for Mellanox Host Device use case
 - remove unnecessary selection policy call when network devices have already selected by the device plugin
