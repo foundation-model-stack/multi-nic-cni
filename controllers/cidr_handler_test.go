@@ -120,6 +120,7 @@ var _ = Describe("Test CIDR Handler	", func() {
 				Expect(len(hostIPs)).To(BeEquivalentTo(len(interfaceNames) * handler.HostInterfaceHandler.GetSize()))
 
 				By("Testing with no interfaces")
+				originalHif := handler.HostInterfaceHandler.ListCache()
 				// Clear the HostInterface cache to simulate no interfaces
 				handler.HostInterfaceHandler.SafeCache.Clear()
 
@@ -128,6 +129,41 @@ var _ = Describe("Test CIDR Handler	", func() {
 				Expect(len(cidrSpec.CIDRs)).To(Equal(0))
 				hostIPs = handler.GetHostAddressesToExclude()
 				Expect(len(hostIPs)).To(BeZero())
+
+				By("Setting original hosts")
+				for k, v := range originalHif {
+					handler.HostInterfaceHandler.SafeCache.SetCache(k, v)
+				}
+			})
+
+			It("Empty subnet with unmanaged hostinterface", func() {
+				unmanagedMultinicnetwork := GetMultiNicCNINetwork("unmanaged", cniVersion, cniType, cniArgs)
+				unmanagedMultinicnetwork.Spec.Subnet = ""
+				ipamConfig, err := MultiNicnetworkReconcilerInstance.GetIPAMConfig(unmanagedMultinicnetwork)
+				Expect(err).NotTo(HaveOccurred())
+				ipamConfig.InterfaceBlock = 0
+				ipamConfig.HostBlock = 0
+				cidrSpec, err := handler.GenerateCIDRFromHostSubnet(*ipamConfig)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(len(cidrSpec.CIDRs)).To(Equal(len(interfaceNames)))
+				hifSnapshot := handler.HostInterfaceHandler.ListCache()
+				for _, cidr := range cidrSpec.CIDRs {
+					for _, hostInfo := range cidr.Hosts {
+						hif, found := hifSnapshot[hostInfo.HostName]
+						Expect(found).To(Equal(true))
+						found = false
+						for _, iface := range hif.Spec.Interfaces {
+							if hostInfo.InterfaceName == iface.InterfaceName {
+								netAddr := iface.NetAddress
+								Expect(cidr.VlanCIDR).To(Equal(netAddr))
+								Expect(hostInfo.PodCIDR).To(Equal(netAddr))
+								found = true
+								break
+							}
+						}
+						Expect(found).To(Equal(true))
+					}
+				}
 			})
 		})
 
