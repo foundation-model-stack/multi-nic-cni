@@ -1,13 +1,22 @@
+> [!IMPORTANT]
+>
+> ⚠️ Repository Status
+>
+> This repository is currently **suspended for updates** due to resource constraints. 
+> **Further development and maintenance are on hold as of the latest release (v1.3.1)**.
+>
+> We appreciate your understanding and will provide updates if the status changes.
+
 ## **official document:** https://foundation-model-stack.github.io/multi-nic-cni
 
 - [Multi-NIC CNI](#multi-nic-cni)
   - [MultiNicNetwork](#multinicnetwork)
   - [Usage](#usage)
-      - [Installation](#installation)
-        - [Requirements](#requirements)
-        - [Quick Installation](#quick-installation)
-        - [Deploy MultiNicNetwork resource](#deploy-multinicnetwork-resource)
-      - [Test](#test)
+    - [Installation](#installation)
+      - [Requirements](#requirements)
+      - [Quick Installation](#quick-installation)
+      - [Deploy MultiNicNetwork resource](#deploy-multinicnetwork-resource)
+    - [Test](#test)
 - [Demo](#demo)
 - [Blog Posts, Talks, and Papers](#blog-posts-talks-and-papers)
 
