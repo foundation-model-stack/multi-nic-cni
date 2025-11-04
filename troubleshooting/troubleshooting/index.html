@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>Manual Troubleshooting (Common Issues) - Multi-NIC CNI</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Manual Troubleshooting (Common Issues)";
+        var mkdocs_page_input_path = "troubleshooting/troubleshooting.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/yaml.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/rust.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> Multi-NIC CNI
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">Multi-NIC CNI</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../Maintainers/">Maintainers</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Concept</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../concept/">Key Concept</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../concept/cni-plugins/">Supported CNI Plugins</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../concept/multi-cloud-support/">Multi-Cloud Support</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../concept/multi-nic-ipam/">Built-in Multi-NIC Network</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../concept/network-status/">Network Status</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../concept/policy/">Policy-based secondary network attachment</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Contributing</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../contributing/">Contributor Guide</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../contributing/architecture/">Architecture</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../contributing/local_build_push/">Local Development</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../contributing/maintainer/">Upstream Development</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Release</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../release/">Release</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../release/alpha/">Alpha Channel</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../release/beta/">Beta Channel</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../release/stable/">Stable Channel (default)</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Troubleshooting</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../health-checker/">Troubleshooting with Multi-NIC CNI Health Checker Service</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Manual Troubleshooting (Common Issues)</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#issues">Issues</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#multi-nic-cni-controller-gets-oomkilled">Multi-NIC CNI Controller gets OOMKilled</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#hostinterface-not-created">HostInterface not created</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#no-secondary-interfaces-in-hostinterface">No secondary interfaces in HostInterface</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#pod-failed-to-start">Pod failed to start</a>
+        <ul>
+    <li class="toctree-l4"><a class="reference internal" href="#pod-failed-to-start-summary-table">Pod failed to start (Summary Table)</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#network-not-found">Network not found</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#cni-binary-not-found">CNI binary not found</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#ipam-execadd-failed">IPAM ExecAdd: failed</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#ipam-plugin-returned-missing-ip-config">IPAM plugin returned missing IP config</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#zero-config">Zero config</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#ping-failed">Ping failed</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#tcpudp-communication-failed">TCP/UDP communication failed.</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#actions">Actions</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#controller-configuration">Controller configuration</a>
+        <ul>
+    <li class="toctree-l4"><a class="reference internal" href="#log-levels">Log Levels</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#daemon-configuration">Daemon configuration</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#list-in-use-pods">List in-use pods</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#get-cni-log-available-after-v103">Get CNI log (available after v1.0.3)</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#get-controller-log">Get Controller log</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#get-multi-nicd-log">Get multi-nicd log</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#deploy-multi-nicd-config">Deploy multi-nicd config</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#set-security-groups">Set security groups</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#add-secondary-interfaces">Add secondary interfaces</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#restart-controller">Restart controller</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#restart-multi-nicd">Restart multi-nicd</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#check-host-secondary-interfaces">Check host secondary interfaces</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#update-daemon-pod-to-use-latest-version">Update daemon pod to use latest version</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#update-controller-to-use-latest-version">Update controller to use latest version</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#safe-upgrade-multi-nic-cni-operator">Safe upgrade Multi-NIC CNI operator</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#customize-multi-nic-cni-controller-of-operator">Customize Multi-NIC CNI controller of operator</a>
+    </li>
+        </ul>
+    </li>
+    </ul>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">User guide</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../user_guide/">Installation</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../user_guide/user/">MultiNicNetwork Usage and Testing</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">Multi-NIC CNI</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Troubleshooting</li>
+      <li class="breadcrumb-item active">Manual Troubleshooting (Common Issues)</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="manual-troubleshooting-common-issues">Manual Troubleshooting (Common Issues)</h1>
+<p>** Please first confirm feature supports on each multi-nic-cni release version from <a href="../../release/">here</a>. **</p>
+<!-- TOC tocDepth:2..3 chapterDepth:3..6 -->
+
+<ul>
+<li><a href="#issues">Issues</a><ul>
+<li><a href="#multi-nic-cni-controller-gets-oomkilled">Multi-NIC CNI Controller gets OOMKilled</a></li>
+<li><a href="#hostinterface-not-created">HostInterface not created</a></li>
+<li><a href="#no-secondary-interfaces-in-hostinterface">No secondary interfaces in HostInterface</a></li>
+<li><a href="#pod-failed-to-start">Pod failed to start</a></li>
+<li><a href="#pod-failed-to-start-summary-table">Pod failed to start (Summary Table)</a></li>
+<li><a href="#ping-failed">Ping failed</a></li>
+<li><a href="#tcpudp-communication-failed">TCP/UDP communication failed.</a></li>
+</ul>
+</li>
+<li><a href="#actions">Actions</a><ul>
+<li><a href="#controller-configuration">Controller configuration</a></li>
+<li><a href="#daemon-configuration">Daemon configuration</a></li>
+<li><a href="#list-in-use-pods">List in-use pods</a></li>
+<li><a href="#get-cni-log-available-after-v103">Get CNI log (available after v1.0.3)</a></li>
+<li><a href="#get-controller-log">Get Controller log</a></li>
+<li><a href="#get-multi-nicd-log">Get multi-nicd log</a></li>
+<li><a href="#deploy-multi-nicd-config">Deploy multi-nicd config</a></li>
+<li><a href="#set-security-groups">Set security groups</a></li>
+<li><a href="#add-secondary-interfaces">Add secondary interfaces</a></li>
+<li><a href="#restart-controller">Restart controller</a></li>
+<li><a href="#restart-multi-nicd">Restart multi-nicd</a></li>
+<li><a href="#check-host-secondary-interfaces">Check host secondary interfaces</a></li>
+<li><a href="#update-daemon-pod-to-use-latest-version">Update daemon pod to use latest version</a></li>
+<li><a href="#update-controller-to-use-latest-version">Update controller to use latest version</a></li>
+<li><a href="#safe-upgrade-multi-nic-cni-operator">Safe upgrade Multi-NIC CNI operator</a></li>
+<li><a href="#customize-multi-nic-cni-controller-of-operator">Customize Multi-NIC CNI controller of operator</a></li>
+</ul>
+</li>
+</ul>
+<!-- /TOC -->
+
+<h2 id="issues">Issues</h2>
+<p>There are commonly three steps of issue: at pod creation, simple ICMP (ping) communication, TCP/UDP communication. The most complicated one is at pod creation. </p>
+<p>Before start troubleshooting, set common variables for reference simplicity.</p>
+<pre><code class="language-bash">export FAILED_POD= # pod that fails to run
+export FAILED_POD_NAMESPACE= # namespace where the failed pod is supposed to run
+export FAILED_NODE= # node where pod is deployed
+export FAILED_NODE_IP = # IP of FAILED_NODE
+export MULTI_NIC_NAMESPACE= # namespace where multi-nic cni operator is deployed, default=multi-nic-cni-operator
+</code></pre>
+<h3 id="multi-nic-cni-controller-gets-oomkilled">Multi-NIC CNI Controller gets OOMKilled</h3>
+<p>This is expected issue in a large cluster where the controller requires large amount of member to operate. Please adjust the resource limit in the controller deployment. For the case of installing via operator hub or operator bundle, please check the step to modify the deployment in <a href="#customize-multi-nic-cni-controller-of-operator">Customize Multi-NIC CNI controller of operator</a>.</p>
+<h3 id="hostinterface-not-created">HostInterface not created</h3>
+<p>There are a couple of reasons that the HostInterface is not created. First check the multi-nicd DaemonSet.</p>
+<pre><code class="language-bash">kubectl get ds multi-nicd -n $MULTI_NIC_NAMESPACE -oyaml
+</code></pre>
+<ul>
+<li>
+<p><em>daemonsets.apps "multi-nicd" not found</em></p>
+<ul>
+<li>
+<p>Check whether no config.multinic.fms.io deployed in the cluster.</p>
+<pre><code>kubectl get config.multinic multi-nicd -n $MULTI_NIC_NAMESPACE
+</code></pre>
+<p>If no config.multinic.fms.io deployed, see <a href="#deploy-multi-nicd-config">Deploy multi-nicd</a></p>
+</li>
+<li>
+<p>The node has taint that the daemon is not tolerate. </p>
+<pre><code>kubectl get nodes $FAILED_NODE -o json|jq -r .spec.taints
+</code></pre>
+<p>To tolerate the <a href="https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration">taint</a>, add the tolerate manually to the multi-nicd DaemonSet.</p>
+<pre><code>kubectl edit $(kubectl get po -owide -A|grep multi-nicd\
+    |grep $FAILED_NODE|awk '{printf "%s -n %s", $2, $1}')
+</code></pre>
+</li>
+</ul>
+</li>
+<li>
+<p>Other cases, check <a href="#get-controller-log">controller log</a></p>
+</li>
+</ul>
+<h3 id="no-secondary-interfaces-in-hostinterface">No secondary interfaces in HostInterface</h3>
+<p>The HostInterface is created but there is no interface listed in the custom resource.
+There are two common root causes.</p>
+<ol>
+<li>
+<p>Communication between controller and multi-nicd is blocked. </p>
+<ul>
+<li>
+<p>Check whether the controller can communicate with multi-nicd:</p>
+<pre><code>kubectl logs --selector control-plane=controller-manager \
+  -n $MULTI_NIC_NAMESPACE -c manager| grep Join| grep $FAILED_NODE_IP
+</code></pre>
+<ul>
+<li>If no line shown up and the full <a href="#get-controller-log">controller log</a> printing <code>Fail to create hostinterface ... cannot update interfaces: Get "&lt;node IP&gt;/interface": dial tcp &lt;node IP&gt;:11000: i/o timeout</code>, check <a href="#set-security-groups">set required security group rules</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<p>Network interfaces are not configured as expected.</p>
+<ul>
+<li>
+<p>Check <a href="#get-multi-nicd-log">multi-nicd log</a>.</p>
+<ul>
+<li>If getting <code>cannot list address on &lt;SECONDARY INTERFACE&gt;</code>, please confirm whether IPv4 address on the host.</li>
+<li>
+<p>If getting <code>cannot get PCI info: Get "https://pci-ids.ucw.cz/v2.2/pci.ids.gz": net/http: TLS handshake timeout</code>, some environment variables need to be set in the config for the multi-nicd container to reach the above address via proxy settings.</p>
+<pre><code>apiVersion: multinic.fms.io/v1
+kind: Config
+metadata:
+  name: multi-nicd
+...
+spec:
+...
+  daemon:
+  env:    
+- name: HTTP_PROXY
+  value: &lt;REPLACE WITH YOUR HTTPS_PROXY&gt;
+- name: HTTPS_PROXY
+  value: &lt;REPLACE WITH YOUR HTTPS_PROXY&gt;
+- name: NO_PROXY
+  value: &lt;REPLACE WITH YOUR NO_PROXY&gt;
+</code></pre>
+</li>
+<li>
+<p>Otherwise, please refer to <a href="#check-host-secondary-interfaces">check interfaces at node's host network</a>.</p>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ol>
+<h3 id="pod-failed-to-start">Pod failed to start</h3>
+<p><strong>Issue:</strong>
+Pod stays pending in <code>ContainerCreating</code> status.
+Get more information from <code>describe</code></p>
+<pre><code class="language-bash">kubectl describe $FAILED_POD -n $FAILED_POD_NAMESPACE
+</code></pre>
+<p>Find the following keyword from <code>FailedCreatePodSandBox</code>:</p>
+<ul>
+<li><a href="#network-not-found">Network not found</a></li>
+<li><a href="#cni-binary-not-found">CNI binary not found</a></li>
+<li><a href="#ipam-execadd-failed">IPAM ExecAdd: failed</a></li>
+<li><a href="#no-available-ip-address">No available IP address</a></li>
+<li><a href="#ipam-plugin-returned-missing-ip-config">IPAM plugin returned missing IP config</a></li>
+<li><a href="#zero-config">zero config</a></li>
+</ul>
+<h4 id="pod-failed-to-start-summary-table">Pod failed to start (Summary Table)</h4>
+<p>For those who are familar to action command (e.g., list multinic CRs, list daemon pods), you may troubleshoot with the summary table:</p>
+<blockquote>
+<ul>
+<li>Investigate source of issue from top to bottom</li>
+<li><em>X</em> refers to no relevance</li>
+<li>If the issue cannot be solved by configuration (multinicnetwork, annotation, host network, config.multinic) and last patch of <a href="#update-daemon-pod-to-use-latest-version">controller</a> and <a href="#update-daemon-pod-to-use-latest-version">multi-nicd</a>, please report the <a href="https://github.com/foundation-model-stack/multi-nic-cni/issues">issue</a> with the corresponding log. </li>
+<li>*The solved bug on CNI binary requires node restart.</li>
+</ul>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>Potential source of Issue</th>
+<th>Network not found</th>
+<th>CNI binary not found</th>
+<th>- IPAM ExecAdd: failed <br>- IPAM plugin returned missing IP config</th>
+<th>zero config</th>
+<th>Fail execPlugin</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>multinicnetwork definition/annotation</strong></td>
+<td>- annotation missing/mismatch<br>- multinicnetwork wrong configured</td>
+<td>X</td>
+<td>- IPAM wrong configured<br>- <code>masters</code> multinicnetwork spec missing (&gt; 1 multinicnetwork)</td>
+<td><strong>non-IP host:</strong><br>- no master name provided via multi-config or annotation</td>
+<td>X</td>
+</tr>
+<tr>
+<td><strong>host network</strong></td>
+<td>X</td>
+<td>X</td>
+<td>X</td>
+<td><strong>L3:</strong><br>- daemon communication blocked<br><strong>All:</strong><br>- interface missing<br></td>
+<td>X</td>
+</tr>
+<tr>
+<td><strong>controller</strong></td>
+<td>- net-attach-def not created</td>
+<td>- daemon not created due to wrong configured (config.multinic)</td>
+<td><strong>L3:</strong><br>- daemon/hostinterface not created<br>- CIDR/IPPool not created/unsynced</td>
+<td>X</td>
+<td>X</td>
+</tr>
+<tr>
+<td><strong>daemon</strong><br>(multi-nicd)</td>
+<td>X</td>
+<td>X</td>
+<td><strong>L3:</strong><br>- failed to discover hostinterface<br>- IP limit reach<br><strong>All cases:</strong><br>- hang on no-respond API server (should be fixed by <a href="https://github.com/foundation-model-stack/multi-nic-cni/pull/172">#172</a>)</td>
+<td>X</td>
+<td>X</td>
+</tr>
+<tr>
+<td><strong>main CNI binary</strong><br>(multi-nic)</td>
+<td>X</td>
+<td>X</td>
+<td>- *failed to clean up previous pod network (should be fixed by <a href="https://github.com/foundation-model-stack/multi-nic-cni/pull/165">#165</a>)</td>
+<td><strong>host-device</strong><br>- *failed to clean up previous pod network (should be fixed by <a href="https://github.com/foundation-model-stack/multi-nic-cni/issues/152">#152</a>)</td>
+<td>X</td>
+</tr>
+<tr>
+<td><strong>ipam CNI binary</strong><br>(multi-nic-ipam)</td>
+<td>X</td>
+<td>X</td>
+<td>- *failed to clean up previous ip allocation (should be fixed by <a href="https://github.com/foundation-model-stack/multi-nic-cni/pull/104">#104</a>)</td>
+<td>X</td>
+<td>X</td>
+</tr>
+<tr>
+<td><strong>3rd-party CNI binary</strong></td>
+<td>X</td>
+<td>- binary missing</td>
+<td>- 3rd-party IPAM failure</td>
+<td>X</td>
+<td>- 3rd-party main plugin failure</td>
+</tr>
+</tbody>
+</table>
+<h4 id="network-not-found">Network not found</h4>
+<pre><code class="language-bash">kubectl get multinicnetwork # multinicnetwork resource created
+kubectl get $FAILED_POD -n $FAILED_POD_NAMESPACE -oyaml|grep &quot;k8s.v1.cni.cncf.io/networks&quot; # pod annotation matched
+kubectl get net-attach-def # network-attachment-definition created
+</code></pre>
+<p>If net-attach-def is missing (<code>No resources found in default namespace</code>), check <a href="#get-controller-log">controller log</a> to see whether the failure comes from misconfiguration in multinicnetwork (Marshal failure) or network-attachment-definition creation request to API server.</p>
+<h4 id="cni-binary-not-found">CNI binary not found</h4>
+<p>The binary file of CNI is not in the expected location read by Multus. The expected location can be found in Multus daemonset as below.</p>
+<pre><code class="language-bash">kubectl get ds $(kubectl get ds -A\
+|grep multus|head -n 1|awk '{printf &quot;%s -n %s&quot;, $2, $1}')  -ojson\
+|jq .spec.template.spec.volumes
+</code></pre>
+<p><em>Example output:</em></p>
+<pre><code class="language-json">[
+...
+  {
+    &quot;hostPath&quot;: {
+      &quot;path&quot;: &quot;/var/lib/cni/bin&quot;,
+      &quot;type&quot;: &quot;&quot;
+    },
+    &quot;name&quot;: &quot;cnibin&quot;
+  },
+...
+]
+</code></pre>
+<p>The expected location is in <em>hostPath</em> of <em>cnibin</em>.</p>
+<ul>
+<li><strong>missing multi-nic/multi-nic-ipam CNI</strong></li>
+</ul>
+<p>The CNI directory is probably mounted to a wrong location in the configs.multinic.fms.io CR. Modify mount path ( <em>hostpath</em> attribute ) in <code>spec.daemon.mounts</code> of <em>cnibin</em> to the target location above.</p>
+<pre><code>kubectl edit config.multinic multi-nicd -n $MULTI_NIC_NAMESPACE
+</code></pre>
+<ul>
+<li><strong>missing other CNI such as ipvlan</strong>
+  The missing CNI may not be supported. </li>
+</ul>
+<h4 id="ipam-execadd-failed">IPAM ExecAdd: failed</h4>
+<p>This error occurs when CNI cannot execute Multi-NIC IPAM which can be caused by multiple reasons as follows.</p>
+<ul>
+<li>
+<p><code>failed to load netconf</code></p>
+<p>The configuration cannot be loaded. This is delegated CNI (such as IPVLAN) issue. 
+Find more details from <a href="#get-cni-log">CNI log</a>.</p>
+</li>
+<li>
+<p><code>"netx": address already in use</code></p>
+<p>There are a couple of reasons to cause this issue such as IPPool is unsync due to unexpected removal (from operator reinstalltion) or modification of IPPool resource when some assigned pods are still running. IP Address is previously assigned to other pods. </p>
+<p>This should be handled by <a href="https://github.com/foundation-model-stack/multi-nic-cni/commit/4bbac4b8e8b6975b4c49f660df78dc9506e34a49">this commit</a>. This commit will try assigning the next available address to prevent infinite failure assignment to the same already-in-use IP address.
+Try <a href="#update-daemon-pod-to-use-latest-version">updating to latest image of daemon</a>.</p>
+</li>
+<li>
+<p><code>failed to request ip Response nothing</code> </p>
+<ul>
+<li>
+<p>get more information from HostInterface CR: </p>
+<pre><code>kubectl get HostInterface $FAILED_NODE -oyaml
+</code></pre>
+</li>
+<li>
+<p>If hostinterfaces.multinic.fms.io "FAILED_NODE" not found, check <a href="#hostinterface-not-created">HostInterface is not be created.</a> </p>
+</li>
+<li>If no interfaces in <code>.spec.interfaces</code>, check <a href="#no-secondary-interfaces-in-hostinterface">HostInterface does not show the secondary interfaces.</a></li>
+<li>Check whether it reaches CIDR block limit, confirm <a href="#no-secondary-interfaces-in-hostinterface">no available IP address</a></li>
+<li>Other cases, find more details from <a href="#get-multi-nicd-log">multi-nicd log</a></li>
+<li>Multi-nicd daemon pod has no response, <a href="#restart-multi-nicd">restart multi-nicd</a> might help.</li>
+</ul>
+</li>
+<li>
+<p>other CNI plugin (such as aws-vpc-cni, sr-iov) failure, check each CNI log.</p>
+<ul>
+<li>aws-vpc-cni: <code>/host/var/log/aws-routed-eni</code></li>
+</ul>
+</li>
+</ul>
+<h6 id="no-available-ip-address">No available IP address</h6>
+<p>List corresponding Pod CIDR from HostInterface.</p>
+<pre><code class="language-bash">kubectl get HostInterface $FAILED_NODE -oyaml
+</code></pre>
+<p>Check ippools.multinic.fms.io of the corresponding pod CIDR whether the IP address actually reach the limit. If yes, consider changing the host block and interface block in <code>multinicnetworks.multinic.fms.io</code>.</p>
+<h4 id="ipam-plugin-returned-missing-ip-config">IPAM plugin returned missing IP config</h4>
+<p>No IP address set from the multi-nic type IPAM without throwing an error. To troubleshoot, we need additional information from <a href="#get-cni-log-available-after-v103">IPAM CNI log</a>.</p>
+<h4 id="zero-config">Zero config</h4>
+<p>Zero config occurs when CNI cannot generate configurations from the network-attachment-definition. To troubleshoot, we need additional information from <a href="#get-cni-log">CNI log</a>.</p>
+<h3 id="ping-failed">Ping failed</h3>
+<p><strong>Issue:</strong> Pods cannot ping each other.</p>
+<ul>
+<li>
+<p>If the CNI operates at Layer 2 (such as MACVLAN or IPVLAN with L2), please confirm whether the defined Pod CIDR is routable within your cluster.</p>
+<p>For bare metal cluster which has only a certain VLAN range opened on the switch, 
+please define a VLAN interface instead of the physical NIC on the node.
+Usually for a bare metal node with a secondary interface,
+the two ports of NIC2 will be defined as tenant-bond for redundancy,
+the VLAN interface should be defined following the naming vlanXXX@tenant-bond,
+where XXX represents a valid open VLAN ID. </p>
+<p>Please see the following example:</p>
+<pre><code>13769: tenant-bond: &lt;BROADCAST,MULTICAST,MASTER,UP,LOWER_UP&gt; mtu 9000 qdisc noqueue state UP group
+default qlen 1000 link/ether 98:03:9b:8c:55:e4 brd ff:ff:ff:ff:ff:ff
+14688: vlan1134@tenant-bond: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu 9000 qdisc noqueue state UP group
+default qlen 1000 inet 172.11.3.3/16 brd 172.11.255.255 scope global noprefixroute vlan1134
+</code></pre>
+</li>
+<li>
+<p>If the CNI operates at Layer 3, check route status in <code>multinicnetworks.multinic.fms.io</code>.</p>
+<pre><code>kubectl get multinicnetwork.multinic.fms.io multinic-ipvlanl3 -o json\ 
+| jq -r .status.routeStatus
+</code></pre>
+<ul>
+<li><em>WaitForRoutes</em>:  the new cidr is just recomputed and waiting for route update.</li>
+<li><em>Failed</em>: some route cannot be applied, need attention. Check <a href="#get-multi-nicd-log">multi-nicd log</a></li>
+<li><em>Unknown</em>: some daemon cannot be connected. </li>
+<li>
+<p><em>N/A</em>: there is no L3 configuration applied. Check whether multinicnetwork.multinic.fms.io is defined with L3 mode and cidrs.multinic.fms.io is created.  </p>
+<pre><code>kubectl get cidrs.multinic.fms.io
+</code></pre>
+</li>
+<li>
+<p><em>Success</em>: check <a href="#set-security-groups">set required security group rules</a></p>
+</li>
+</ul>
+</li>
+</ul>
+<h3 id="tcpudp-communication-failed">TCP/UDP communication failed.</h3>
+<p><strong>Issue:</strong> Pods can ping each other but do not get response from TCP/UDP communication such as iPerf.</p>
+<p>Check whether the multi-nicd detects the other host interfaces.</p>
+<pre><code class="language-bash">kubectl get po $(kubectl get po -owide -A|grep multi-nicd\
+   |grep $FAILED_NODE|awk '{printf &quot;%s -n %s&quot;, $2, $1}') -o json\
+   |jq -r .metadata.labels
+</code></pre>
+<p>The nubmer in <code>multi-nicd-join</code> should be equal to accumulated number of interfaces from each host in the same zone. </p>
+<p><a href="#check-host-secondary-interfaces">Check whether the host secondary interfaces between hosts are connected</a>. 
+If yes, try <a href="#restart-controller">restarting multi-nic-cni controller node</a> to forcefully synchronize host interfaces.</p>
+<h2 id="actions">Actions</h2>
+<p>Available configurations on <code>config.multinic/multi-nicd</code>:</p>
+<h3 id="controller-configuration">Controller configuration</h3>
+<p>These following controller configuration values will be applied on-the-fly (no need to restart the controller pod).</p>
+<table>
+<thead>
+<tr>
+<th>Configuration</th>
+<th>Description</th>
+<th>Default Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>.spec.logLevel</td>
+<td>controller's verbose log level</td>
+<td>4</td>
+</tr>
+<tr>
+<td>.spec.urgentReconcileSeconds</td>
+<td>time to requeue reconcile after instant failure in second unit</td>
+<td>5 seconds</td>
+</tr>
+<tr>
+<td>.spec.normalReconcileMinutes</td>
+<td>time to requeue reconcile while waiting for initial configuration in minute unit</td>
+<td>1 minute</td>
+</tr>
+<tr>
+<td>.spec.longReconcileMinutes</td>
+<td>time to requeue reconcile when sensing control traffic failure in minute unit</td>
+<td>10 minutes</td>
+</tr>
+<tr>
+<td>.spec.contextTimeoutMinutes</td>
+<td>time out for API server call context in minute unit</td>
+<td>2 minutes</td>
+</tr>
+</tbody>
+</table>
+<h4 id="log-levels">Log Levels</h4>
+<table>
+<thead>
+<tr>
+<th>Verbose Level</th>
+<th>Information</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>- critical error (cannot create/update resource by k8s API) <br> - "Set Config" key <br> - set up log <br>- config error</td>
+</tr>
+<tr>
+<td>2</td>
+<td>- significant events/failures of multinicnetwork</td>
+</tr>
+<tr>
+<td>3</td>
+<td>- significant events/failures of cidr</td>
+</tr>
+<tr>
+<td>4 (default)</td>
+<td>- significant events/failures of hostinterface</td>
+</tr>
+<tr>
+<td>5</td>
+<td>- significant events/failures of ippools</td>
+</tr>
+<tr>
+<td>6</td>
+<td>- significant events/failures of route configurations</td>
+</tr>
+<tr>
+<td>7</td>
+<td>- requeue <br> - get deleted resource <br> - debug pointers (e.g., start point of function call)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="daemon-configuration">Daemon configuration</h3>
+<table>
+<thead>
+<tr>
+<th>Configuration</th>
+<th>Description</th>
+<th>Type</th>
+<th>Default Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>.spec.daemon.port</td>
+<td>multi-nicd serving port</td>
+<td>int</td>
+<td>11000</td>
+</tr>
+<tr>
+<td>.spec.daemon.mounts</td>
+<td>additional host-path mount</td>
+<td>HostPathMount</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<pre><code class="language-yaml"># HostPathMount
+mounts:
+- name: mountName
+  podpath: path/on/pod
+  hostpath: path/on/host
+</code></pre>
+<p>Additionally, the following common <a href="https://kubernetes.io/docs/concepts/workloads/controllers/daemonset/">apps/DaemonSet</a> configurations are also available under <code>.spec.daemon</code>.
+- nodeSelector
+- image
+- imagePullSecret
+- imagePullPolicy
+- securityContext
+- env
+- envFrom
+- resources
+- tolerations</p>
+<h3 id="list-in-use-pods">List in-use pods</h3>
+<p><strong>modify '&lt; MULTINICNETWORK NAME HERE &gt;'</strong> in the following command with your target.multinicnetwork name</p>
+<pre><code class="language-bash">kubectl get po -A -ojson| jq -r '.items[]|select(.metadata.annotations.&quot;k8s.v1.cni.cncf.io/networks&quot;==&quot;&lt; MULTINICNETWORK NAME HERE &gt;&quot;)|.metadata.namespace + &quot; &quot; + .metadata.name'
+</code></pre>
+<h3 id="get-cni-log-available-after-v103">Get CNI log (available after v1.0.3)</h3>
+<p>To make CNI log available on the daemon pod, you may mount the the host log path to the daemon pod:</p>
+<ul>
+<li>Run </li>
+</ul>
+<pre><code class="language-bash">kubectl edit config.multinic multi-nicd
+</code></pre>
+<ul>
+<li>Add the following mount items</li>
+</ul>
+<pre><code class="language-yaml"># config/multi-nicd
+spec:
+  daemon:
+    mounts:
+    ...
+    - hostpath: /var/log/multi-nic-cni.log
+      name: cni-log
+      podpath: /host/var/log/multi-nic-cni.log
+    - hostpath: /var/log/multi-nic-ipam.log
+      name: ipam-log
+      podpath: /host/var/log/multi-nic-ipam.log
+    # For AWS-IPVLAN main plugin log also add the following lines:
+    # - hostpath: /var/log/multi-nic-aws-ipvlan.log
+    #   name: ipam-log
+    #   podpath: /host/var/log/multi-nic-aws-ipvlan.log
+</code></pre>
+<p>Then, you can get CNI log from the following commands:</p>
+<pre><code class="language-bash"># default main plugin
+kubectl exec $(kubectl get po -owide -A|grep multi-nicd\
+|grep $FAILED_NODE|awk '{printf &quot;%s -n %s&quot;, $2, $1}')\
+-- cat /host/var/log/multi-nic-cni.log
+
+# multi-nic on aws main plugin
+kubectl exec $(kubectl get po -owide -A|grep multi-nicd\
+|grep $FAILED_NODE|awk '{printf &quot;%s -n %s&quot;, $2, $1}')\
+-- cat /host/var/log/multi-nic-aws-ipvlan.log
+
+# IPAM plugin
+kubectl exec $(kubectl get po -owide -A|grep multi-nicd\
+|grep $FAILED_NODE|awk '{printf &quot;%s -n %s&quot;, $2, $1}')\
+-- cat /host/var/log/multi-nic-ipam.log
+</code></pre>
+<h3 id="get-controller-log">Get Controller log</h3>
+<pre><code class="language-bash">kubectl logs --selector control-plane=controller-manager \
+-n $MULTI_NIC_NAMESPACE -c manager
+</code></pre>
+<h3 id="get-multi-nicd-log">Get multi-nicd log</h3>
+<pre><code class="language-bash">kubectl logs $(kubectl get po -owide -A|grep multi-nicd\
+|grep $FAILED_NODE|awk '{printf &quot;%s -n %s&quot;, $2, $1}')
+</code></pre>
+<h3 id="deploy-multi-nicd-config">Deploy multi-nicd config</h3>
+<p>Restart the controller pod should create the multi-nicd config automatically.</p>
+<pre><code class="language-bash">kubectl delete po --selector control-plane=controller-manager \
+-n $MULTI_NIC_NAMESPACE
+</code></pre>
+<p>If not, update the controller to the latest image and <a href="#restart-multi-nic-cni-controller">restart the controller</a> (recommended).
+Otherwise, deploy config manually.</p>
+<pre><code class="language-bash">kubectl create -f https://raw.githubusercontent.com/foundation-model-stack/multi-nic-cni/main/config/samples/config.yaml \
+-n $MULTI_NIC_NAMESPACE
+</code></pre>
+<h3 id="set-security-groups">Set security groups</h3>
+<p>There are four security group rules that must be opened for Multi-nic CNI.</p>
+<ol>
+<li>outbound/inbound communication within the same security group</li>
+<li>outbound/inbound communication of Pod networks</li>
+<li>inbound multi-nicd serving TCP port (default: 11000)</li>
+</ol>
+<h3 id="add-secondary-interfaces">Add secondary interfaces</h3>
+<ul>
+<li>Prepare secondary subnets with <a href="#set-required-security-group-rules">required security group rules</a> and enable multiple source IPs from a single vNIC (i.e.g, enable IP spoofing on IBM Cloud) </li>
+<li>Attach the secondary subnets to instance<ul>
+<li>manual attachment: follows Cloud provider instruction</li>
+<li>
+<p>by machine-api-operator: updates an image of machine api controller of the provider to support secondary interface on provider spec. </p>
+<p>Check <a href="https://github.com/openshift/machine-api-provider-ibmcloud/compare/main...sunya-ch:machine-api-provider-ibmcloud:multi-nic">example commit</a> in <a href="https://github.com/sunya-ch/machine-api-provider-ibmcloud/tree/multi-nic">modified controller</a></p>
+</li>
+</ul>
+</li>
+</ul>
+<h3 id="restart-controller">Restart controller</h3>
+<pre><code class="language-bash">kubectl delete --selector control-plane=controller-manager \
+-n $MULTI_NIC_NAMESPACE
+</code></pre>
+<h3 id="restart-multi-nicd">Restart multi-nicd</h3>
+<pre><code class="language-bash">kubectl delete po $(kubectl get po -owide -A|grep multi-nicd\
+|grep $FAILED_NODE|awk '{printf &quot;%s -n %s&quot;, $2, $1}')
+</code></pre>
+<h3 id="check-host-secondary-interfaces">Check host secondary interfaces</h3>
+<p>Log in to FAILED_NODE with <code>oc debug node/$FAILED_NODE</code> or using <a href="https://github.com/jedrecord/nettools">nettools</a> with <code>hostNetwork: true</code>. If secondary interfaces do not exist at the host network or an IPv4 address has not been assigned, <a href="#add-secondary-interfaces-at-nodes-host-network">add the secondary interfaces</a></p>
+<h3 id="update-daemon-pod-to-use-latest-version">Update daemon pod to use latest version</h3>
+<ol>
+<li>
+<p>Check whether the using <code>image</code> set with <code>latest</code> version tag and <code>imagePullPolicy: Always</code></p>
+<pre><code>kubectl get daemonset multi-nicd -o yaml -n $MULTI_NIC_NAMESPACE|grep image
+</code></pre>
+<p>If not, modify <code>image</code> with the latest version tag and change <code>imagePullPolicy</code> to <code>Always</code></p>
+<pre><code>kubectl edit daemonset multi-nicd -n $MULTI_NIC_NAMESPACE
+</code></pre>
+</li>
+<li>
+<p>Delete the current multi-nicd pods with selector</p>
+<pre><code>kubectl delete po --selector app=multi-nicd -n $MULTI_NIC_NAMESPACE
+</code></pre>
+</li>
+<li>
+<p>Check readiness  </p>
+<pre><code>kubectl get po --selector app=multi-nicd -n $MULTI_NIC_NAMESPACE
+</code></pre>
+</li>
+</ol>
+<h3 id="update-controller-to-use-latest-version">Update controller to use latest version</h3>
+<ol>
+<li>
+<p>Check whether the using <code>image</code> set with <code>latest</code> version tag and <code>imagePullPolicy: Always</code></p>
+<pre><code>kubectl get deploy multi-nic-cni-operator-controller-manager -o yaml -n $MULTI_NIC_NAMESPACE|grep multi-nic-cni-controller -A 2|grep image
+</code></pre>
+<p>If not, modify <code>image</code> with the latest version tag and change <code>imagePullPolicy</code> to <code>Always</code></p>
+<pre><code>kubectl edit deploy multi-nic-cni-operator-controller-manager -n $MULTI_NIC_NAMESPACE
+</code></pre>
+</li>
+<li>
+<p>Delete the current multi-nicd pods with selector</p>
+<pre><code>kubectl delete po --selector control-plane=controller-manager -n $MULTI_NIC_NAMESPACE
+</code></pre>
+</li>
+<li>
+<p>Check readiness  </p>
+<pre><code>kubectl get po --selector control-plane=controller-manager -n $MULTI_NIC_NAMESPACE
+</code></pre>
+</li>
+</ol>
+<h3 id="safe-upgrade-multi-nic-cni-operator">Safe upgrade Multi-NIC CNI operator</h3>
+<ul>
+<li>
+<p>Before bundle version on Operator Hub to v1.0.2</p>
+<p>There are three significant changes:</p>
+<ul>
+<li>
+<p>Change API group from <code>net.cogadvisor.io</code> to <code>multinic.fms.io</code>. To check API group,</p>
+<pre><code>kubectl get crd|grep multinicnetworks
+multinicnetworks.multinic.fms.io                                  2022-09-27T08:47:35Z
+</code></pre>
+</li>
+<li>
+<p>Change route configuration logic for handling fault tolerance issue. To check route configuration logic. Run <code>ip rule</code> in any worker host by running <code>oc debug node</code> or using <a href="https://github.com/jedrecord/nettools">nettools</a> with <code>hostNetwork: true</code>. </p>
+<pre><code>&gt; ip rule
+0:  from all lookup local
+32765:  from 192.168.0.0/16 lookup multinic-ipvlanl3
+32766:  from all lookup main
+32767:  from all lookup default
+</code></pre>
+<p>If it shows similar rules as above, the route configuration logic is up-to-date.</p>
+</li>
+<li>
+<p>Add multinicnetwork CR to show routeStatus. To check routeStatus key in multinicnetwork CR</p>
+<pre><code>kubectl get multinicnetwork -o yaml|grep routeStatus
+  routeStatus: Success
+</code></pre>
+</li>
+</ul>
+<p>If all changes are applied (up-to-date) in your current version, there is no need to stop the running workload to reinstall the operator. Check <a href="#update-daemon-pod-to-use-latest-version">update the daemon pods</a> and <a href="#update-controller-to-use-latest-version">update the controller</a> to get the image with latest minor updates and bug fixes.
+<br></p>
+<p>Otherwise, check <a href="https://github.com/foundation-model-stack/multi-nic-cni/tree/doc/live-migration">live migration</a></p>
+</li>
+</ul>
+<h3 id="customize-multi-nic-cni-controller-of-operator">Customize Multi-NIC CNI controller of operator</h3>
+<p>If the multi-nic-cni operator has been managed by the Operator Lifecycle Manager (olm)  (installed by operator-sdk run bundle or via operator hub), the modification to the controller deployment (multi-nic-cni controller pod) will be overriden by the olm. </p>
+<p>To modify the value such as resource request/limit to the controller pod, you need to edit the <code>.spec.install.spec.deployments</code> section in the ClusterServiceVersion (csv) resource of the multi-nic-cni operator. </p>
+<p>You can locate the csv resource of multi-nic-cni operator in your cluster from the following command.</p>
+<pre><code>kubectl get csv -l operators.coreos.com/multi-nic-cni-operator.multi-nic-cni-operator -A
+</code></pre>
+<p><em>Before v1.0.5, the csv are created in all namespaces. You need to edit the csv in the namespace that the controller has been deployed. The modification of csv in the other namespace will not be applied.</em></p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../health-checker/" class="btn btn-neutral float-left" title="Troubleshooting with Multi-NIC CNI Health Checker Service"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../../user_guide/" class="btn btn-neutral float-right" title="Installation">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../health-checker/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../../user_guide/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>
