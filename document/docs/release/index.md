@@ -8,3 +8,4 @@ Channel|Version|IPVLAN L2/L3|AWS IPVLAN|Mellanox Host Device|MACVLAN|SR-IOV VF|I
 [alpha](./alpha.md)|v1.2.8|&check;|&check;|&check;|&check;|X|X|X
 |v1.2.9|&check;|&check;|&check;|&check;|&check;|X|X
 |v1.3.0|&check;|&check;|&check;|X|X|&check;|&check;
+|v1.3.1|&check;|&check;|&check;|&check;|&check;|&check;|&check;

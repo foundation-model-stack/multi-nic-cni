@@ -2,6 +2,16 @@
 
 ![](../img/alpha-release.png)
 
+## v1.3.1
+
+**Highlights**
+
+Cherry-pick 1.2.2-1.3.0 updates including
+
+- feat: add multi-path routes
+- feat: add multi-config and handle static ips
+- feat: unmanaged hostinterface
+
 ## v1.2.9
 
 **Highlights**
