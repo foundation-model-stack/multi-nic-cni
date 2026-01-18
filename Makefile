@@ -14,7 +14,7 @@ export IMAGE_REGISTRY ?= ghcr.io/foundation-model-stack
 # - use the VERSION as arg of the bundle target (e.g make bundle VERSION=0.0.2)
 # - use environment variables to overwrite this value (e.g export VERSION=0.0.2)
 # VERSION ?= 0.0.1
-VERSION ?= 1.3.2
+VERSION ?= 9.9.9
 export CHANNELS = "alpha"
 export DEFAULT_CHANNEL = "alpha"
 
@@ -125,6 +125,7 @@ manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and Cust
 	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./api/..." paths="./controllers/..." output:crd:artifacts:config=config/crd/bases
 
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
+	echo "start genrate"
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./api/..." paths="./controllers/..."
 
 fmt: ## Run go fmt against code.
