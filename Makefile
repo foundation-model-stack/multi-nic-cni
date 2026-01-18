@@ -252,6 +252,7 @@ sample-concheck:
 
 .PHONY: bundle
 bundle: manifests kustomize predeploy ## Generate bundle manifests and metadata, then validate generated files.
+	echo "start bh-bundel"
 	rm -f config/manifests/bases/multi-nic-cni-operator.clusterserviceversion.yaml
 	envsubst < config/manifests/bases/multi-nic-cni-operator.clusterserviceversion.template > config/manifests/bases/multi-nic-cni-operator.clusterserviceversion.yaml
 	operator-sdk generate kustomize manifests -q
