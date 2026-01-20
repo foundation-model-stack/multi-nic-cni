@@ -2,9 +2,7 @@ name: commit-lint
 on:
   pull_request:
 
-permissions:
-  contents: read
-  pull-requests: read
+permissions: read-all
 
 jobs:
   commitlint:

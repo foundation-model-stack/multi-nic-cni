@@ -13,8 +13,9 @@ on:
       - ./*/go.mod
       - ./*/src/go.mod
 
-jobs:
+permissions: read-all
 
+jobs:
   controller-test:
     runs-on: ubuntu-latest
     steps:
