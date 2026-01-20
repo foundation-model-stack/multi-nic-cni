@@ -16,6 +16,8 @@ on:
       - ./*/go.mod
       - ./*/src/go.mod
 
+permissions: read-all
+
 jobs:
   scale-test:
     runs-on: ubuntu-latest

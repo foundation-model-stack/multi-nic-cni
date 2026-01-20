@@ -1,0 +1,8 @@
+##############################################################
+#
+# List of approvers/reviewers for Multi-NIC CNI project
+#
+##############################################################
+
+# All files in workflows folder must be approved by listed active maintainers.
+.github/workflows/* @sunya-ch @tatsuhirochiba @chcost
