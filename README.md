@@ -35,11 +35,11 @@ Multi-NIC CNI is the CNI plugin for secondary networks operating on top of [Mult
     2) **L3 Host Route Configuration**: configure L3 routes (next hop via dev) in host route table according to the computed CIDR.
     3) **Distributed IP Allocation Management**: manage IP allocation/deallocation distributedly via the communication between CNI program and daemon at each host.
 
-    [read more](./document/docs/Concept/multi-nic-ipam.md) 
+    [read more](./document/docs/concept/multi-nic-ipam.md)
 
   - **Policy-based secondary network attachment**: Instead of statically set the desired host's master interface name one by one, user can define a policy on attaching multiple secondary network interfaces such as specifying only the number of desired interfaces, filtering only highspeed NICs. 
 
-    [read more](./document/docs/Concept/policy.md)
+    [read more](./document/docs/concept/policy.md)
 
 -  II) **Bridging device plugin runtime results and CNI configuration:** Multi-NIC CNI can configure CNI of network device in accordance to device plugin allocation results orderly.
 
