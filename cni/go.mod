@@ -5,7 +5,7 @@ go 1.23.0
 require (
 	github.com/Microsoft/hcsshim v0.9.2
 	github.com/aws/aws-sdk-go v1.43.29
-	github.com/buger/jsonparser v1.1.1
+	github.com/buger/jsonparser v1.1.2
 	github.com/containernetworking/cni v1.2.3
 	github.com/coreos/go-iptables v0.6.0
 	github.com/gorilla/mux v1.7.3
